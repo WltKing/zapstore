@@ -1,0 +1,31 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "globalDependencies": [".env"],
+  "globalEnv": [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "REDIS_URL",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY",
+    "OPENAI_API_KEY",
+    "EVOLUTION_API_URL",
+    "EVOLUTION_API_KEY",
+    "ASAAS_API_KEY",
+    "BETTER_AUTH_SECRET",
+    "PUBLIC_APP_URL"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {},
+    "typecheck": {
+      "dependsOn": ["^build"]
+    }
+  }
+}

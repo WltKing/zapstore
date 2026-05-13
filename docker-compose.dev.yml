@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: zapstore_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: zapstore
+      POSTGRES_PASSWORD: zapstore_dev
+      POSTGRES_DB: zapstore
+    ports:
+      - "5432:5432"
+    volumes:
+      - zapstore_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zapstore -d zapstore"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: zapstore_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - zapstore_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  zapstore_pg_data:
+  zapstore_redis_data:
