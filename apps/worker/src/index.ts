@@ -9,6 +9,7 @@ loadEnv({ path: resolve(__dirname, "../../../.env") });
 import { Worker, type Job } from "bullmq";
 import { Redis } from "ioredis";
 import pino from "pino";
+import { processInboundJob, type InboundJobPayload } from "./jobs/inbound.js";
 
 const logger = pino({
   transport:
@@ -21,15 +22,22 @@ const connection = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379", 
   maxRetriesPerRequest: null,
 });
 
-// Queue: inbound — consome mensagens recebidas do WhatsApp.
-// Fase 1: processa media, monta contexto, chama LLM, envia resposta.
-new Worker(
+new Worker<InboundJobPayload>(
   "inbound",
-  async (job: Job) => {
-    logger.info({ jobId: job.id, data: job.data }, "Processing inbound message");
-    // TODO Fase 1: implementar engine de conversa.
+  async (job: Job<InboundJobPayload>) => {
+    const start = Date.now();
+    try {
+      await processInboundJob(job, logger);
+      logger.info(
+        { jobId: job.id, tenantId: job.data.tenantId, ms: Date.now() - start },
+        "Processed inbound message",
+      );
+    } catch (err) {
+      logger.error({ jobId: job.id, err }, "Failed to process inbound message");
+      throw err;
+    }
   },
-  { connection },
+  { connection, concurrency: 4 },
 );
 
 logger.info("Worker started — listening on queue: inbound");

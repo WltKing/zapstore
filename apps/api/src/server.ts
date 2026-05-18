@@ -13,6 +13,7 @@ import helmet from "@fastify/helmet";
 import sensible from "@fastify/sensible";
 import { prisma } from "@zapstore/db";
 import { healthRoutes } from "./modules/health/routes.js";
+import { whatsappWebhookRoutes } from "./modules/webhooks/whatsapp.js";
 
 const PORT = Number(process.env.PORT ?? 4000);
 const HOST = process.env.HOST ?? "0.0.0.0";
@@ -33,6 +34,7 @@ async function main() {
   await app.register(sensible);
 
   await app.register(healthRoutes, { prefix: "/health" });
+  await app.register(whatsappWebhookRoutes, { prefix: "/webhooks/whatsapp" });
 
   const shutdown = async () => {
     app.log.info("Shutting down...");
