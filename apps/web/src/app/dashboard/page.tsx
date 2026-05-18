@@ -4,12 +4,21 @@ import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser, getTenantStats } from "@/lib/tenant";
 import { NICHE_TEMPLATES } from "@/lib/niches";
 
+const DEFAULT_QUOTA = 2500;
+
+function formatBrl(value: number): string {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+}
+
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/login");
 
   const tenant = await getPrimaryTenantForUser(session.user.id);
   const stats = tenant ? await getTenantStats(tenant.id) : null;
+  const quota = tenant?.subscription?.messageQuota ?? DEFAULT_QUOTA;
+  const used = stats?.messagesUsedThisMonth ?? 0;
+  const pct = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
@@ -22,7 +31,10 @@ export default async function DashboardPage() {
             {tenant ? (
               <>
                 Plano: <strong>Trial</strong> · Nicho:{" "}
-                <strong>{NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Genérico"}</strong>
+                <strong>
+                  {NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ??
+                    "Genérico"}
+                </strong>
               </>
             ) : (
               <>
@@ -56,12 +68,41 @@ export default async function DashboardPage() {
         </section>
       ) : (
         <>
-          {/* Cards de métrica (placeholders por enquanto) */}
+          {pct >= 100 ? (
+            <div className="mt-6 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+              <strong>Limite mensal atingido.</strong> Seu bot está respondendo com a mensagem de
+              indisponibilidade até o próximo ciclo ou upgrade. <a href="/billing" className="underline">Fazer upgrade →</a>
+            </div>
+          ) : pct >= 80 ? (
+            <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+              <strong>Você usou {pct}% do seu plano.</strong> Considere comprar pacote extra ou fazer upgrade antes de
+              atingir o limite. <a href="/billing" className="underline">Ver opções →</a>
+            </div>
+          ) : null}
+
+          {/* Cards */}
           <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card title="Vendas hoje" value="R$ 0,00" hint="Quando os pedidos começarem a entrar" />
-            <Card title="Pedidos abertos" value="0" hint="Pedidos aguardando entrega" />
-            <Card title="Mensagens este mês" value="0 / 2.500" hint="Limite do plano Starter" />
-            <Card title="Ticket médio" value="—" hint="Aparece após o 1º pedido" />
+            <Card
+              title="Vendas hoje"
+              value={formatBrl(stats?.salesTodayBrl ?? 0)}
+              hint={stats?.orderCount === 0 ? "Quando o bot fechar uma venda, ela cai aqui" : "Pedidos de hoje (sem cancelados)"}
+            />
+            <Card
+              title="Pedidos abertos"
+              value={String(stats?.openOrderCount ?? 0)}
+              hint={`${stats?.orderCount ?? 0} pedidos no total`}
+            />
+            <Card
+              title="Mensagens este mês"
+              value={`${used.toLocaleString("pt-BR")} / ${quota.toLocaleString("pt-BR")}`}
+              hint={`${pct}% do plano Starter`}
+              progress={pct}
+            />
+            <Card
+              title="Ticket médio"
+              value={stats?.orderCount === 0 ? "—" : formatBrl(stats?.avgTicketBrl ?? 0)}
+              hint="Média de todos os pedidos válidos"
+            />
           </section>
 
           {/* Próximos passos */}
@@ -95,7 +136,7 @@ export default async function DashboardPage() {
                 done={tenant.botConfig?.whatsappConnected ?? false}
                 href="/whatsapp"
                 title="Conectar o WhatsApp"
-                desc="Aponte a câmera do celular pro QR code"
+                desc="Aponte a câmera do celular pro QR code (apenas em deploy Linux)"
               />
               <Step
                 done={tenant.subscription?.status === "active"}
@@ -111,17 +152,47 @@ export default async function DashboardPage() {
   );
 }
 
-function Card({ title, value, hint }: { title: string; value: string; hint: string }) {
+function Card({
+  title,
+  value,
+  hint,
+  progress,
+}: {
+  title: string;
+  value: string;
+  hint: string;
+  progress?: number;
+}) {
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm">
       <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
       <div className="mt-2 text-2xl font-bold text-neutral-900">{value}</div>
+      {progress !== undefined && (
+        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+          <div
+            className={`h-full ${
+              progress >= 100 ? "bg-red-500" : progress >= 80 ? "bg-amber-500" : "bg-emerald-500"
+            }`}
+            style={{ width: `${Math.min(100, progress)}%` }}
+          />
+        </div>
+      )}
       <div className="mt-1 text-xs text-neutral-500">{hint}</div>
     </div>
   );
 }
 
-function Step({ done, href, title, desc }: { done: boolean; href: string; title: string; desc: string }) {
+function Step({
+  done,
+  href,
+  title,
+  desc,
+}: {
+  done: boolean;
+  href: string;
+  title: string;
+  desc: string;
+}) {
   return (
     <li>
       <a
