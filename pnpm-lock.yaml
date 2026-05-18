@@ -84,6 +84,9 @@ importers:
       '@zapstore/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@zapstore/payment':
+        specifier: workspace:*
+        version: link:../../packages/payment
       '@zapstore/whatsapp':
         specifier: workspace:*
         version: link:../../packages/whatsapp

@@ -12,6 +12,7 @@
   "dependencies": {
     "@zapstore/db": "workspace:*",
     "@zapstore/engine": "workspace:*",
+    "@zapstore/payment": "workspace:*",
     "@zapstore/whatsapp": "workspace:*",
     "better-auth": "^1.6.11",
     "dotenv": "^16.6.1",
