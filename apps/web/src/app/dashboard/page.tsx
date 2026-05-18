@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getPrimaryTenantForUser } from "@/lib/tenant";
+import { getPrimaryTenantForUser, getTenantStats } from "@/lib/tenant";
 import { NICHE_TEMPLATES } from "@/lib/niches";
 
 export default async function DashboardPage() {
@@ -9,6 +9,7 @@ export default async function DashboardPage() {
   if (!session) redirect("/login");
 
   const tenant = await getPrimaryTenantForUser(session.user.id);
+  const stats = tenant ? await getTenantStats(tenant.id) : null;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
@@ -75,10 +76,14 @@ export default async function DashboardPage() {
                 desc="Define horário, formas de pagamento, instruções de venda"
               />
               <Step
-                done={false}
+                done={(stats?.productCount ?? 0) > 0}
                 href="/products"
                 title="Cadastrar produtos"
-                desc="Catálogo que o bot vai oferecer aos clientes"
+                desc={
+                  stats && stats.productCount > 0
+                    ? `${stats.activeProductCount} produto(s) ativo(s)`
+                    : "Catálogo que o bot vai oferecer aos clientes"
+                }
               />
               <Step
                 done={tenant.botConfig?.whatsappConnected ?? false}
