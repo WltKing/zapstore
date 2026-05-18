@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { prisma, withTenant } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { getWhatsAppProvider } from "@/lib/whatsapp-provider";
+import { getRedis, RedisKeys } from "@/lib/redis";
 
 async function requireTenantId(): Promise<string> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -28,7 +29,7 @@ export async function getWhatsAppStatus(): Promise<WhatsAppStatus & { error?: st
     const provider = getWhatsAppProvider();
     const status = await provider.ensureInstance(tenantId);
 
-    // Sincroniza no banco quando conecta.
+    // Se conectou, marca no banco.
     if (status.connected) {
       await withTenant(tenantId, async (tx) => {
         await tx.botConfig.update({
@@ -36,8 +37,31 @@ export async function getWhatsAppStatus(): Promise<WhatsAppStatus & { error?: st
           data: { whatsappConnected: true, whatsappInstance: `tenant_${tenantId}` },
         });
       });
+      // Limpa o QR do cache.
+      await getRedis().del(RedisKeys.whatsappQr(tenantId));
+      return status;
     }
-    return status;
+
+    // Nao conectado: ensureInstance retorna QR apenas na primeira criacao da
+    // instance. Em chamadas seguintes, o QR mais novo vem por webhook
+    // (qrcode.updated) e fica salvo no Redis. Preferimos o do Redis sempre que
+    // existir (mais recente).
+    const cachedQr = await getRedis().get(RedisKeys.whatsappQr(tenantId));
+    return { connected: false, qrCode: cachedQr ?? status.qrCode };
+  } catch (e) {
+    return { connected: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
+export async function refreshQrCodeAction(): Promise<WhatsAppStatus & { error?: string }> {
+  try {
+    const tenantId = await requireTenantId();
+    const provider = getWhatsAppProvider();
+    const qr = await provider.refreshQrCode(tenantId);
+    if (qr) {
+      await getRedis().set(RedisKeys.whatsappQr(tenantId), qr, "EX", 60);
+    }
+    return { connected: false, qrCode: qr };
   } catch (e) {
     return { connected: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
   }

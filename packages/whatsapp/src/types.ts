@@ -40,6 +40,18 @@ export interface WhatsAppProvider {
   /** Desconecta a instance (logout). */
   disconnect(tenantId: string): Promise<void>;
 
+  /** Forca refresh do QR (chama /connect). Use apenas quando QR expirou. */
+  refreshQrCode(tenantId: string): Promise<string | undefined>;
+
   /** Faz parse de um payload de webhook do provider para um IncomingMessage normalizado. */
   parseWebhook(payload: unknown): IncomingMessage | null;
+
+  /** Parse de webhook qrcode.updated. Retorna { tenantId, qrCode } se for esse tipo. */
+  parseQrCodeWebhook(payload: unknown): { tenantId: string; qrCode: string } | null;
+
+  /** Parse de webhook connection.update. Retorna { tenantId, state } se for esse tipo. */
+  parseConnectionWebhook(payload: unknown): {
+    tenantId: string;
+    state: "open" | "connecting" | "close";
+  } | null;
 }

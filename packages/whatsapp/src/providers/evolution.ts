@@ -12,18 +12,15 @@ interface EvolutionInstanceState {
   instance: { instanceName: string; state: "open" | "connecting" | "close" };
 }
 
+interface EvolutionCreateResponse {
+  instance?: { instanceName?: string };
+  qrcode?: { code?: string; base64?: string };
+}
+
 interface EvolutionFetchInstance {
   name?: string;
   instanceName?: string;
-  ownerJid?: string | null;
   connectionStatus?: "open" | "connecting" | "close";
-}
-
-interface EvolutionConnectResponse {
-  pairingCode?: string | null;
-  code?: string;
-  base64?: string;
-  count?: number;
 }
 
 export class EvolutionProvider implements WhatsAppProvider {
@@ -50,58 +47,73 @@ export class EvolutionProvider implements WhatsAppProvider {
       const text = await res.text();
       throw new Error(`Evolution ${method} ${path}: ${res.status} ${text}`);
     }
-    // Algumas operacoes (DELETE, logout) retornam vazio.
     const text = await res.text();
     return (text ? JSON.parse(text) : ({} as T)) as T;
   }
 
   /**
-   * Garante que a instance existe e retorna o status atual.
-   * Se ainda nao esta pareada, retorna o QR code em base64.
+   * Garante que a instance existe. Retorna o status atual.
+   *
+   * IMPORTANTE: nao chama `/instance/connect` em chamadas subsequentes
+   * (isso reinicia o canal Baileys e mata o QR atual). O QR sai apenas no
+   * response do create — chamadas seguintes precisam pegar o QR via webhook
+   * (event `qrcode.updated`) ou refazer a instance.
    */
   async ensureInstance(tenantId: string): Promise<InstanceStatus> {
     const name = this.instanceName(tenantId);
 
-    // 1. Verifica se ja existe
-    let exists = false;
+    // 1. Ja existe?
+    let existing: EvolutionFetchInstance | undefined;
     try {
       const list = await this.request<EvolutionFetchInstance[]>(
         "GET",
         `/instance/fetchInstances?instanceName=${encodeURIComponent(name)}`,
       );
-      exists = Array.isArray(list) && list.length > 0;
+      existing = Array.isArray(list) ? list.find((i) => (i.name ?? i.instanceName) === name) : undefined;
     } catch {
-      exists = false;
+      // sem cache
     }
 
-    // 2. Cria se nao existe
-    if (!exists) {
-      await this.request("POST", "/instance/create", {
+    // 2. Se nao existe, cria. Response traz QR ja na primeira vez.
+    if (!existing) {
+      const created = await this.request<EvolutionCreateResponse>("POST", "/instance/create", {
         instanceName: name,
         integration: "WHATSAPP-BAILEYS",
         qrcode: true,
       });
+      const qr = created.qrcode?.base64 ?? created.qrcode?.code;
+      return { connected: false, qrCode: qr ?? undefined };
     }
 
-    // 3. Verifica o estado
+    // 3. Ja existe — apenas le o estado (rapido, nao dispara reconexao).
     const state = await this.request<EvolutionInstanceState>(
       "GET",
       `/instance/connectionState/${encodeURIComponent(name)}`,
     );
-
     if (state.instance.state === "open") {
       return { connected: true };
     }
 
-    // 4. Pega QR code (forca refresh)
+    // Para state=close ou connecting: o QR atual sai via webhook qrcode.updated.
+    // Retornamos sem QR; o painel ou cache (Redis) cuida de mostrar o QR vindo
+    // do webhook.
+    return { connected: false };
+  }
+
+  /**
+   * Forca um novo pareamento (chama /connect). Usar APENAS quando o QR atual
+   * expirou e o usuario clicou em "Gerar novo QR".
+   */
+  async refreshQrCode(tenantId: string): Promise<string | undefined> {
+    const name = this.instanceName(tenantId);
     try {
-      const qr = await this.request<EvolutionConnectResponse>(
+      const qr = await this.request<EvolutionCreateResponse["qrcode"]>(
         "GET",
         `/instance/connect/${encodeURIComponent(name)}`,
       );
-      return { connected: false, qrCode: qr.base64 ?? qr.code ?? undefined };
+      return qr?.base64 ?? qr?.code ?? undefined;
     } catch {
-      return { connected: false };
+      return undefined;
     }
   }
 
@@ -150,6 +162,42 @@ export class EvolutionProvider implements WhatsAppProvider {
     } catch {
       // ja desconectado
     }
+    try {
+      await this.request("DELETE", `/instance/delete/${encodeURIComponent(name)}`);
+    } catch {
+      // ja deletado
+    }
+  }
+
+  /**
+   * Extrai o QR (base64) de um payload de webhook `qrcode.updated`, se for o caso.
+   * Retorna { tenantId, qrCode } pra cache no Redis.
+   */
+  parseQrCodeWebhook(payload: unknown): { tenantId: string; qrCode: string } | null {
+    if (!payload || typeof payload !== "object") return null;
+    const p = payload as Record<string, unknown>;
+    if (p.event !== "qrcode.updated") return null;
+    const data = p.data as Record<string, unknown> | undefined;
+    const qr = data?.qrcode as Record<string, unknown> | undefined;
+    const base64 = (qr?.base64 as string | undefined) ?? (qr?.code as string | undefined);
+    const instance = String(p.instance ?? "");
+    const tenantId = instance.startsWith("tenant_") ? instance.slice("tenant_".length) : instance;
+    if (!base64 || !tenantId) return null;
+    return { tenantId, qrCode: base64 };
+  }
+
+  /** Conecta/desconecta event do webhook. Retorna { tenantId, state }. */
+  parseConnectionWebhook(payload: unknown): { tenantId: string; state: "open" | "connecting" | "close" } | null {
+    if (!payload || typeof payload !== "object") return null;
+    const p = payload as Record<string, unknown>;
+    if (p.event !== "connection.update") return null;
+    const data = p.data as Record<string, unknown> | undefined;
+    const state = data?.state as string | undefined;
+    if (state !== "open" && state !== "connecting" && state !== "close") return null;
+    const instance = String(p.instance ?? "");
+    const tenantId = instance.startsWith("tenant_") ? instance.slice("tenant_".length) : instance;
+    if (!tenantId) return null;
+    return { tenantId, state };
   }
 
   parseWebhook(payload: unknown): IncomingMessage | null {
@@ -166,13 +214,12 @@ export class EvolutionProvider implements WhatsAppProvider {
 
     const fromMe = Boolean(key.fromMe);
     const remoteJid = String(key.remoteJid ?? "");
-    if (!remoteJid || remoteJid.endsWith("@g.us")) return null; // ignora grupos
+    if (!remoteJid || remoteJid.endsWith("@g.us")) return null;
     const fromName = (data.pushName as string | undefined) ?? undefined;
 
     const message = data.message as Record<string, unknown> | undefined;
     if (!message) return null;
 
-    // Texto pode estar em conversation ou extendedTextMessage.text
     const messageType = String(data.messageType ?? "");
     let type: IncomingMessage["type"] = "unknown";
     let text: string | undefined;
