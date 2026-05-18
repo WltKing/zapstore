@@ -184,8 +184,8 @@ model BotConfig {
   whatsappConnected  Boolean  @default(false)
 
   // LLM
-  llmProvider        String   @default("anthropic") // "anthropic" | "google" | "openai"
-  llmModel           String   @default("claude-haiku-4-5-20251001")
+  llmProvider        String   @default("google") // "anthropic" | "google" | "openai"
+  llmModel           String   @default("gemini-1.5-flash-latest")
 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

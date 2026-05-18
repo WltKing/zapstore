@@ -18,7 +18,7 @@ export function createLLMProvider(opts: CreateLLMOptions): LLMProvider {
     case "google":
       return new GoogleProvider({
         apiKey: opts.apiKey,
-        model: opts.model ?? "gemini-2.0-flash",
+        model: opts.model ?? "gemini-1.5-flash-latest",
       });
     default: {
       const _exhaustive: never = opts.provider;
