@@ -37,6 +37,9 @@ export interface WhatsAppProvider {
   /** Indica para o usuario que o bot esta "digitando". */
   setTyping(tenantId: string, to: string, durationMs: number): Promise<void>;
 
+  /** Desconecta a instance (logout). */
+  disconnect(tenantId: string): Promise<void>;
+
   /** Faz parse de um payload de webhook do provider para um IncomingMessage normalizado. */
   parseWebhook(payload: unknown): IncomingMessage | null;
 }
