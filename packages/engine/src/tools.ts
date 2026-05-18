@@ -1,16 +1,16 @@
 import { withTenant } from "@zapstore/db";
 import type { LLMTool } from "@zapstore/llm";
 
-// Tool exposta ao LLM. O schema vira function-calling no Anthropic e Gemini.
+// Schema da tool exposta ao LLM.
 export const criarPedidoTool: LLMTool = {
   name: "criar_pedido",
   description:
-    "Cria um pedido no sistema apos o cliente CONFIRMAR todos os dados (nome, telefone, endereco, forma de pagamento, itens). Nao use sem confirmacao explicita.",
+    "Cria um pedido no sistema apos o cliente CONFIRMAR todos os dados (nome, telefone, endereco, forma de pagamento, itens). Nao use sem confirmacao explicita do cliente.",
   inputSchema: {
     type: "object",
     properties: {
       customerName: { type: "string", description: "Nome completo do cliente" },
-      customerPhone: { type: "string", description: "Telefone do cliente (E.164 ou nacional)" },
+      customerPhone: { type: "string", description: "Telefone do cliente" },
       customerAddress: { type: "string", description: "Endereco completo se entrega; vazio se retirada/servico" },
       paymentMethod: {
         type: "string",
@@ -59,7 +59,6 @@ export async function handleCriarPedido(
 
   try {
     const result = await withTenant(tenantId, async (tx) => {
-      // Busca produtos e valida que pertencem ao tenant
       const products = await tx.product.findMany({
         where: { id: { in: input.items.map((i) => i.productId) } },
       });
@@ -79,7 +78,6 @@ export async function handleCriarPedido(
       });
       const totalBrl = items.reduce((acc, it) => acc + it.qty * it.priceBrl, 0);
 
-      // orderNumber sequencial por tenant: pega o maior + 1.
       const last = await tx.order.findFirst({
         where: { tenantId },
         orderBy: { orderNumber: "desc" },

@@ -14,6 +14,7 @@
     "@zapstore/llm": "workspace:*",
     "@zapstore/whatsapp": "workspace:*",
     "@zapstore/prompts": "workspace:*",
+    "@zapstore/engine": "workspace:*",
     "bullmq": "^5.34.4",
     "dotenv": "^16.4.7",
     "ioredis": "^5.4.2",

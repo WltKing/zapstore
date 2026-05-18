@@ -86,6 +86,12 @@ export default async function DashboardPage() {
                 }
               />
               <Step
+                done={false}
+                href="/simulator"
+                title="Testar o bot no simulador"
+                desc="Converse com seu bot pelo painel — sem WhatsApp real"
+              />
+              <Step
                 done={tenant.botConfig?.whatsappConnected ?? false}
                 href="/whatsapp"
                 title="Conectar o WhatsApp"

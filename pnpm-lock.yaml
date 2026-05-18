@@ -81,6 +81,9 @@ importers:
       '@zapstore/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@zapstore/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@zapstore/whatsapp':
         specifier: workspace:*
         version: link:../../packages/whatsapp
@@ -130,6 +133,9 @@ importers:
       '@zapstore/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@zapstore/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@zapstore/llm':
         specifier: workspace:*
         version: link:../../packages/llm
@@ -174,6 +180,22 @@ importers:
       prisma:
         specifier: ^6.1.0
         version: 6.19.3(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/engine:
+    dependencies:
+      '@zapstore/db':
+        specifier: workspace:*
+        version: link:../db
+      '@zapstore/llm':
+        specifier: workspace:*
+        version: link:../llm
+      '@zapstore/prompts':
+        specifier: workspace:*
+        version: link:../prompts
+    devDependencies:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
