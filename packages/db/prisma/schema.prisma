@@ -185,7 +185,7 @@ model BotConfig {
 
   // LLM
   llmProvider        String   @default("google") // "anthropic" | "google" | "openai"
-  llmModel           String   @default("gemini-2.0-flash-lite")
+  llmModel           String   @default("gemini-2.5-flash")
 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

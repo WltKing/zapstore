@@ -30,7 +30,7 @@ function buildLLMProvider(model: string, providerName: string) {
   return createLLMProvider({
     provider: "google",
     apiKey: process.env.GOOGLE_API_KEY ?? "",
-    model: providerName === "google" ? model : "gemini-2.0-flash-lite",
+    model: providerName === "google" ? model : "gemini-2.5-flash",
   });
 }
 
