@@ -52,12 +52,14 @@ COPY --from=builder --chown=nodeapp:nodejs /app/apps/web/package.json ./apps/web
 COPY --from=builder --chown=nodeapp:nodejs /app/apps/web/.next/standalone ./apps/web-standalone
 COPY --from=builder --chown=nodeapp:nodejs /app/apps/web/.next/static ./apps/web-standalone/apps/web/.next/static
 COPY --from=builder --chown=nodeapp:nodejs /app/apps/web/public ./apps/web-standalone/apps/web/public
-# - api: dist + package.json
+# - api: dist + package.json + node_modules (pnpm symlinks pra .pnpm/)
 COPY --from=builder --chown=nodeapp:nodejs /app/apps/api/package.json ./apps/api/
 COPY --from=builder --chown=nodeapp:nodejs /app/apps/api/dist ./apps/api/dist
-# - worker: dist + package.json
+COPY --from=builder --chown=nodeapp:nodejs /app/apps/api/node_modules ./apps/api/node_modules
+# - worker: dist + package.json + node_modules
 COPY --from=builder --chown=nodeapp:nodejs /app/apps/worker/package.json ./apps/worker/
 COPY --from=builder --chown=nodeapp:nodejs /app/apps/worker/dist ./apps/worker/dist
+COPY --from=builder --chown=nodeapp:nodejs /app/apps/worker/node_modules ./apps/worker/node_modules
 
 # Entrypoint que escolhe qual app rodar
 COPY --chown=nodeapp:nodejs scripts/start.sh /start.sh
