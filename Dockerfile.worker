@@ -1,0 +1,42 @@
+# Dockerfile do Worker BullMQ (apps/worker)
+
+FROM node:22-alpine AS base
+RUN corepack enable && corepack prepare pnpm@11.0.8 --activate
+WORKDIR /app
+
+FROM base AS deps
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json turbo.json tsconfig.base.json ./
+COPY apps/web/package.json ./apps/web/
+COPY apps/api/package.json ./apps/api/
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/db/package.json ./packages/db/
+COPY packages/llm/package.json ./packages/llm/
+COPY packages/whatsapp/package.json ./packages/whatsapp/
+COPY packages/payment/package.json ./packages/payment/
+COPY packages/prompts/package.json ./packages/prompts/
+COPY packages/engine/package.json ./packages/engine/
+RUN pnpm install --frozen-lockfile
+
+FROM deps AS builder
+COPY packages ./packages
+COPY apps/worker ./apps/worker
+RUN pnpm --filter @zapstore/db prisma generate
+RUN pnpm -r --filter "./packages/*" build
+RUN pnpm --filter @zapstore/worker build
+
+FROM node:22-alpine AS runner
+RUN corepack enable && corepack prepare pnpm@11.0.8 --activate
+WORKDIR /app
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nodeapp
+
+COPY --from=builder --chown=nodeapp:nodejs /app/pnpm-workspace.yaml /app/pnpm-lock.yaml /app/package.json ./
+COPY --from=builder --chown=nodeapp:nodejs /app/apps/worker/package.json ./apps/worker/
+COPY --from=builder --chown=nodeapp:nodejs /app/apps/worker/dist ./apps/worker/dist
+COPY --from=builder --chown=nodeapp:nodejs /app/packages ./packages
+COPY --from=builder --chown=nodeapp:nodejs /app/node_modules ./node_modules
+
+USER nodeapp
+
+CMD ["node", "apps/worker/dist/index.js"]

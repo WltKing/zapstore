@@ -8,7 +8,9 @@ loadEnv({ path: resolve(__dirname, "../../.env") });
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["@zapstore/db"],
+  output: "standalone", // pra Docker (Dockerfile.web copia .next/standalone)
+  outputFileTracingRoot: resolve(__dirname, "../.."),
+  transpilePackages: ["@zapstore/db", "@zapstore/engine", "@zapstore/llm", "@zapstore/prompts", "@zapstore/payment", "@zapstore/whatsapp"],
   env: {
     NEXT_PUBLIC_APP_URL: process.env.PUBLIC_APP_URL ?? "http://localhost:3000",
   },
