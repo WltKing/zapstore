@@ -63,15 +63,16 @@ function formatProducts(products: ProductInfo[]): string {
   if (products.length === 0) {
     return "(nenhum produto cadastrado — avise o cliente que voce vai consultar a equipe)";
   }
-  return products
-    .map((p) => {
-      const stockNote = p.stock <= 0 ? " [SEM ESTOQUE]" : p.stock < 3 ? ` [restam ${p.stock}]` : "";
-      const desc = p.description ? ` — ${p.description}` : "";
-      const price = new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      }).format(p.priceBrl);
-      return `- ${p.name}: ${price}${stockNote}${desc}`;
-    })
-    .join("\n");
+  const header =
+    "IMPORTANTE: quando chamar a tool criar_pedido, use SEMPRE o `productId` EXATO listado abaixo (UUID entre colchetes). NUNCA invente um id ou use o nome no lugar.";
+  const lines = products.map((p) => {
+    const stockNote = p.stock <= 0 ? " [SEM ESTOQUE]" : p.stock < 3 ? ` [restam ${p.stock}]` : "";
+    const desc = p.description ? ` — ${p.description}` : "";
+    const price = new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(p.priceBrl);
+    return `- [productId: ${p.id}] ${p.name}: ${price}${stockNote}${desc}`;
+  });
+  return [header, "", ...lines].join("\n");
 }
