@@ -4,8 +4,64 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { magicLink } from "better-auth/plugins";
 import { prisma } from "@zapstore/db";
 
-// Better-Auth config. Magic Link em dev loga o link no console;
-// em producao integrar Resend/SES (Fase 1 polish).
+// Envia o magic link. Estrategia:
+// 1. Se RESEND_API_KEY existe -> envia email de verdade via Resend.
+// 2. Senao -> loga o link no console (dev e tambem prod sem email configurado).
+//    Nunca lanca erro: melhor logar do que quebrar o login.
+async function sendMagicLinkEmail(email: string, url: string): Promise<void> {
+  const resendKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.EMAIL_FROM ?? "Zapstore <onboarding@resend.dev>";
+
+  if (resendKey) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: email,
+          subject: "Seu link de acesso ao Zapstore",
+          html: `
+            <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto">
+              <h2>Entrar no Zapstore</h2>
+              <p>Clique no botão abaixo pra acessar sua conta. O link expira em 5 minutos.</p>
+              <p style="margin:24px 0">
+                <a href="${url}" style="background:#171717;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block">
+                  Acessar minha conta
+                </a>
+              </p>
+              <p style="color:#666;font-size:13px">Se você não pediu esse link, ignore este e-mail.</p>
+            </div>`,
+        }),
+      });
+      if (!res.ok) {
+        // eslint-disable-next-line no-console
+        console.error("[MAGIC LINK] Resend falhou:", res.status, await res.text());
+        // eslint-disable-next-line no-console
+        console.log(`[MAGIC LINK] fallback para ${email}: ${url}`);
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("[MAGIC LINK] erro Resend:", e);
+      // eslint-disable-next-line no-console
+      console.log(`[MAGIC LINK] fallback para ${email}: ${url}`);
+    }
+    return;
+  }
+
+  // Sem provedor de email: loga no console.
+  // eslint-disable-next-line no-console
+  console.log("\n========================================");
+  // eslint-disable-next-line no-console
+  console.log(`[MAGIC LINK] enviar para ${email}:`);
+  // eslint-disable-next-line no-console
+  console.log(url);
+  // eslint-disable-next-line no-console
+  console.log("========================================\n");
+}
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
@@ -30,19 +86,7 @@ export const auth = betterAuth({
   plugins: [
     magicLink({
       sendMagicLink: async ({ email, url }) => {
-        if (process.env.NODE_ENV !== "production") {
-          // eslint-disable-next-line no-console
-          console.log("\n========================================");
-          // eslint-disable-next-line no-console
-          console.log(`[MAGIC LINK] enviar para ${email}:`);
-          // eslint-disable-next-line no-console
-          console.log(url);
-          // eslint-disable-next-line no-console
-          console.log("========================================\n");
-          return;
-        }
-        // TODO Fase 1 polish: integrar Resend
-        throw new Error("Email provider nao configurado em producao");
+        await sendMagicLinkEmail(email, url);
       },
     }),
   ],
