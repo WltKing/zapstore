@@ -7,6 +7,14 @@ set -e
 APP_TYPE="${APP_TYPE:-web}"
 echo "[start.sh] APP_TYPE=${APP_TYPE}"
 
+# Rede de seguranca: distribui o Prisma Query Engine (alpine) pra todo diretorio
+# .prisma/client encontrado. Cobre o caso do Next standalone nao copiar o binario.
+if [ -d /opt/prisma-engine ] && ls /opt/prisma-engine/*.so.node >/dev/null 2>&1; then
+  find /app -type d -path "*.prisma/client" 2>/dev/null | while read -r d; do
+    cp -n /opt/prisma-engine/*.so.node "$d/" 2>/dev/null || true
+  done
+fi
+
 # Roda migrations Prisma uma vez (idempotente). Apenas no web — web sobe primeiro
 # pra garantir que migrations roda antes do worker conectar.
 if [ "$APP_TYPE" = "web" ] && [ "${RUN_MIGRATIONS:-true}" = "true" ]; then

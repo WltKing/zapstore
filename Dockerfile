@@ -21,6 +21,12 @@ RUN pnpm install --frozen-lockfile
 
 # --- builder: copia tudo e builda os 3 apps + prisma client ---
 FROM deps AS builder
+# Vars publicas do Next precisam estar como ENV no build (sao inlined no bundle).
+ARG PUBLIC_APP_URL=https://zapstore.sleepzcolchoes.com
+ARG PUBLIC_API_URL=https://api.zapstore.sleepzcolchoes.com
+ENV PUBLIC_APP_URL=$PUBLIC_APP_URL
+ENV PUBLIC_API_URL=$PUBLIC_API_URL
+ENV NEXT_PUBLIC_APP_URL=$PUBLIC_APP_URL
 COPY packages ./packages
 COPY apps ./apps
 RUN pnpm --filter @zapstore/db prisma generate
@@ -28,6 +34,9 @@ RUN pnpm -r --filter "./packages/*" build
 RUN pnpm --filter @zapstore/web build
 RUN pnpm --filter @zapstore/api build
 RUN pnpm --filter @zapstore/worker build
+# Localiza o Prisma Query Engine (alpine) e coloca num caminho fixo pro runner.
+RUN mkdir -p /prisma-engine && \
+    find /app/node_modules /app/packages -name "libquery_engine-linux-musl-openssl-3.0.x.so.node" -exec cp {} /prisma-engine/ \; 2>/dev/null || true
 
 # --- runner: imagem final ---
 FROM node:22-alpine AS runner
@@ -60,6 +69,9 @@ COPY --from=builder --chown=nodeapp:nodejs /app/apps/api/node_modules ./apps/api
 COPY --from=builder --chown=nodeapp:nodejs /app/apps/worker/package.json ./apps/worker/
 COPY --from=builder --chown=nodeapp:nodejs /app/apps/worker/dist ./apps/worker/dist
 COPY --from=builder --chown=nodeapp:nodejs /app/apps/worker/node_modules ./apps/worker/node_modules
+
+# Prisma Query Engine (alpine) num local fixo — start.sh distribui em runtime.
+COPY --from=builder --chown=nodeapp:nodejs /prisma-engine /opt/prisma-engine
 
 # Entrypoint que escolhe qual app rodar
 COPY --chown=nodeapp:nodejs scripts/start.sh /start.sh
