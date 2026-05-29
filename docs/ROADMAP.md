@@ -167,35 +167,53 @@
 
 ---
 
-## PLANO DE FASES (entrega incremental — cada fase vendável)
+## ESTRATÉGIA DE EXECUÇÃO: largura primeiro, profundidade depois
 
-**Fase 1 ✅ FEITA** — Núcleo SaaS + bot de texto + pedidos/produtos básicos + dashboard simples + billing. Em produção.
+Decisão (2026-05-29): em vez de aprofundar um módulo por vez, fazer o **sistema
+inteiro existir de forma básica** primeiro (todas as áreas funcionando no simples),
+e depois aprofundar com detalhes/funções avançadas. Vantagens: "sistema completo"
+pra demonstrar e vender muito antes; cada área já dá valor; incrementos guiados por
+feedback real. Ritmo: cada CAMADA é construída inteira e entregue pra validação.
 
-**Fase 2 — Atendente Virtual Completo** (maior diferencial; é o que o cliente compra)
-- M2 completo: áudio, imagem, PDF, buffer, pausa humano, opt-out, resposta humanizada
-- Tools: atualizar e cancelar pedido, consultar vagas
-- Configurador avançado + simulador melhorado
+---
 
-**Fase 3 — Agendamento de Serviços**
-- M5 completo. Abre salão, barbearia, clínica de estética, etc.
+### CAMADA 0 ✅ FEITA — Fundação + prova de conceito
+Núcleo SaaS + bot de texto + pedidos/produtos básicos + dashboard simples + billing.
+Em produção em zapstore.sleepzcolchoes.com.
 
-**Fase 4 — Vendas & Produtos completos**
-- M3 (form completo, edição, impressão) + M4 (kits, fiscal, margem, estoque, import XML)
+### CAMADA 1 — "Sistema completo, versão básica" (PRÓXIMA)
+Todas as áreas existindo e funcionais no simples. Entregue inteira pra validar.
+1. **Shell de navegação** — sidebar com todas as áreas agrupadas (Principal/Financeiro/
+   Logística/Serviços/Sistema), igual ao SleepZ. Dá a cara de "sistema completo".
+2. **Clientes (CRM básico)** — cadastro/lista, telefone, endereço, histórico simples.
+3. **Pedidos** — criar manual no painel (form), editar, ver detalhes (além do bot).
+4. **Produtos** — categorias, alerta de estoque baixo, margem simples.
+5. **Agendamento** — profissionais, serviços, agenda, agendar/cancelar manual + via bot.
+6. **Financeiro básico** — despesas (categorias) + caixa simples (entradas das vendas −
+   despesas) + visão de competência.
+7. **Entregas básico** — lista de entregas, status, capacidade por turno simples.
+8. **Dashboard melhor** — cards ricos (vendas, líquido, pedidos, mensagens) + 2-3 gráficos.
+9. **Configurações ampliadas** — horário, pagamento, entrega, dados da loja num só lugar.
+10. **Usuários & perfis** — multi-usuário por loja (adm/operador) básico.
+11. **Bot — incrementos essenciais** — tools cancelar e atualizar pedido; entender áudio.
+12. **E-mail real (Resend)** — clientes logam sozinhos.
 
-**Fase 5 — Financeiro & Caixa**
-- M6 completo (despesas, competência, caixa, fechamento, taxas, parcelamento)
+### CAMADA 2 — Profundidade comercial (vender melhor)
+- Bot completo: imagem, PDF, buffer, pausa humano, opt-out, resposta humanizada, notificar time
+- Agendamento: lembretes automáticos, calendário visual, política de cancelamento
+- Pedidos: autocomplete cliente, CEP+Maps+IBGE, desconto/frete por item, impressão com QR Pix
+- Remarketing automático (cron, A/B, opt-out)
+- Dashboard/BI: vendas por canal/vendedor, top produtos, evolução 12m, exportar CSV
 
-**Fase 6 — Logística & Entregas**
-- M8 completo (capacidade, rota, gestão, feriados, app motorista PWA)
+### CAMADA 3 — Profundidade operacional (loja grande)
+- Financeiro avançado: formas+taxas maquininha, parcelamento, crédito D+1, antecipação, imposto
+- Logística: rota do motorista, reagendar/pular, feriados, app motorista PWA, atrasadas
+- Produtos: kits/composição, import XML de NFe, dados fiscais
 
-**Fase 7 — Fiscal / NFe**
-- M7 completo (Focus multi-tenant, NFC-e/NF-e, emissão automática)
-
-**Fase 8 — Marketing, BI & Remarketing**
-- M9 + M10 + M11 ricos (dashboard avançado, analytics, remarketing automático)
-
-**Fase 9 — Multi-usuário, verticalização & polimento**
-- M1 (perfis), M12 (auditoria, white-label), templates por nicho, app mobile
+### CAMADA 4 — Fiscal & Marketing & Plataforma
+- Fiscal: Focus NFe multi-tenant (NFC-e/NF-e, emissão automática na entrega)
+- Marketing/BI: ROAS, CAC, funil Meta/Google, raio de atuação, projeções
+- Plataforma: auditoria, realtime, white-label, templates por nicho, app mobile
 
 ---
 
