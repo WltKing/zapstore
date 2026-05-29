@@ -29,17 +29,6 @@ export const whatsappWebhookRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: "Invalid payload" });
     }
 
-    // DEBUG: loga o tipo de evento que chega (remover depois de estabilizar).
-    const evt = (body as Record<string, unknown>).event;
-    if (evt === "messages.upsert") {
-      app.log.info(
-        { event: evt, data: JSON.stringify(body).slice(0, 800) },
-        "WEBHOOK messages.upsert raw",
-      );
-    } else {
-      app.log.info({ event: evt }, "WEBHOOK event");
-    }
-
     // 1. QR code update
     const qrEvent = provider.parseQrCodeWebhook(body);
     if (qrEvent) {

@@ -51,6 +51,10 @@ export class GoogleProvider implements LLMProvider {
       generationConfig: {
         temperature: opts.temperature ?? 0.2,
         maxOutputTokens: opts.maxTokens ?? 1024,
+        // Desabilita o "thinking" do gemini-2.5-flash (gastava ~300 tokens e
+        // segundos de latencia por resposta). Atendimento precisa ser rapido.
+        // Campo nao tipado no SDK legado — passa via cast.
+        ...({ thinkingConfig: { thinkingBudget: 0 } } as Record<string, unknown>),
       },
     });
 
