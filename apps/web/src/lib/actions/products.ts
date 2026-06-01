@@ -8,9 +8,12 @@ import { auth } from "@/lib/auth";
 export interface ProductInput {
   name: string;
   description?: string;
+  category?: string;
   priceBrl: number;
+  costBrl?: number | null;
   imageUrl?: string;
   stock: number;
+  lowStockThreshold: number;
   active: boolean;
 }
 
@@ -33,7 +36,10 @@ async function requireTenantId(): Promise<string> {
 function validateProduct(input: ProductInput): string | null {
   if (!input.name.trim()) return "Informe o nome do produto.";
   if (Number.isNaN(input.priceBrl) || input.priceBrl < 0) return "Preco invalido.";
+  if (input.costBrl != null && (Number.isNaN(input.costBrl) || input.costBrl < 0)) return "Custo invalido.";
   if (!Number.isInteger(input.stock) || input.stock < 0) return "Estoque invalido.";
+  if (!Number.isInteger(input.lowStockThreshold) || input.lowStockThreshold < 0)
+    return "Limite de estoque baixo invalido.";
   return null;
 }
 
@@ -49,9 +55,12 @@ export async function createProductAction(input: ProductInput): Promise<ActionRe
           tenantId,
           name: input.name.trim(),
           description: input.description?.trim() || null,
+          category: input.category?.trim() || null,
           priceBrl: input.priceBrl,
+          costBrl: input.costBrl != null && !Number.isNaN(input.costBrl) ? input.costBrl : null,
           imageUrl: input.imageUrl?.trim() || null,
           stock: input.stock,
+          lowStockThreshold: input.lowStockThreshold,
           active: input.active,
         },
       });
@@ -76,9 +85,12 @@ export async function updateProductAction(id: string, input: ProductInput): Prom
         data: {
           name: input.name.trim(),
           description: input.description?.trim() || null,
+          category: input.category?.trim() || null,
           priceBrl: input.priceBrl,
+          costBrl: input.costBrl != null && !Number.isNaN(input.costBrl) ? input.costBrl : null,
           imageUrl: input.imageUrl?.trim() || null,
           stock: input.stock,
+          lowStockThreshold: input.lowStockThreshold,
           active: input.active,
         },
       });

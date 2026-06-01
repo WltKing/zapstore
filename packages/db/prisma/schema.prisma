@@ -207,9 +207,12 @@ model Product {
   tenantId    String   @db.Uuid
   name        String
   description String?  @db.Text
+  category    String?  // categoria livre (ou por nicho): "Casal", "Queen"...
   priceBrl    Decimal  @db.Decimal(10, 2)
+  costBrl     Decimal? @db.Decimal(10, 2) // custo, pra calcular margem
   imageUrl    String?
   stock       Int      @default(0)
+  lowStockThreshold Int @default(5) // alerta quando stock <= este valor
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

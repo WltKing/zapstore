@@ -21,9 +21,12 @@ export default async function ProductsPage() {
     id: p.id,
     name: p.name,
     description: p.description,
+    category: p.category,
     priceBrl: Number(p.priceBrl),
+    costBrl: p.costBrl != null ? Number(p.costBrl) : null,
     imageUrl: p.imageUrl,
     stock: p.stock,
+    lowStockThreshold: p.lowStockThreshold,
     active: p.active,
   }));
 

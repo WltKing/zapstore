@@ -14,18 +14,37 @@ export interface ProductRow {
   id: string;
   name: string;
   description: string | null;
+  category: string | null;
   priceBrl: number;
+  costBrl: number | null;
   imageUrl: string | null;
   stock: number;
+  lowStockThreshold: number;
   active: boolean;
 }
 
 function blank(): ProductInput {
-  return { name: "", description: "", priceBrl: 0, imageUrl: "", stock: 0, active: true };
+  return {
+    name: "",
+    description: "",
+    category: "",
+    priceBrl: 0,
+    costBrl: null,
+    imageUrl: "",
+    stock: 0,
+    lowStockThreshold: 5,
+    active: true,
+  };
 }
 
 function formatBrl(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+}
+
+/** Margem de lucro a partir de preço e custo. "—" se não houver custo. */
+function marginLabel(price: number, cost: number | null): string {
+  if (cost == null || price <= 0) return "—";
+  return `${(((price - cost) / price) * 100).toFixed(0)}%`;
 }
 
 export function ProductsView({ initial, storeName }: { initial: ProductRow[]; storeName: string }) {
@@ -33,6 +52,8 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState<ProductRow | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const lowStockItems = initial.filter((p) => p.active && p.stock <= p.lowStockThreshold);
 
   const handleToggle = (id: string, active: boolean) => {
     startTransition(async () => {
@@ -82,6 +103,14 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
         <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
       )}
 
+      {lowStockItems.length > 0 && (
+        <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          ⚠️ {lowStockItems.length}{" "}
+          {lowStockItems.length === 1 ? "produto com estoque baixo" : "produtos com estoque baixo"}:{" "}
+          {lowStockItems.map((p) => p.name).join(", ")}.
+        </p>
+      )}
+
       <section className="mt-8 rounded-2xl bg-white shadow-sm">
         {initial.length === 0 ? (
           <div className="p-12 text-center">
@@ -96,6 +125,7 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
               <tr>
                 <th className="px-6 py-3 text-left">Produto</th>
                 <th className="px-6 py-3 text-right">Preço</th>
+                <th className="px-6 py-3 text-right">Margem</th>
                 <th className="px-6 py-3 text-right">Estoque</th>
                 <th className="px-6 py-3 text-center">Ativo</th>
                 <th className="px-6 py-3 text-right">Ações</th>
@@ -119,7 +149,14 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
                         </div>
                       )}
                       <div>
-                        <div className="font-medium">{p.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{p.name}</span>
+                          {p.category && (
+                            <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
+                              {p.category}
+                            </span>
+                          )}
+                        </div>
                         {p.description && (
                           <div className="line-clamp-1 text-xs text-neutral-500">
                             {p.description}
@@ -129,12 +166,15 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right font-medium">{formatBrl(p.priceBrl)}</td>
+                  <td className="px-6 py-4 text-right text-neutral-600">
+                    {marginLabel(p.priceBrl, p.costBrl)}
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <span
                       className={
                         p.stock === 0
                           ? "text-red-600"
-                          : p.stock < 5
+                          : p.stock <= p.lowStockThreshold
                             ? "text-amber-600"
                             : "text-neutral-700"
                       }
@@ -204,9 +244,12 @@ function toInput(p: ProductRow): ProductInput {
   return {
     name: p.name,
     description: p.description ?? "",
+    category: p.category ?? "",
     priceBrl: p.priceBrl,
+    costBrl: p.costBrl,
     imageUrl: p.imageUrl ?? "",
     stock: p.stock,
+    lowStockThreshold: p.lowStockThreshold,
     active: p.active,
   };
 }
@@ -272,9 +315,19 @@ function ProductDialog({
           />
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-neutral-700">Categoria (opcional)</label>
+          <input
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+            placeholder="Ex: Casal, Queen, Solteiro..."
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          />
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Preço (R$)</label>
+            <label className="block text-sm font-medium text-neutral-700">Preço de venda (R$)</label>
             <input
               type="number"
               step="0.01"
@@ -282,6 +335,20 @@ function ProductDialog({
               required
               value={form.priceBrl}
               onChange={(e) => setForm({ ...form, priceBrl: Number(e.target.value) })}
+              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Custo (R$, opcional)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.costBrl ?? ""}
+              onChange={(e) =>
+                setForm({ ...form, costBrl: e.target.value === "" ? null : Number(e.target.value) })
+              }
+              placeholder="pra calcular margem"
               className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
             />
           </div>
@@ -294,6 +361,18 @@ function ProductDialog({
               required
               value={form.stock}
               onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Alerta de estoque baixo</label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              required
+              value={form.lowStockThreshold}
+              onChange={(e) => setForm({ ...form, lowStockThreshold: Number(e.target.value) })}
               className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
             />
           </div>
