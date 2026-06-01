@@ -37,6 +37,9 @@ model Tenant {
   conversations Conversation[]
   usageEvents   UsageEvent[]
   customers     Customer[]
+  professionals Professional[]
+  services      Service[]
+  appointments  Appointment[]
 
   @@map("tenants")
 }
@@ -323,4 +326,71 @@ model UsageEvent {
 
   @@index([tenantId, occurredAt])
   @@map("usage_events")
+}
+
+// ============================================================
+// AGENDAMENTO DE SERVIÇOS (nichos de serviço: estética, clínica...)
+// ============================================================
+
+model Professional {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@index([tenantId, active])
+  @@map("professionals")
+}
+
+model Service {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  name        String
+  durationMin Int      @default(30)
+  priceBrl    Decimal  @db.Decimal(10, 2)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@index([tenantId, active])
+  @@map("services")
+}
+
+model Appointment {
+  id             String            @id @default(uuid()) @db.Uuid
+  tenantId       String            @db.Uuid
+  professionalId String?           @db.Uuid
+  serviceId      String?           @db.Uuid
+  serviceName    String            // snapshot do serviço no momento
+  customerName   String
+  customerPhone  String
+  scheduledFor   DateTime
+  durationMin    Int               @default(30)
+  priceBrl       Decimal           @default(0) @db.Decimal(10, 2)
+  status         AppointmentStatus @default(SCHEDULED)
+  notes          String?           @db.Text
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  professional Professional? @relation(fields: [professionalId], references: [id], onDelete: SetNull)
+  service      Service?      @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, scheduledFor])
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  DONE
+  CANCELED
+  NO_SHOW
 }
