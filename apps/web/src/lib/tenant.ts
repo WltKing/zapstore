@@ -53,14 +53,17 @@ export async function getTenantStats(tenantId: string) {
     };
   });
 
-  // Mensagens consumidas no mes (sem RLS — usage_events tem RLS, precisamos do tenantId).
+  // Mensagens consumidas no mes. usage_events tem RLS — roda dentro de withTenant
+  // (seta app.tenant_id) pra funcionar com role nao-superuser.
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
-  const usage = await prisma.usageEvent.aggregate({
-    _sum: { messageCount: true, costBrl: true },
-    where: { tenantId, occurredAt: { gte: monthStart } },
-  });
+  const usage = await withTenant(tenantId, (tx) =>
+    tx.usageEvent.aggregate({
+      _sum: { messageCount: true, costBrl: true },
+      where: { tenantId, occurredAt: { gte: monthStart } },
+    }),
+  );
 
   return {
     ...stats,

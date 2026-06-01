@@ -1,4 +1,4 @@
-import { prisma, withTenant } from "@zapstore/db";
+import { withTenant } from "@zapstore/db";
 import { createLLMProvider, type LLMMessage } from "@zapstore/llm";
 import { buildSystemPrompt, type ProductInfo, type TenantBotInfo } from "@zapstore/prompts";
 import { criarPedidoTool, handleCriarPedido, type CriarPedidoInput } from "./tools.js";
@@ -45,21 +45,27 @@ function buildLLMProvider(model: string, providerName: string) {
 export async function processConversationTurn(input: TurnInput): Promise<TurnResult> {
   const { tenantId, customerPhone, customerName, text } = input;
 
-  // 1. Tenant + bot config (sem RLS, tabela global).
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    include: { botConfig: true, subscription: true },
-  });
+  // 1. Tenant + bot config + subscription. botConfig/subscription tem RLS,
+  // entao a leitura roda dentro de withTenant (seta app.tenant_id) — necessario
+  // pra funcionar quando o app conecta com role nao-superuser.
+  const tenant = await withTenant(tenantId, (tx) =>
+    tx.tenant.findUnique({
+      where: { id: tenantId },
+      include: { botConfig: true, subscription: true },
+    }),
+  );
   if (!tenant || !tenant.botConfig) {
     throw new Error("Tenant ou botConfig nao encontrado");
   }
 
   // 2. Checagem de cota mensal.
   const quota = tenant.subscription?.messageQuota ?? DEFAULT_QUOTA;
-  const usage = await prisma.usageEvent.aggregate({
-    _sum: { messageCount: true },
-    where: { tenantId, occurredAt: { gte: startOfMonth() } },
-  });
+  const usage = await withTenant(tenantId, (tx) =>
+    tx.usageEvent.aggregate({
+      _sum: { messageCount: true },
+      where: { tenantId, occurredAt: { gte: startOfMonth() } },
+    }),
+  );
   const used = usage._sum.messageCount ?? 0;
   if (used >= quota) {
     return {
@@ -160,18 +166,20 @@ export async function processConversationTurn(input: TurnInput): Promise<TurnRes
     maxTokens: 800,
   });
 
-  // 6. Usage event
-  await prisma.usageEvent.create({
-    data: {
-      tenantId,
-      tokensIn: response.usage.tokensIn,
-      tokensOut: response.usage.tokensOut,
-      messageCount: 1,
-      costBrl: response.usage.costBrl,
-      llmProvider: llm.name,
-      llmModel: llm.model,
-    },
-  });
+  // 6. Usage event (usage_events tem RLS — grava dentro de withTenant).
+  await withTenant(tenantId, (tx) =>
+    tx.usageEvent.create({
+      data: {
+        tenantId,
+        tokensIn: response.usage.tokensIn,
+        tokensOut: response.usage.tokensOut,
+        messageCount: 1,
+        costBrl: response.usage.costBrl,
+        llmProvider: llm.name,
+        llmModel: llm.model,
+      },
+    }),
+  );
 
   // 7. Tools
   let replyText = response.text;
