@@ -1,8 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteOrderAction, updateOrderStatusAction } from "@/lib/actions/orders";
+import {
+  createOrderAction,
+  deleteOrderAction,
+  updateOrderAction,
+  updateOrderStatusAction,
+  type OrderInput,
+} from "@/lib/actions/orders";
 
 interface OrderItem {
   productId?: string;
@@ -10,6 +16,12 @@ interface OrderItem {
   qty?: number;
   priceBrl?: number;
   [k: string]: unknown;
+}
+
+export interface ProductOption {
+  id: string;
+  name: string;
+  priceBrl: number;
 }
 
 export interface OrderRow {
@@ -50,6 +62,13 @@ const NEXT_STATUS: Record<string, string | null> = {
   CANCELED: null,
 };
 
+const PAYMENT_OPTIONS = [
+  { value: "pix", label: "Pix" },
+  { value: "cartao", label: "Cartão" },
+  { value: "dinheiro", label: "Dinheiro" },
+  { value: "boleto", label: "Boleto" },
+];
+
 function formatBrl(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
@@ -58,11 +77,20 @@ function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
 }
 
-export function OrdersView({ storeName, orders }: { storeName: string; orders: OrderRow[] }) {
+export function OrdersView({
+  storeName,
+  orders,
+  products,
+}: {
+  storeName: string;
+  orders: OrderRow[];
+  products: ProductOption[];
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [editing, setEditing] = useState<OrderRow | "new" | null>(null);
 
   const advance = (id: string, status: string) => {
     const next = NEXT_STATUS[status];
@@ -99,16 +127,35 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Pedidos</h1>
         </div>
-        <a
-          href="/dashboard"
-          className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-        >
-          Voltar
-        </a>
+        <div className="flex gap-2">
+          <a
+            href="/dashboard"
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+          >
+            Voltar
+          </a>
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setEditing("new");
+            }}
+            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+          >
+            + Novo pedido
+          </button>
+        </div>
       </header>
 
       {error && (
         <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+      )}
+
+      {products.length === 0 && (
+        <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Você ainda não tem produtos cadastrados. Cadastre produtos antes de criar um pedido
+          manual. <a href="/products" className="font-medium underline">Ir para Produtos</a>
+        </p>
       )}
 
       <section className="mt-8 rounded-2xl bg-white shadow-sm">
@@ -116,14 +163,9 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
           <div className="p-12 text-center">
             <h2 className="text-lg font-semibold">Nenhum pedido ainda</h2>
             <p className="mt-1 text-sm text-neutral-500">
-              Quando o bot fechar uma venda, ela aparece aqui automaticamente.
+              Crie um pedido manual no botão acima, ou deixe o bot fechar a venda — aparece aqui
+              automaticamente.
             </p>
-            <a
-              href="/simulator"
-              className="mt-6 inline-block rounded-lg border border-neutral-300 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
-            >
-              Testar o bot no simulador
-            </a>
           </div>
         ) : (
           <ul className="divide-y divide-neutral-100">
@@ -217,6 +259,18 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
                             Avançar → {STATUS_LABELS[NEXT_STATUS[o.status]!]}
                           </button>
                         )}
+                        {o.status !== "CANCELED" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setError(null);
+                              setEditing(o);
+                            }}
+                            className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+                          >
+                            Editar
+                          </button>
+                        )}
                         {o.status !== "CANCELED" && o.status !== "DELIVERED" && (
                           <button
                             type="button"
@@ -244,6 +298,243 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
           </ul>
         )}
       </section>
+
+      {editing && (
+        <OrderDialog
+          products={products}
+          order={editing === "new" ? null : editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            router.refresh();
+          }}
+        />
+      )}
     </main>
+  );
+}
+
+function orderToInput(o: OrderRow): OrderInput {
+  const items = (Array.isArray(o.items) ? (o.items as OrderItem[]) : [])
+    .filter((it) => typeof it.productId === "string" && it.productId)
+    .map((it) => ({ productId: it.productId as string, qty: Number(it.qty ?? 1) }));
+  return {
+    customerName: o.customerName,
+    customerPhone: o.customerPhone,
+    customerAddress: o.customerAddress ?? "",
+    paymentMethod: o.paymentMethod ?? "",
+    notes: o.notes ?? "",
+    items: items.length ? items : [{ productId: "", qty: 1 }],
+  };
+}
+
+function OrderDialog({
+  products,
+  order,
+  onClose,
+  onSaved,
+}: {
+  products: ProductOption[];
+  order: OrderRow | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState<OrderInput>(
+    order
+      ? orderToInput(order)
+      : {
+          customerName: "",
+          customerPhone: "",
+          customerAddress: "",
+          paymentMethod: "",
+          notes: "",
+          items: [{ productId: "", qty: 1 }],
+        },
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const priceOf = (productId: string) => products.find((p) => p.id === productId)?.priceBrl ?? 0;
+  const total = useMemo(
+    () => form.items.reduce((s, it) => s + priceOf(it.productId) * (it.qty || 0), 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [form.items],
+  );
+
+  const setItem = (i: number, patch: Partial<{ productId: string; qty: number }>) => {
+    setForm((f) => ({
+      ...f,
+      items: f.items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)),
+    }));
+  };
+  const addItem = () => setForm((f) => ({ ...f, items: [...f.items, { productId: "", qty: 1 }] }));
+  const removeItem = (i: number) =>
+    setForm((f) => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }));
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const res = order
+        ? await updateOrderAction(order.id, form)
+        : await createOrderAction(form);
+      if (!res.ok) setError(res.error ?? "Erro");
+      else onSaved();
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <form
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSubmit}
+        className="max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+      >
+        <h2 className="text-xl font-semibold">
+          {order ? `Editar pedido #${order.orderNumber}` : "Novo pedido"}
+        </h2>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Cliente</label>
+            <input
+              required
+              value={form.customerName}
+              onChange={(e) => setForm({ ...form, customerName: e.target.value })}
+              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Telefone</label>
+            <input
+              required
+              value={form.customerPhone}
+              onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
+              placeholder="(62) 99157-2500"
+              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-neutral-700">Endereço (opcional)</label>
+          <input
+            value={form.customerAddress}
+            onChange={(e) => setForm({ ...form, customerAddress: e.target.value })}
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between">
+            <label className="block text-sm font-medium text-neutral-700">Itens</label>
+            <button
+              type="button"
+              onClick={addItem}
+              className="text-sm font-medium text-neutral-700 hover:text-neutral-900"
+            >
+              + Adicionar item
+            </button>
+          </div>
+          <div className="mt-2 space-y-2">
+            {form.items.map((it, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <select
+                  required
+                  value={it.productId}
+                  onChange={(e) => setItem(i, { productId: e.target.value })}
+                  className="min-w-0 flex-1 rounded-lg border border-neutral-300 px-2 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                >
+                  <option value="">Selecione um produto...</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} — {formatBrl(p.priceBrl)}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  required
+                  value={it.qty}
+                  onChange={(e) => setItem(i, { qty: Number(e.target.value) })}
+                  className="w-16 rounded-lg border border-neutral-300 px-2 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                />
+                <span className="w-24 text-right text-sm text-neutral-600">
+                  {formatBrl(priceOf(it.productId) * (it.qty || 0))}
+                </span>
+                {form.items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeItem(i)}
+                    className="text-neutral-400 hover:text-red-600"
+                    aria-label="Remover item"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Pagamento</label>
+            <select
+              value={form.paymentMethod}
+              onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
+              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+            >
+              <option value="">Não informado</option>
+              {PAYMENT_OPTIONS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-end justify-end">
+            <div className="text-right">
+              <div className="text-xs uppercase tracking-wide text-neutral-500">Total</div>
+              <div className="text-2xl font-bold">{formatBrl(total)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-neutral-700">Observações (opcional)</label>
+          <textarea
+            rows={2}
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          />
+        </div>
+
+        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+          >
+            {isPending ? "Salvando..." : "Salvar pedido"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
