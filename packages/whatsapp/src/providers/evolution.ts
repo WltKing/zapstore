@@ -85,7 +85,7 @@ export class EvolutionProvider implements WhatsAppProvider {
       return { connected: false, qrCode: qr ?? undefined };
     }
 
-    // 3. Ja existe — apenas le o estado (rapido, nao dispara reconexao).
+    // 3. Ja existe — le o estado.
     const state = await this.request<EvolutionInstanceState>(
       "GET",
       `/instance/connectionState/${encodeURIComponent(name)}`,
@@ -94,9 +94,17 @@ export class EvolutionProvider implements WhatsAppProvider {
       return { connected: true };
     }
 
-    // Para state=close ou connecting: o QR atual sai via webhook qrcode.updated.
-    // Retornamos sem QR; o painel ou cache (Redis) cuida de mostrar o QR vindo
-    // do webhook.
+    // state === "close": instancia parada, ninguem esta gerando QR. Dispara o
+    // connect pra iniciar o pareamento e ja retorna o QR fresco. Depois disso a
+    // instance vira "connecting" (proximo branch), entao nao reentramos aqui —
+    // isso evita reiniciar o canal Baileys e matar o QR a cada poll.
+    if (state.instance.state === "close") {
+      const qr = await this.refreshQrCode(tenantId);
+      return { connected: false, qrCode: qr };
+    }
+
+    // state === "connecting": Evolution ja emite QRs via webhook (qrcode.updated)
+    // -> o painel mostra pelo cache (Redis). Nao tocamos pra nao matar o QR atual.
     return { connected: false };
   }
 

@@ -47,6 +47,11 @@ export async function getWhatsAppStatus(): Promise<WhatsAppStatus & { error?: st
     // (qrcode.updated) e fica salvo no Redis. Preferimos o do Redis sempre que
     // existir (mais recente).
     const cachedQr = await getRedis().get(RedisKeys.whatsappQr(tenantId));
+    // Se a instance acabou de gerar um QR (estava "close" -> connect), guarda no
+    // Redis pra que os polls seguintes leiam do cache e nao redisparem o connect.
+    if (!cachedQr && status.qrCode) {
+      await getRedis().set(RedisKeys.whatsappQr(tenantId), status.qrCode, "EX", 60);
+    }
     return { connected: false, qrCode: cachedQr ?? status.qrCode };
   } catch (e) {
     return { connected: false, error: e instanceof Error ? e.message : "Erro desconhecido" };

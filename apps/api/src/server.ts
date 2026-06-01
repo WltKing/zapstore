@@ -20,6 +20,9 @@ const HOST = process.env.HOST ?? "0.0.0.0";
 
 async function main() {
   const app = Fastify({
+    // Webhooks da Evolution com midia (imagem/audio/video) chegam com base64
+    // inline e estouram o limite padrao de 1MB do Fastify (resposta 413).
+    bodyLimit: Number(process.env.API_BODY_LIMIT ?? 25 * 1024 * 1024), // 25MB
     logger: {
       level: process.env.LOG_LEVEL ?? "info",
       transport:
