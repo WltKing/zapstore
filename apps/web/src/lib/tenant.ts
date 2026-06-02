@@ -1,17 +1,26 @@
 import { prisma, withTenant } from "@zapstore/db";
 
-/** Retorna a primeira loja em que o usuario e ADMIN, ou null se nao tem nenhuma. */
+/** Retorna a primeira loja do usuario (com botConfig+subscription), ou null. */
 export async function getPrimaryTenantForUser(userId: string) {
   const link = await prisma.tenantUser.findFirst({
     where: { userId },
     orderBy: { createdAt: "asc" },
-    include: {
-      tenant: {
-        include: { botConfig: true, subscription: true },
-      },
-    },
+    include: { tenant: true }, // tenant é global (sem RLS)
   });
-  return link?.tenant ?? null;
+  if (!link?.tenant) return null;
+
+  const tenantId = link.tenant.id;
+  // botConfig e subscription têm RLS -> carregar dentro de withTenant (seta
+  // app.tenant_id), senão com a role nao-superuser os includes voltam nulos.
+  const { botConfig, subscription } = await withTenant(tenantId, async (tx) => {
+    const [botConfig, subscription] = await Promise.all([
+      tx.botConfig.findUnique({ where: { tenantId } }),
+      tx.subscription.findUnique({ where: { tenantId } }),
+    ]);
+    return { botConfig, subscription };
+  });
+
+  return { ...link.tenant, botConfig, subscription };
 }
 
 /** Resumo rico da loja pro dashboard (cards + gráfico + checklist). */
