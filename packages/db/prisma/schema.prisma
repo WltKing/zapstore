@@ -25,6 +25,8 @@ model Tenant {
   slug        String   @unique
   name        String
   niche       String?  // colchoes | restaurante | salao | generico
+  brandColor  String?  // cor da marca (white-label básico), ex: "#16a34a"
+  logoUrl     String?  // URL do logo da loja
   status      TenantStatus @default(TRIAL)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

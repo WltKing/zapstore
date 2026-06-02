@@ -58,7 +58,15 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-export function Sidebar({ storeName }: { storeName: string }) {
+export function Sidebar({
+  storeName,
+  brandColor,
+  logoUrl,
+}: {
+  storeName: string;
+  brandColor?: string | null;
+  logoUrl?: string | null;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -89,8 +97,16 @@ export function Sidebar({ storeName }: { storeName: string }) {
       >
         <div className="flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 text-sm font-bold text-white">
-              Z
+            <div
+              className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg text-sm font-bold text-white"
+              style={{ backgroundColor: brandColor || "#171717" }}
+            >
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                (storeName.trim()[0] ?? "Z").toUpperCase()
+              )}
             </div>
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold text-neutral-900">{storeName}</div>

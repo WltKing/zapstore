@@ -14,7 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-neutral-50">
-      <Sidebar storeName={tenant.name} />
+      <Sidebar storeName={tenant.name} brandColor={tenant.brandColor} logoUrl={tenant.logoUrl} />
       <div className="flex-1 overflow-x-hidden">{children}</div>
     </div>
   );

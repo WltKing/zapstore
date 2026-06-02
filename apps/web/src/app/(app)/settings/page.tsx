@@ -1,11 +1,27 @@
-import { PagePlaceholder } from "@/components/page-placeholder";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { getPrimaryTenantForUser } from "@/lib/tenant";
+import { NICHE_TEMPLATES } from "@/lib/niches";
+import { SettingsView } from "./view";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/login");
+
+  const tenant = await getPrimaryTenantForUser(session.user.id);
+  if (!tenant) redirect("/onboarding");
+
+  const nicheLabel =
+    NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Genérico";
+
   return (
-    <PagePlaceholder
-      title="Configurações"
-      description="Dados da loja, horário, formas de pagamento, entrega e calendário."
-      layer="Camada 1"
+    <SettingsView
+      storeName={tenant.name}
+      brandColor={tenant.brandColor}
+      logoUrl={tenant.logoUrl}
+      nicheLabel={nicheLabel}
+      email={session.user.email}
     />
   );
 }
