@@ -9,6 +9,7 @@ import {
   toggleProductAction,
   type ProductInput,
 } from "@/lib/actions/products";
+import { ImageUpload } from "@/components/image-upload";
 
 export interface ProductRow {
   id: string;
@@ -516,30 +517,17 @@ function ProductDialog({
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-neutral-700">URL da imagem (opcional)</label>
-          <input
-            type="url"
-            value={form.imageUrl}
-            onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-            placeholder="https://..."
-            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-          />
-          <p className="mt-1 text-xs text-neutral-500">
-            Imagem de catálogo. Por enquanto cole a URL — upload direto vem em breve.
-          </p>
-        </div>
+        <ImageUpload
+          label="Imagem de catálogo (opcional)"
+          value={form.imageUrl ?? ""}
+          onChange={(url) => setForm({ ...form, imageUrl: url })}
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-neutral-700">URL da imagem &quot;real&quot; (opcional)</label>
-          <input
-            type="url"
-            value={form.realImageUrl}
-            onChange={(e) => setForm({ ...form, realImageUrl: e.target.value })}
-            placeholder="https://... (foto real do produto)"
-            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-          />
-        </div>
+        <ImageUpload
+          label={'Imagem "real" (opcional)'}
+          value={form.realImageUrl ?? ""}
+          onChange={(url) => setForm({ ...form, realImageUrl: url })}
+        />
 
         <details className="rounded-lg border border-neutral-200 p-3">
           <summary className="cursor-pointer text-sm font-medium text-neutral-700">
