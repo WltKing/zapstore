@@ -181,6 +181,7 @@ model BotConfig {
   deliveryCities     String[] // ["Goiânia", "Aparecida", "Senador Canedo"]
   paymentMethods     String[] // ["pix", "cartao", "boleto"]
   acceptsScheduling  Boolean  @default(false)
+  dailyDeliveryCapacity Int   @default(0) // entregas/dia (0 = sem limite definido)
 
   // Prompt customizado pelo lojista
   extraInstructions  String   @default("") @db.Text
