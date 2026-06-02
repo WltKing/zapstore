@@ -2,6 +2,53 @@
 
 import { useRef, useState } from "react";
 
+const MAX_DIM = 1280; // lado maior (px) — bom no WhatsApp e no painel
+const QUALITY = 0.82; // compressão JPEG
+
+function loadImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Imagem inválida."));
+    };
+    img.src = url;
+  });
+}
+
+/** Redimensiona pra no máximo MAX_DIM e comprime em JPEG. Reduz muito o tamanho. */
+async function resizeImage(file: File): Promise<Blob> {
+  const img = await loadImage(file);
+  let { width, height } = img;
+  if (width > MAX_DIM || height > MAX_DIM) {
+    if (width >= height) {
+      height = Math.round((height * MAX_DIM) / width);
+      width = MAX_DIM;
+    } else {
+      width = Math.round((width * MAX_DIM) / height);
+      height = MAX_DIM;
+    }
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Falha ao processar a imagem.");
+  ctx.drawImage(img, 0, 0, width, height);
+  return await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("Falha ao processar a imagem."))),
+      "image/jpeg",
+      QUALITY,
+    ),
+  );
+}
+
 /** Campo de imagem com upload nativo (envia pro /api/upload e devolve a URL). */
 export function ImageUpload({
   value,
@@ -22,8 +69,9 @@ export function ImageUpload({
     setError(null);
     setUploading(true);
     try {
+      const blob = await resizeImage(file);
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", blob, "image.jpg");
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Falha no upload.");
