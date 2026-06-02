@@ -43,6 +43,7 @@ model Tenant {
   services      Service[]
   appointments  Appointment[]
   expenses      Expense[]
+  productKitItems ProductKitItem[]
 
   @@map("tenants")
 }
@@ -232,7 +233,9 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  kitItems   ProductKitItem[] @relation("KitComposition")
+  partOfKits ProductKitItem[] @relation("KitComponentOf")
 
   @@index([tenantId, active])
   @@map("products")
@@ -256,6 +259,21 @@ model Customer {
   @@unique([tenantId, phone])
   @@index([tenantId, createdAt])
   @@map("customers")
+}
+
+model ProductKitItem {
+  id          String  @id @default(uuid()) @db.Uuid
+  tenantId    String  @db.Uuid
+  kitId       String  @db.Uuid // produto tipo kit
+  componentId String  @db.Uuid // produto componente
+  qty         Int     @default(1)
+
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  kit       Product @relation("KitComposition", fields: [kitId], references: [id], onDelete: Cascade)
+  component Product @relation("KitComponentOf", fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, kitId])
+  @@map("product_kit_items")
 }
 
 model Order {

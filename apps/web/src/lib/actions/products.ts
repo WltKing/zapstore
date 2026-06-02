@@ -22,6 +22,15 @@ export interface ProductInput {
   cfopEntrada?: string;
   origem?: string;
   active: boolean;
+  kitItems?: { componentId: string; qty: number }[];
+}
+
+/** Monta as linhas de composição de um kit (vazio se não for kit). */
+function kitRows(tenantId: string, kitId: string, input: ProductInput) {
+  if (input.kind !== "kit" || !input.kitItems?.length) return [];
+  return input.kitItems
+    .filter((i) => i.componentId && i.componentId !== kitId && Number.isInteger(i.qty) && i.qty > 0)
+    .map((i) => ({ tenantId, kitId, componentId: i.componentId, qty: i.qty }));
 }
 
 export interface ActionResult {
@@ -57,7 +66,7 @@ export async function createProductAction(input: ProductInput): Promise<ActionRe
     if (err) return { ok: false, error: err };
 
     await withTenant(tenantId, async (tx) => {
-      await tx.product.create({
+      const product = await tx.product.create({
         data: {
           tenantId,
           name: input.name.trim(),
@@ -78,6 +87,8 @@ export async function createProductAction(input: ProductInput): Promise<ActionRe
           active: input.active,
         },
       });
+      const rows = kitRows(tenantId, product.id, input);
+      if (rows.length) await tx.productKitItem.createMany({ data: rows });
     });
 
     revalidatePath("/products");
@@ -115,6 +126,10 @@ export async function updateProductAction(id: string, input: ProductInput): Prom
           active: input.active,
         },
       });
+      // Recompõe os itens do kit (substitui os existentes).
+      await tx.productKitItem.deleteMany({ where: { kitId: id } });
+      const rows = kitRows(tenantId, id, input);
+      if (rows.length) await tx.productKitItem.createMany({ data: rows });
     });
 
     revalidatePath("/products");

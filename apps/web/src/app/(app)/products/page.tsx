@@ -13,7 +13,10 @@ export default async function ProductsPage() {
   if (!tenant) redirect("/onboarding");
 
   const products = await withTenant(tenant.id, async (tx) =>
-    tx.product.findMany({ orderBy: { createdAt: "desc" } }),
+    tx.product.findMany({
+      orderBy: { name: "asc" }, // produtos em ordem alfabética (regra do dono)
+      include: { kitItems: { include: { component: { select: { id: true, name: true } } } } },
+    }),
   );
 
   // Serializa Decimal -> number pra passar ao Client Component.
@@ -35,6 +38,11 @@ export default async function ProductsPage() {
     cfopEntrada: p.cfopEntrada,
     origem: p.origem,
     active: p.active,
+    kitItems: p.kitItems.map((k) => ({
+      componentId: k.componentId,
+      componentName: k.component.name,
+      qty: k.qty,
+    })),
   }));
 
   return <ProductsView initial={items} storeName={tenant.name} />;

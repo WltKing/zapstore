@@ -28,6 +28,7 @@ export interface ProductRow {
   cfopEntrada: string | null;
   origem: string | null;
   active: boolean;
+  kitItems: { componentId: string; componentName: string; qty: number }[];
 }
 
 function blank(): ProductInput {
@@ -48,6 +49,7 @@ function blank(): ProductInput {
     cfopEntrada: "",
     origem: "",
     active: true,
+    kitItems: [],
   };
 }
 
@@ -260,6 +262,7 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
         <ProductDialog
           initial={editing === "new" ? blank() : toInput(editing)}
           editingId={editing === "new" ? null : editing.id}
+          allProducts={initial}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -289,23 +292,39 @@ function toInput(p: ProductRow): ProductInput {
     cfopEntrada: p.cfopEntrada ?? "",
     origem: p.origem ?? "",
     active: p.active,
+    kitItems: p.kitItems.map((k) => ({ componentId: k.componentId, qty: k.qty })),
   };
 }
 
 function ProductDialog({
   initial,
   editingId,
+  allProducts,
   onClose,
   onSaved,
 }: {
   initial: ProductInput;
   editingId: string | null;
+  allProducts: ProductRow[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [form, setForm] = useState<ProductInput>(initial);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Produtos que podem entrar num kit: simples e diferentes do próprio.
+  const componentOptions = allProducts.filter((p) => p.kind === "simple" && p.id !== editingId);
+  const kitItems = form.kitItems ?? [];
+  const setKitItem = (i: number, patch: Partial<{ componentId: string; qty: number }>) =>
+    setForm((f) => ({
+      ...f,
+      kitItems: (f.kitItems ?? []).map((it, idx) => (idx === i ? { ...it, ...patch } : it)),
+    }));
+  const addKitItem = () =>
+    setForm((f) => ({ ...f, kitItems: [...(f.kitItems ?? []), { componentId: "", qty: 1 }] }));
+  const removeKitItem = (i: number) =>
+    setForm((f) => ({ ...f, kitItems: (f.kitItems ?? []).filter((_, idx) => idx !== i) }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -385,10 +404,62 @@ function ProductDialog({
             <option value="kit">Kit (conjunto)</option>
           </select>
           {form.kind === "kit" && (
-            <p className="mt-1 text-xs text-neutral-500">
-              A composição do kit (quais produtos ele junta, e o desmembramento no pedido) vem na
-              próxima etapa.
-            </p>
+            <div className="mt-3 rounded-lg border border-neutral-200 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-neutral-700">Composição do kit</span>
+                <button
+                  type="button"
+                  onClick={addKitItem}
+                  className="text-sm font-medium text-neutral-700 hover:text-neutral-900"
+                >
+                  + Produto
+                </button>
+              </div>
+              {componentOptions.length === 0 ? (
+                <p className="mt-2 text-xs text-neutral-500">
+                  Cadastre produtos simples primeiro pra montar o kit.
+                </p>
+              ) : kitItems.length === 0 ? (
+                <p className="mt-2 text-xs text-neutral-500">
+                  Adicione os produtos que compõem este kit — serão desmembrados no pedido.
+                </p>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  {kitItems.map((it, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <select
+                        value={it.componentId}
+                        onChange={(e) => setKitItem(i, { componentId: e.target.value })}
+                        className="min-w-0 flex-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                      >
+                        <option value="">Selecione...</option>
+                        {componentOptions.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={it.qty}
+                        onChange={(e) => setKitItem(i, { qty: Number(e.target.value) })}
+                        className="w-16 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeKitItem(i)}
+                        className="text-neutral-400 hover:text-red-600"
+                        aria-label="Remover"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
