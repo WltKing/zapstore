@@ -19,6 +19,9 @@ export default async function DashboardPage() {
   const quota = tenant?.subscription?.messageQuota ?? DEFAULT_QUOTA;
   const used = stats?.messagesUsedThisMonth ?? 0;
   const pct = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
+  const monthSales = stats?.monthSalesBrl ?? 0;
+  const monthExpenses = stats?.monthExpensesBrl ?? 0;
+  const monthResult = monthSales - monthExpenses;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
@@ -80,17 +83,59 @@ export default async function DashboardPage() {
             </div>
           ) : null}
 
-          {/* Cards */}
-          <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {(stats?.lowStockCount ?? 0) > 0 && (
+            <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+              ⚠️ <strong>{stats?.lowStockCount}</strong> produto(s) com estoque baixo.{" "}
+              <a href="/products" className="underline">Ver produtos →</a>
+            </div>
+          )}
+
+          {/* Resumo do mês */}
+          <section className="mt-8">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+              Este mês
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Card title="Vendas" value={formatBrl(monthSales)} hint="Pedidos do mês (sem cancelados)" />
+              <Card title="Despesas" value={formatBrl(monthExpenses)} hint="Lançadas em Despesas" />
+              <Card
+                title="Resultado"
+                value={formatBrl(monthResult)}
+                hint={monthResult >= 0 ? "No azul 🎉" : "No vermelho"}
+                valueClass={monthResult >= 0 ? "text-emerald-700" : "text-red-700"}
+              />
+            </div>
+          </section>
+
+          {/* Gráfico de vendas */}
+          <section className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+              Vendas (últimos 14 dias)
+            </h2>
+            <SalesChart data={stats?.salesByDay ?? []} />
+          </section>
+
+          {/* Cards operacionais */}
+          <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card
               title="Vendas hoje"
               value={formatBrl(stats?.salesTodayBrl ?? 0)}
-              hint={stats?.orderCount === 0 ? "Quando o bot fechar uma venda, ela cai aqui" : "Pedidos de hoje (sem cancelados)"}
+              hint={`Ticket médio ${stats?.orderCount === 0 ? "—" : formatBrl(stats?.avgTicketBrl ?? 0)}`}
             />
             <Card
               title="Pedidos abertos"
               value={String(stats?.openOrderCount ?? 0)}
               hint={`${stats?.orderCount ?? 0} pedidos no total`}
+            />
+            <Card
+              title="Agendamentos hoje"
+              value={String(stats?.todaysAppointments ?? 0)}
+              hint={`${stats?.upcomingAppointments ?? 0} agendados à frente`}
+            />
+            <Card
+              title="Clientes"
+              value={String(stats?.customerCount ?? 0)}
+              hint="Cadastrados na loja"
             />
             <Card
               title="Mensagens este mês"
@@ -99,9 +144,9 @@ export default async function DashboardPage() {
               progress={pct}
             />
             <Card
-              title="Ticket médio"
-              value={stats?.orderCount === 0 ? "—" : formatBrl(stats?.avgTicketBrl ?? 0)}
-              hint="Média de todos os pedidos válidos"
+              title="Produtos ativos"
+              value={String(stats?.activeProductCount ?? 0)}
+              hint={`${stats?.productCount ?? 0} no catálogo`}
             />
           </section>
 
@@ -157,16 +202,18 @@ function Card({
   value,
   hint,
   progress,
+  valueClass,
 }: {
   title: string;
   value: string;
   hint: string;
   progress?: number;
+  valueClass?: string;
 }) {
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm">
       <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
-      <div className="mt-2 text-2xl font-bold text-neutral-900">{value}</div>
+      <div className={`mt-2 text-2xl font-bold ${valueClass ?? "text-neutral-900"}`}>{value}</div>
       {progress !== undefined && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
           <div
@@ -219,5 +266,40 @@ function Step({
         <span className="text-sm text-neutral-400">→</span>
       </a>
     </li>
+  );
+}
+
+function SalesChart({ data }: { data: { label: string; total: number }[] }) {
+  const max = Math.max(...data.map((d) => d.total), 1);
+  const hasSales = data.some((d) => d.total > 0);
+  return (
+    <div className="mt-4">
+      <div className="flex h-40 items-end gap-1.5">
+        {data.map((d, i) => (
+          <div
+            key={i}
+            className="flex flex-1 flex-col items-center justify-end"
+            title={`${d.label}: ${formatBrl(d.total)}`}
+          >
+            <div
+              className="w-full rounded-t bg-emerald-400"
+              style={{ height: `${(d.total / max) * 100}%`, minHeight: d.total > 0 ? "4px" : "0px" }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mt-1 flex gap-1.5">
+        {data.map((d, i) => (
+          <div key={i} className="flex-1 text-center text-[9px] text-neutral-400">
+            {i % 2 === 0 ? d.label : ""}
+          </div>
+        ))}
+      </div>
+      {!hasSales && (
+        <p className="mt-3 text-center text-xs text-neutral-400">
+          Sem vendas nos últimos 14 dias ainda.
+        </p>
+      )}
+    </div>
   );
 }

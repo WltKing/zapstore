@@ -14,50 +14,108 @@ export async function getPrimaryTenantForUser(userId: string) {
   return link?.tenant ?? null;
 }
 
-/** Resumo de progresso da loja pra dashboard (checklist + cards). */
+/** Resumo rico da loja pro dashboard (cards + gráfico + checklist). */
 export async function getTenantStats(tenantId: string) {
+  const now = new Date();
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(todayStart);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const since14 = new Date(todayStart);
+  since14.setDate(since14.getDate() - 13); // 14 dias incluindo hoje
+
   const stats = await withTenant(tenantId, async (tx) => {
-    const [productCount, activeProductCount, orderCount, openOrderCount] = await Promise.all([
+    const [
+      productCount,
+      activeProductCount,
+      orderCount,
+      openOrderCount,
+      customerCount,
+      todaysAppointments,
+      upcomingAppointments,
+    ] = await Promise.all([
       tx.product.count(),
       tx.product.count({ where: { active: true } }),
       tx.order.count(),
       tx.order.count({ where: { status: { in: ["PENDING", "CONFIRMED", "IN_DELIVERY"] } } }),
+      tx.customer.count(),
+      tx.appointment.count({
+        where: { status: "SCHEDULED", scheduledFor: { gte: todayStart, lt: tomorrow } },
+      }),
+      tx.appointment.count({ where: { status: "SCHEDULED", scheduledFor: { gte: now } } }),
     ]);
 
-    // Vendas hoje
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const todaysOrders = await tx.order.findMany({
-      where: { createdAt: { gte: today }, status: { not: "CANCELED" } },
+      where: { createdAt: { gte: todayStart }, status: { not: "CANCELED" } },
       select: { totalBrl: true },
     });
     const salesTodayBrl = todaysOrders.reduce((s, o) => s + Number(o.totalBrl), 0);
 
-    // Ticket medio
-    const completedOrders = await tx.order.findMany({
+    const validOrders = await tx.order.findMany({
       where: { status: { not: "CANCELED" } },
       select: { totalBrl: true },
     });
     const avgTicketBrl =
-      completedOrders.length === 0
+      validOrders.length === 0
         ? 0
-        : completedOrders.reduce((s, o) => s + Number(o.totalBrl), 0) / completedOrders.length;
+        : validOrders.reduce((s, o) => s + Number(o.totalBrl), 0) / validOrders.length;
+
+    const [monthAgg, monthExpAgg] = await Promise.all([
+      tx.order.aggregate({
+        _sum: { totalBrl: true },
+        where: { status: { not: "CANCELED" }, createdAt: { gte: monthStart } },
+      }),
+      tx.expense.aggregate({ _sum: { amountBrl: true }, where: { paidAt: { gte: monthStart } } }),
+    ]);
+    const monthSalesBrl = Number(monthAgg._sum.totalBrl ?? 0);
+    const monthExpensesBrl = Number(monthExpAgg._sum.amountBrl ?? 0);
+
+    const activeProducts = await tx.product.findMany({
+      where: { active: true },
+      select: { stock: true, lowStockThreshold: true },
+    });
+    const lowStockCount = activeProducts.filter((p) => p.stock <= p.lowStockThreshold).length;
+
+    const recentOrders = await tx.order.findMany({
+      where: { status: { not: "CANCELED" }, createdAt: { gte: since14 } },
+      select: { totalBrl: true, createdAt: true },
+    });
+
+    // Vendas por dia (14 buckets) pro gráfico.
+    const dayMs = 86400000;
+    const salesByDay = Array.from({ length: 14 }, (_, i) => {
+      const d = new Date(since14.getTime() + i * dayMs);
+      return {
+        label: `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`,
+        total: 0,
+      };
+    });
+    for (const o of recentOrders) {
+      const od = new Date(o.createdAt);
+      od.setHours(0, 0, 0, 0);
+      const idx = Math.floor((od.getTime() - since14.getTime()) / dayMs);
+      if (idx >= 0 && idx < 14) salesByDay[idx].total += Number(o.totalBrl);
+    }
 
     return {
       productCount,
       activeProductCount,
       orderCount,
       openOrderCount,
+      customerCount,
+      todaysAppointments,
+      upcomingAppointments,
       salesTodayBrl,
       avgTicketBrl,
+      monthSalesBrl,
+      monthExpensesBrl,
+      lowStockCount,
+      salesByDay,
     };
   });
 
-  // Mensagens consumidas no mes. usage_events tem RLS — roda dentro de withTenant
-  // (seta app.tenant_id) pra funcionar com role nao-superuser.
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
+  // Mensagens consumidas no mes (usage_events tem RLS -> dentro de withTenant).
   const usage = await withTenant(tenantId, (tx) =>
     tx.usageEvent.aggregate({
       _sum: { messageCount: true, costBrl: true },
