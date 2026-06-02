@@ -7,13 +7,20 @@ import { auth } from "@/lib/auth";
 
 export interface ProductInput {
   name: string;
+  fiscalName?: string;
   description?: string;
   category?: string;
+  kind: string; // "simple" | "kit"
   priceBrl: number;
   costBrl?: number | null;
   imageUrl?: string;
+  realImageUrl?: string;
   stock: number;
   lowStockThreshold: number;
+  ncm?: string;
+  cest?: string;
+  cfopEntrada?: string;
+  origem?: string;
   active: boolean;
 }
 
@@ -55,12 +62,19 @@ export async function createProductAction(input: ProductInput): Promise<ActionRe
           tenantId,
           name: input.name.trim(),
           description: input.description?.trim() || null,
+          fiscalName: input.fiscalName?.trim() || null,
           category: input.category?.trim() || null,
+          kind: input.kind === "kit" ? "kit" : "simple",
           priceBrl: input.priceBrl,
           costBrl: input.costBrl != null && !Number.isNaN(input.costBrl) ? input.costBrl : null,
           imageUrl: input.imageUrl?.trim() || null,
+          realImageUrl: input.realImageUrl?.trim() || null,
           stock: input.stock,
           lowStockThreshold: input.lowStockThreshold,
+          ncm: input.ncm?.trim() || null,
+          cest: input.cest?.trim() || null,
+          cfopEntrada: input.cfopEntrada?.trim() || null,
+          origem: input.origem?.trim() || null,
           active: input.active,
         },
       });
@@ -85,12 +99,19 @@ export async function updateProductAction(id: string, input: ProductInput): Prom
         data: {
           name: input.name.trim(),
           description: input.description?.trim() || null,
+          fiscalName: input.fiscalName?.trim() || null,
           category: input.category?.trim() || null,
+          kind: input.kind === "kit" ? "kit" : "simple",
           priceBrl: input.priceBrl,
           costBrl: input.costBrl != null && !Number.isNaN(input.costBrl) ? input.costBrl : null,
           imageUrl: input.imageUrl?.trim() || null,
+          realImageUrl: input.realImageUrl?.trim() || null,
           stock: input.stock,
           lowStockThreshold: input.lowStockThreshold,
+          ncm: input.ncm?.trim() || null,
+          cest: input.cest?.trim() || null,
+          cfopEntrada: input.cfopEntrada?.trim() || null,
+          origem: input.origem?.trim() || null,
           active: input.active,
         },
       });

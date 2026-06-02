@@ -13,26 +13,40 @@ import {
 export interface ProductRow {
   id: string;
   name: string;
+  fiscalName: string | null;
   description: string | null;
   category: string | null;
+  kind: string;
   priceBrl: number;
   costBrl: number | null;
   imageUrl: string | null;
+  realImageUrl: string | null;
   stock: number;
   lowStockThreshold: number;
+  ncm: string | null;
+  cest: string | null;
+  cfopEntrada: string | null;
+  origem: string | null;
   active: boolean;
 }
 
 function blank(): ProductInput {
   return {
     name: "",
+    fiscalName: "",
     description: "",
     category: "",
+    kind: "simple",
     priceBrl: 0,
     costBrl: null,
     imageUrl: "",
+    realImageUrl: "",
     stock: 0,
     lowStockThreshold: 5,
+    ncm: "",
+    cest: "",
+    cfopEntrada: "",
+    origem: "",
     active: true,
   };
 }
@@ -133,7 +147,14 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
             </thead>
             <tbody>
               {initial.map((p) => (
-                <tr key={p.id} className="border-b border-neutral-100 last:border-0">
+                <tr
+                  key={p.id}
+                  onClick={() => {
+                    setError(null);
+                    setEditing(p);
+                  }}
+                  className="cursor-pointer border-b border-neutral-100 last:border-0 hover:bg-neutral-50"
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       {p.imageUrl ? (
@@ -151,6 +172,11 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{p.name}</span>
+                          {p.kind === "kit" && (
+                            <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-indigo-600">
+                              Kit
+                            </span>
+                          )}
                           {p.category && (
                             <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-500">
                               {p.category}
@@ -172,11 +198,9 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
                   <td className="px-6 py-4 text-right">
                     <span
                       className={
-                        p.stock === 0
-                          ? "text-red-600"
-                          : p.stock <= p.lowStockThreshold
-                            ? "text-amber-600"
-                            : "text-neutral-700"
+                        p.stock <= p.lowStockThreshold
+                          ? "font-medium text-red-600"
+                          : "text-neutral-700"
                       }
                     >
                       {p.stock}
@@ -185,7 +209,10 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
                   <td className="px-6 py-4 text-center">
                     <button
                       type="button"
-                      onClick={() => handleToggle(p.id, !p.active)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggle(p.id, !p.active);
+                      }}
                       disabled={isPending}
                       className={`inline-flex h-6 w-11 items-center rounded-full transition ${
                         p.active ? "bg-emerald-500" : "bg-neutral-300"
@@ -201,7 +228,8 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
                   <td className="px-6 py-4 text-right">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setError(null);
                         setEditing(p);
                       }}
@@ -211,7 +239,10 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDelete(p.id, p.name)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(p.id, p.name);
+                      }}
                       disabled={isPending}
                       className="text-sm text-red-600 hover:text-red-700"
                     >
@@ -243,13 +274,20 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
 function toInput(p: ProductRow): ProductInput {
   return {
     name: p.name,
+    fiscalName: p.fiscalName ?? "",
     description: p.description ?? "",
     category: p.category ?? "",
+    kind: p.kind,
     priceBrl: p.priceBrl,
     costBrl: p.costBrl,
     imageUrl: p.imageUrl ?? "",
+    realImageUrl: p.realImageUrl ?? "",
     stock: p.stock,
     lowStockThreshold: p.lowStockThreshold,
+    ncm: p.ncm ?? "",
+    cest: p.cest ?? "",
+    cfopEntrada: p.cfopEntrada ?? "",
+    origem: p.origem ?? "",
     active: p.active,
   };
 }
@@ -289,18 +327,29 @@ function ProductDialog({
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={handleSubmit}
-        className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-6 shadow-xl"
+        className="max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
       >
         <h2 className="text-xl font-semibold">
           {editingId ? "Editar produto" : "Novo produto"}
         </h2>
 
         <div>
-          <label className="block text-sm font-medium text-neutral-700">Nome</label>
+          <label className="block text-sm font-medium text-neutral-700">Nome (comercial)</label>
           <input
             required
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="Nome que o cliente e o bot veem"
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-neutral-700">Nome na nota (fiscal, opcional)</label>
+          <input
+            value={form.fiscalName}
+            onChange={(e) => setForm({ ...form, fiscalName: e.target.value })}
+            placeholder="Como o produto sai na nota fiscal"
             className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
           />
         </div>
@@ -323,6 +372,24 @@ function ProductDialog({
             placeholder="Ex: Casal, Queen, Solteiro..."
             className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-neutral-700">Tipo</label>
+          <select
+            value={form.kind}
+            onChange={(e) => setForm({ ...form, kind: e.target.value })}
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          >
+            <option value="simple">Produto simples</option>
+            <option value="kit">Kit (conjunto)</option>
+          </select>
+          {form.kind === "kit" && (
+            <p className="mt-1 text-xs text-neutral-500">
+              A composição do kit (quais produtos ele junta, e o desmembramento no pedido) vem na
+              próxima etapa.
+            </p>
+          )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -388,9 +455,63 @@ function ProductDialog({
             className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
           />
           <p className="mt-1 text-xs text-neutral-500">
-            Por enquanto cole a URL de uma imagem. Upload direto vem na próxima atualização.
+            Imagem de catálogo. Por enquanto cole a URL — upload direto vem em breve.
           </p>
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-neutral-700">URL da imagem &quot;real&quot; (opcional)</label>
+          <input
+            type="url"
+            value={form.realImageUrl}
+            onChange={(e) => setForm({ ...form, realImageUrl: e.target.value })}
+            placeholder="https://... (foto real do produto)"
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          />
+        </div>
+
+        <details className="rounded-lg border border-neutral-200 p-3">
+          <summary className="cursor-pointer text-sm font-medium text-neutral-700">
+            Dados fiscais (opcional)
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-medium text-neutral-600">NCM</label>
+              <input
+                value={form.ncm}
+                onChange={(e) => setForm({ ...form, ncm: e.target.value })}
+                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-600">CEST</label>
+              <input
+                value={form.cest}
+                onChange={(e) => setForm({ ...form, cest: e.target.value })}
+                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-600">CFOP entrada</label>
+              <input
+                value={form.cfopEntrada}
+                onChange={(e) => setForm({ ...form, cfopEntrada: e.target.value })}
+                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-600">Origem (0-8)</label>
+              <input
+                value={form.origem}
+                onChange={(e) => setForm({ ...form, origem: e.target.value })}
+                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-neutral-400">
+            Usados quando ativarmos a emissão de nota fiscal (módulo futuro).
+          </p>
+        </details>
 
         <label className="flex items-center gap-2">
           <input

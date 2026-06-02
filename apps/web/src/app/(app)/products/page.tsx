@@ -20,13 +20,20 @@ export default async function ProductsPage() {
   const items = products.map((p) => ({
     id: p.id,
     name: p.name,
+    fiscalName: p.fiscalName,
     description: p.description,
     category: p.category,
+    kind: p.kind,
     priceBrl: Number(p.priceBrl),
     costBrl: p.costBrl != null ? Number(p.costBrl) : null,
     imageUrl: p.imageUrl,
+    realImageUrl: p.realImageUrl,
     stock: p.stock,
     lowStockThreshold: p.lowStockThreshold,
+    ncm: p.ncm,
+    cest: p.cest,
+    cfopEntrada: p.cfopEntrada,
+    origem: p.origem,
     active: p.active,
   }));
 
