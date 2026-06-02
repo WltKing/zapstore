@@ -40,6 +40,7 @@ model Tenant {
   professionals Professional[]
   services      Service[]
   appointments  Appointment[]
+  expenses      Expense[]
 
   @@map("tenants")
 }
@@ -393,4 +394,25 @@ enum AppointmentStatus {
   DONE
   CANCELED
   NO_SHOW
+}
+
+// ============================================================
+// FINANCEIRO
+// ============================================================
+
+model Expense {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  category    String   // "Fornecedor", "Aluguel", "Marketing", "Salário"...
+  description String?
+  amountBrl   Decimal  @db.Decimal(10, 2)
+  paidAt      DateTime // data da despesa (competência)
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, paidAt])
+  @@map("expenses")
 }
