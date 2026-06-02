@@ -599,8 +599,8 @@ function ServiceDialog({
           <label className="block text-sm font-medium text-neutral-700">Duração (min)</label>
           <input
             type="number"
-            min="1"
-            step="5"
+            min="5"
+            step="1"
             required
             value={form.durationMin}
             onChange={(e) => setForm({ ...form, durationMin: Number(e.target.value) })}

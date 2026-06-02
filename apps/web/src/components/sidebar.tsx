@@ -136,6 +136,7 @@ export function Sidebar({
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
+                    style={active && brandColor ? { backgroundColor: brandColor } : undefined}
                     className={`mt-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
                       active
                         ? "bg-neutral-900 text-white"
