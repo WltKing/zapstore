@@ -181,7 +181,10 @@ export async function handleCancelarPedido(
       });
       if (!order) return { ok: false, error: `Pedido #${input.orderNumber} nao encontrado.` };
       // Trava: so cancela pedido do proprio contato.
-      if (onlyDigits(order.customerPhone) !== onlyDigits(customerPhone)) {
+      // Trava: em conversa com telefone real (WhatsApp), só age em pedido do
+      // próprio contato. Sem dígitos (ex: simulador) não há identidade pra checar.
+      const convDigits = onlyDigits(customerPhone);
+      if (convDigits && onlyDigits(order.customerPhone) !== convDigits) {
         return { ok: false, error: "Esse pedido nao pertence a este contato." };
       }
       if (order.status === "DELIVERED") {
@@ -209,7 +212,10 @@ export async function handleAtualizarPedido(
         where: { tenantId, orderNumber: input.orderNumber },
       });
       if (!order) return { ok: false, error: `Pedido #${input.orderNumber} nao encontrado.` };
-      if (onlyDigits(order.customerPhone) !== onlyDigits(customerPhone)) {
+      // Trava: em conversa com telefone real (WhatsApp), só age em pedido do
+      // próprio contato. Sem dígitos (ex: simulador) não há identidade pra checar.
+      const convDigits = onlyDigits(customerPhone);
+      if (convDigits && onlyDigits(order.customerPhone) !== convDigits) {
         return { ok: false, error: "Esse pedido nao pertence a este contato." };
       }
       if (order.status === "DELIVERED" || order.status === "CANCELED") {
