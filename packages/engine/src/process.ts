@@ -1,7 +1,17 @@
 import { withTenant } from "@zapstore/db";
 import { createLLMProvider, type LLMMessage } from "@zapstore/llm";
 import { buildSystemPrompt, type ProductInfo, type TenantBotInfo } from "@zapstore/prompts";
-import { criarPedidoTool, handleCriarPedido, type CriarPedidoInput } from "./tools.js";
+import {
+  criarPedidoTool,
+  cancelarPedidoTool,
+  atualizarPedidoTool,
+  handleCriarPedido,
+  handleCancelarPedido,
+  handleAtualizarPedido,
+  type CriarPedidoInput,
+  type CancelarPedidoInput,
+  type AtualizarPedidoInput,
+} from "./tools.js";
 import type { ToolExecution, TurnInput, TurnResult } from "./types.js";
 
 const DEFAULT_QUOTA = 2500;
@@ -161,7 +171,7 @@ export async function processConversationTurn(input: TurnInput): Promise<TurnRes
   const response = await llm.complete({
     systemPrompt,
     messages,
-    tools: [criarPedidoTool],
+    tools: [criarPedidoTool, cancelarPedidoTool, atualizarPedidoTool],
     temperature: 0.4,
     maxTokens: 800,
   });
@@ -193,11 +203,39 @@ export async function processConversationTurn(input: TurnInput): Promise<TurnRes
         result: r.ok ? { orderNumber: r.orderNumber, totalBrl: r.totalBrl } : undefined,
         error: r.error,
       });
-      if (r.ok) {
-        replyText = `${replyText || ""}\n\nPedido #${r.orderNumber} confirmado! ✅`.trim();
-      } else {
-        replyText = `${replyText || ""}\n\nNao consegui registrar o pedido: ${r.error}`.trim();
-      }
+      replyText = r.ok
+        ? `${replyText || ""}\n\nPedido #${r.orderNumber} confirmado! ✅`.trim()
+        : `${replyText || ""}\n\nNao consegui registrar o pedido: ${r.error}`.trim();
+    } else if (call.name === "cancelar_pedido") {
+      const r = await handleCancelarPedido(
+        tenantId,
+        customerPhone,
+        call.input as unknown as CancelarPedidoInput,
+      );
+      toolExecutions.push({
+        name: call.name,
+        ok: r.ok,
+        result: r.ok ? { orderNumber: r.orderNumber } : undefined,
+        error: r.error,
+      });
+      replyText = r.ok
+        ? `${replyText || ""}\n\nPedido #${r.orderNumber} cancelado.`.trim()
+        : `${replyText || ""}\n\nNao consegui cancelar: ${r.error}`.trim();
+    } else if (call.name === "atualizar_pedido") {
+      const r = await handleAtualizarPedido(
+        tenantId,
+        customerPhone,
+        call.input as unknown as AtualizarPedidoInput,
+      );
+      toolExecutions.push({
+        name: call.name,
+        ok: r.ok,
+        result: r.ok ? { orderNumber: r.orderNumber, totalBrl: r.totalBrl } : undefined,
+        error: r.error,
+      });
+      replyText = r.ok
+        ? `${replyText || ""}\n\nPedido #${r.orderNumber} atualizado. ✅`.trim()
+        : `${replyText || ""}\n\nNao consegui atualizar: ${r.error}`.trim();
     } else {
       toolExecutions.push({ name: call.name, ok: false, error: "Tool desconhecida" });
     }
