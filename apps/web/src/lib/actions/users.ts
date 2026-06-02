@@ -4,21 +4,12 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { prisma } from "@zapstore/db";
 import { auth } from "@/lib/auth";
+import { ROLES, type Role } from "@/lib/roles";
 
 export interface ActionResult {
   ok: boolean;
   error?: string;
 }
-
-export const ROLES = ["ADMIN", "OPERATOR", "FINANCIAL", "DELIVERY"] as const;
-export type Role = (typeof ROLES)[number];
-
-export const ROLE_LABELS: Record<Role, string> = {
-  ADMIN: "Administrador",
-  OPERATOR: "Operador",
-  FINANCIAL: "Financeiro",
-  DELIVERY: "Entregador",
-};
 
 /** Exige que o usuário logado seja ADMIN da loja. Retorna { tenantId, userId }. */
 async function requireAdmin(): Promise<{ tenantId: string; userId: string }> {

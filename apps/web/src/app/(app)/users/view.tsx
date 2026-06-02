@@ -2,13 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ROLES,
-  ROLE_LABELS,
-  changeUserRoleAction,
-  inviteUserAction,
-  removeUserAction,
-} from "@/lib/actions/users";
+import { changeUserRoleAction, inviteUserAction, removeUserAction } from "@/lib/actions/users";
+import { ROLES, ROLE_LABELS } from "@/lib/roles";
 
 interface UserRow {
   userId: string;
