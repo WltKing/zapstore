@@ -530,9 +530,12 @@ function ProductDialog({
               step="0.01"
               min="0"
               value={form.costBrl ?? ""}
-              onChange={(e) =>
-                setForm({ ...form, costBrl: e.target.value === "" ? null : Number(e.target.value) })
-              }
+              onChange={(e) => {
+                const cost = e.target.value === "" ? null : Number(e.target.value);
+                // Mexeu no custo → recalcula o preço pela margem base (sempre, se houver margem).
+                const p = priceFromCostMargin(cost, defaultMarginPct);
+                setForm((f) => ({ ...f, costBrl: cost, ...(p != null ? { priceBrl: p } : {}) }));
+              }}
               placeholder="pra calcular margem"
               className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
             />
