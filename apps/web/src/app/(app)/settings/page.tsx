@@ -24,6 +24,8 @@ export default async function SettingsPage() {
       pixCity={tenant.pixCity}
       defaultMarginPct={tenant.defaultMarginPct != null ? Number(tenant.defaultMarginPct) : null}
       roundTo90={tenant.roundTo90}
+      cardFeePct={tenant.cardFeePct != null ? Number(tenant.cardFeePct) : null}
+      taxEstimatePct={tenant.taxEstimatePct != null ? Number(tenant.taxEstimatePct) : null}
       nicheLabel={nicheLabel}
       email={session.user.email}
     />

@@ -29,6 +29,8 @@ export interface StoreSettingsInput {
   pixCity?: string;
   defaultMarginPct?: number | null;
   roundTo90?: boolean;
+  cardFeePct?: number | null;
+  taxEstimatePct?: number | null;
 }
 
 export async function updateStoreSettingsAction(input: StoreSettingsInput): Promise<ActionResult> {
@@ -49,6 +51,17 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
       margin = input.defaultMarginPct;
     }
 
+    // Taxas do caixa (% entre 0 e 100). null = não configurado.
+    const pctOrNull = (v: number | null | undefined, label: string): number | null | "err" => {
+      if (v == null || Number.isNaN(v)) return null;
+      if (v < 0 || v > 100) return "err";
+      return v;
+    };
+    const cardFee = pctOrNull(input.cardFeePct, "taxa");
+    if (cardFee === "err") return { ok: false, error: "Taxa da maquininha inválida (0 a 100)." };
+    const taxEst = pctOrNull(input.taxEstimatePct, "imposto");
+    if (taxEst === "err") return { ok: false, error: "Imposto estimado inválido (0 a 100)." };
+
     // tenants é tabela global (sem RLS); atualizamos só a loja do próprio usuário.
     await prisma.tenant.update({
       where: { id: tenantId },
@@ -60,6 +73,8 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
         pixCity: input.pixCity?.trim() || null,
         defaultMarginPct: margin,
         roundTo90: input.roundTo90 ?? false,
+        cardFeePct: cardFee,
+        taxEstimatePct: taxEst,
       },
     });
 

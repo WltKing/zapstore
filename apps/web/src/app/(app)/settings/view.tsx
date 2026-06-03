@@ -15,6 +15,8 @@ export function SettingsView({
   pixCity,
   defaultMarginPct,
   roundTo90,
+  cardFeePct,
+  taxEstimatePct,
   nicheLabel,
   email,
 }: {
@@ -25,6 +27,8 @@ export function SettingsView({
   pixCity: string | null;
   defaultMarginPct: number | null;
   roundTo90: boolean;
+  cardFeePct: number | null;
+  taxEstimatePct: number | null;
   nicheLabel: string;
   email: string;
 }) {
@@ -36,6 +40,8 @@ export function SettingsView({
   const [pixCityState, setPixCityState] = useState(pixCity ?? "");
   const [margin, setMargin] = useState(defaultMarginPct != null ? String(defaultMarginPct) : "");
   const [round90, setRound90] = useState(roundTo90);
+  const [cardFee, setCardFee] = useState(cardFeePct != null ? String(cardFeePct) : "");
+  const [taxEst, setTaxEst] = useState(taxEstimatePct != null ? String(taxEstimatePct) : "");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -53,6 +59,8 @@ export function SettingsView({
         pixCity: pixCityState,
         defaultMarginPct: margin.trim() === "" ? null : Number(margin),
         roundTo90: round90,
+        cardFeePct: cardFee.trim() === "" ? null : Number(cardFee),
+        taxEstimatePct: taxEst.trim() === "" ? null : Number(taxEst),
       });
       if (!res.ok) setError(res.error ?? "Erro");
       else {
@@ -197,6 +205,50 @@ export function SettingsView({
               <span className="text-neutral-400">(ex: R$ 142,86 → R$ 149,90)</span>
             </span>
           </label>
+        </section>
+
+        {/* Financeiro (caixa) */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="font-semibold">Financeiro (caixa)</h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            Usadas no <strong>Caixa</strong> pra calcular o resultado líquido. A taxa da maquininha é
+            descontada das vendas <strong>parceladas no cartão</strong>; o imposto estimado incide
+            sobre as vendas <strong>com nota</strong> (NFC-e/NF-e).
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700">
+                Taxa da maquininha (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={cardFee}
+                onChange={(e) => setCardFee(e.target.value)}
+                placeholder="ex: 3.5"
+                className={inputClass}
+              />
+              <p className="mt-1 text-xs text-neutral-400">No cartão parcelado.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700">
+                Imposto estimado (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={taxEst}
+                onChange={(e) => setTaxEst(e.target.value)}
+                placeholder="ex: 4"
+                className={inputClass}
+              />
+              <p className="mt-1 text-xs text-neutral-400">Sobre vendas com nota.</p>
+            </div>
+          </div>
         </section>
 
         {/* Pix */}
