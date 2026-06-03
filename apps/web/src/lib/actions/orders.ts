@@ -24,15 +24,40 @@ export interface ActionResult {
 export interface OrderItemInput {
   productId: string;
   qty: number;
+  discountBrl?: number;
+  freightBrl?: number;
 }
 
 export interface OrderInput {
   customerName: string;
   customerPhone: string;
-  customerAddress?: string;
+  customerAddress?: string; // fallback/compatibilidade (form completo usa as partes)
+  customerCpf?: string;
+  customerEmail?: string;
+  cep?: string;
+  street?: string;
+  streetNumber?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  channel?: string; // "online" | "presencial"
+  sellerName?: string;
+  invoiceType?: string; // "none" | "nfce" | "nfe"
+  toReceive?: boolean;
+  deliveryType?: string; // "delivery" | "pickup"
+  deliveryDate?: string; // "YYYY-MM-DD"
+  deliveryShift?: string; // "morning" | "afternoon"
   paymentMethod?: string;
+  installments?: number;
+  discountBrl?: number;
+  freightBrl?: number;
   notes?: string;
   items: OrderItemInput[];
+}
+
+function n(v: number | undefined | null): number {
+  return v != null && !Number.isNaN(v) ? v : 0;
 }
 
 function validateOrder(input: OrderInput): string | null {
@@ -46,7 +71,7 @@ function validateOrder(input: OrderInput): string | null {
   return null;
 }
 
-/** Monta a lista de itens (snapshot nome+preco) e o total a partir dos produtos atuais. */
+/** Itens (snapshot) + total, com desconto/frete por item e do pedido. */
 async function buildItemsAndTotal(
   tx: Parameters<Parameters<typeof withTenant>[1]>[0],
   input: OrderInput,
@@ -58,10 +83,68 @@ async function buildItemsAndTotal(
   const items = input.items.map((i) => {
     const p = map.get(i.productId);
     if (!p) throw new Error("Produto invalido no pedido.");
-    return { productId: p.id, name: p.name, qty: i.qty, priceBrl: Number(p.priceBrl) };
+    const priceBrl = Number(p.priceBrl);
+    const discountBrl = n(i.discountBrl);
+    const freightBrl = n(i.freightBrl);
+    const lineTotal = i.qty * priceBrl - discountBrl + freightBrl;
+    return {
+      productId: p.id,
+      name: p.name,
+      kind: p.kind,
+      qty: i.qty,
+      priceBrl,
+      discountBrl,
+      freightBrl,
+      lineTotal,
+    };
   });
-  const totalBrl = items.reduce((s, it) => s + it.qty * it.priceBrl, 0);
+  const itemsTotal = items.reduce((s, it) => s + it.lineTotal, 0);
+  const totalBrl = itemsTotal - n(input.discountBrl) + n(input.freightBrl);
   return { items, totalBrl };
+}
+
+/** Monta o endereço legível a partir das partes. */
+function composeAddress(input: OrderInput): string | null {
+  const parts = [
+    [input.street?.trim(), input.streetNumber?.trim()].filter(Boolean).join(", "),
+    input.complement?.trim(),
+    input.neighborhood?.trim(),
+    [input.city?.trim(), input.state?.trim()].filter(Boolean).join(" - "),
+    input.cep?.replace(/\D/g, ""),
+  ].filter(Boolean);
+  return parts.join(" · ") || input.customerAddress?.trim() || null;
+}
+
+/** Campos comuns de Order (cliente, endereço, venda, entrega, pagamento). */
+function buildOrderData(input: OrderInput) {
+  const inv = input.invoiceType ?? "none";
+  const shift = input.deliveryShift;
+  return {
+    customerName: input.customerName.trim(),
+    customerPhone: input.customerPhone.replace(/\D/g, ""),
+    customerCpf: input.customerCpf?.replace(/\D/g, "") || null,
+    customerEmail: input.customerEmail?.trim() || null,
+    cep: input.cep?.replace(/\D/g, "") || null,
+    street: input.street?.trim() || null,
+    streetNumber: input.streetNumber?.trim() || null,
+    complement: input.complement?.trim() || null,
+    neighborhood: input.neighborhood?.trim() || null,
+    city: input.city?.trim() || null,
+    state: input.state?.trim().toUpperCase() || null,
+    customerAddress: composeAddress(input),
+    channel: input.channel === "online" ? "online" : "presencial",
+    sellerName: input.sellerName?.trim() || null,
+    invoiceType: inv === "nfce" || inv === "nfe" ? inv : "none",
+    toReceive: Boolean(input.toReceive),
+    deliveryType: input.deliveryType === "pickup" ? "pickup" : "delivery",
+    deliveryDate: input.deliveryDate ? new Date(`${input.deliveryDate}T12:00:00`) : null,
+    deliveryShift: shift === "morning" || shift === "afternoon" ? shift : null,
+    discountBrl: input.discountBrl != null ? input.discountBrl : null,
+    freightBrl: input.freightBrl != null ? input.freightBrl : null,
+    paymentMethod: input.paymentMethod?.trim() || null,
+    installments: input.installments && input.installments > 0 ? input.installments : 1,
+    notes: input.notes?.trim() || null,
+  };
 }
 
 export async function createOrderAction(input: OrderInput): Promise<ActionResult> {
@@ -81,14 +164,10 @@ export async function createOrderAction(input: OrderInput): Promise<ActionResult
         data: {
           tenantId,
           orderNumber,
-          customerName: input.customerName.trim(),
-          customerPhone: input.customerPhone.replace(/\D/g, ""),
-          customerAddress: input.customerAddress?.trim() || null,
           status: "PENDING",
           items,
           totalBrl,
-          paymentMethod: input.paymentMethod?.trim() || null,
-          notes: input.notes?.trim() || null,
+          ...buildOrderData(input),
         },
       });
     });
@@ -112,13 +191,9 @@ export async function updateOrderAction(id: string, input: OrderInput): Promise<
       await tx.order.update({
         where: { id },
         data: {
-          customerName: input.customerName.trim(),
-          customerPhone: input.customerPhone.replace(/\D/g, ""),
-          customerAddress: input.customerAddress?.trim() || null,
           items,
           totalBrl,
-          paymentMethod: input.paymentMethod?.trim() || null,
-          notes: input.notes?.trim() || null,
+          ...buildOrderData(input),
         },
       });
     });
