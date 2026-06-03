@@ -49,7 +49,13 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ id:
   const brand = tenant.brandColor || "#171717";
 
   return (
-    <main className="mx-auto max-w-2xl bg-white p-8 text-neutral-900 print:p-0">
+    <main className="mx-auto max-w-2xl bg-white p-8 text-neutral-900 print:max-w-none print:p-2 print:text-[12px]">
+      <style>{`
+        @page { margin: 8mm; }
+        @media print {
+          html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+      `}</style>
       <PrintButton />
 
       {/* Cabeçalho com a logo da loja */}

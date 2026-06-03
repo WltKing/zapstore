@@ -233,14 +233,20 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
                       >
                         {STATUS_LABELS[o.status] ?? o.status}
                       </span>
-                      <a
-                        href={`/print/order/${o.id}`}
-                        target="_blank"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.open(
+                            `/print/order/${o.id}`,
+                            "print-popup",
+                            "width=480,height=720,menubar=no,toolbar=no",
+                          )
+                        }
                         title="Imprimir"
                         className="text-neutral-400 hover:text-neutral-700"
                       >
                         🖨
-                      </a>
+                      </button>
                       <a href={`/orders/${o.id}`} className="text-sm text-neutral-600 hover:text-neutral-900">
                         Abrir
                       </a>

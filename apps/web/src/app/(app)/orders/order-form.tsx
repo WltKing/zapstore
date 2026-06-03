@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createOrderAction, updateOrderAction, type OrderInput } from "@/lib/actions/orders";
-import { lookupCepAction } from "@/lib/actions/cep";
+import { lookupCepAction, searchCepAction } from "@/lib/actions/cep";
 
 export interface ProductOpt {
   id: string;
@@ -93,10 +93,16 @@ export function OrderForm({
     [form.items, form.discountBrl, form.freightBrl],
   );
 
-  const buscarCep = () => {
+  const lastCep = useRef("");
+
+  // CEP -> endereço (automático ao completar 8 dígitos, ou pelo botão).
+  const doLookupCep = (raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length !== 8 || digits === lastCep.current) return;
+    lastCep.current = digits;
     setCepLoading(true);
     startTransition(async () => {
-      const r = await lookupCepAction(form.cep ?? "");
+      const r = await lookupCepAction(digits);
       setCepLoading(false);
       if (!r.ok || !r.data) {
         setError(r.error ?? "CEP não encontrado.");
@@ -109,6 +115,25 @@ export function OrderForm({
         city: r.data.city,
         state: r.data.state,
       });
+    });
+  };
+
+  // Endereço -> CEP (quando não tem CEP e rua+cidade+UF estão preenchidos).
+  const doReverseCep = () => {
+    const digits = (form.cep ?? "").replace(/\D/g, "");
+    if (digits.length === 8) return;
+    if (
+      (form.state ?? "").trim().length !== 2 ||
+      (form.city ?? "").trim().length < 3 ||
+      (form.street ?? "").trim().length < 3
+    )
+      return;
+    startTransition(async () => {
+      const r = await searchCepAction(form.state ?? "", form.city ?? "", form.street ?? "");
+      if (r.ok && r.data && r.data[0]) {
+        lastCep.current = r.data[0].cep;
+        set({ cep: r.data[0].cep, neighborhood: r.data[0].neighborhood || form.neighborhood });
+      }
     });
   };
 
@@ -148,13 +173,19 @@ export function OrderForm({
         </div>
         <div className="flex gap-2">
           {orderId && (
-            <a
-              href={`/print/order/${orderId}`}
-              target="_blank"
+            <button
+              type="button"
+              onClick={() =>
+                window.open(
+                  `/print/order/${orderId}`,
+                  "print-popup",
+                  "width=480,height=720,menubar=no,toolbar=no",
+                )
+              }
               className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
             >
               Imprimir
-            </a>
+            </button>
           )}
           <a
             href="/orders/new"
@@ -245,16 +276,24 @@ export function OrderForm({
             <div className="mt-3 flex items-end gap-2">
               <div className="w-40">
                 <label className="block text-sm font-medium text-neutral-700">CEP</label>
-                <input value={form.cep} onChange={(e) => set({ cep: e.target.value })} placeholder="00000-000" className={inputClass} />
+                <input
+                  value={form.cep}
+                  onChange={(e) => {
+                    set({ cep: e.target.value });
+                    doLookupCep(e.target.value);
+                  }}
+                  placeholder="00000-000"
+                  className={inputClass}
+                />
               </div>
-              <button type="button" onClick={buscarCep} disabled={cepLoading || isPending} className="mb-0.5 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50">
+              <button type="button" onClick={() => doLookupCep(form.cep ?? "")} disabled={cepLoading || isPending} className="mb-0.5 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50">
                 {cepLoading ? "Buscando..." : "Buscar"}
               </button>
             </div>
             <div className="mt-3 grid gap-3 sm:grid-cols-6">
               <div className="sm:col-span-4">
                 <label className="block text-sm font-medium text-neutral-700">Rua</label>
-                <input value={form.street} onChange={(e) => set({ street: e.target.value })} className={inputClass} />
+                <input value={form.street} onChange={(e) => set({ street: e.target.value })} onBlur={doReverseCep} className={inputClass} />
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-neutral-700">Número</label>
@@ -270,7 +309,7 @@ export function OrderForm({
               </div>
               <div className="sm:col-span-4">
                 <label className="block text-sm font-medium text-neutral-700">Cidade</label>
-                <input value={form.city} onChange={(e) => set({ city: e.target.value })} className={inputClass} />
+                <input value={form.city} onChange={(e) => set({ city: e.target.value })} onBlur={doReverseCep} className={inputClass} />
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-neutral-700">UF</label>
