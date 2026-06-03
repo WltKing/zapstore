@@ -45,5 +45,7 @@ export default async function ProductsPage() {
     })),
   }));
 
-  return <ProductsView initial={items} storeName={tenant.name} />;
+  const defaultMarginPct = tenant.defaultMarginPct != null ? Number(tenant.defaultMarginPct) : null;
+
+  return <ProductsView initial={items} storeName={tenant.name} defaultMarginPct={defaultMarginPct} />;
 }

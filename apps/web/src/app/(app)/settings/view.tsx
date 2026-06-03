@@ -13,6 +13,7 @@ export function SettingsView({
   logoUrl,
   pixKey,
   pixCity,
+  defaultMarginPct,
   nicheLabel,
   email,
 }: {
@@ -21,6 +22,7 @@ export function SettingsView({
   logoUrl: string | null;
   pixKey: string | null;
   pixCity: string | null;
+  defaultMarginPct: number | null;
   nicheLabel: string;
   email: string;
 }) {
@@ -30,6 +32,7 @@ export function SettingsView({
   const [logo, setLogo] = useState(logoUrl ?? "");
   const [pix, setPix] = useState(pixKey ?? "");
   const [pixCityState, setPixCityState] = useState(pixCity ?? "");
+  const [margin, setMargin] = useState(defaultMarginPct != null ? String(defaultMarginPct) : "");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -45,6 +48,7 @@ export function SettingsView({
         logoUrl: logo,
         pixKey: pix,
         pixCity: pixCityState,
+        defaultMarginPct: margin.trim() === "" ? null : Number(margin),
       });
       if (!res.ok) setError(res.error ?? "Erro");
       else {
@@ -140,6 +144,33 @@ export function SettingsView({
                 keepTransparency
               />
             </div>
+          </div>
+        </section>
+
+        {/* Precificação */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="font-semibold">Precificação</h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            Com a margem padrão preenchida, o sistema <strong>sugere o preço de venda</strong>{" "}
+            automaticamente a partir do custo — ao cadastrar um produto e ao importar o XML de uma
+            nota. Evita produto com preço zerado. (Margem sobre a venda: custo R$ 100 + margem 30%
+            = preço R$ 142,86.)
+          </p>
+          <div className="mt-4 max-w-xs">
+            <label className="block text-sm font-medium text-neutral-700">Margem padrão (%)</label>
+            <input
+              type="number"
+              min="0"
+              max="99"
+              step="0.5"
+              value={margin}
+              onChange={(e) => setMargin(e.target.value)}
+              placeholder="ex: 30"
+              className={inputClass}
+            />
+            <p className="mt-1 text-xs text-neutral-400">
+              Deixe em branco pra não sugerir preço automaticamente.
+            </p>
           </div>
         </section>
 

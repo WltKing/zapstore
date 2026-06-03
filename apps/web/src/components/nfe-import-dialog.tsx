@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { importNfeAction, type NfeImportLine } from "@/lib/actions/nfe";
+import { priceFromCostMargin } from "@/lib/pricing";
 
 /** Produto existente, pro casamento por nome na conferência. */
 export interface ExistingProduct {
@@ -75,15 +76,18 @@ type LineState = NfeImportLine & { _xProd: string };
 
 export function NfeImportDialog({
   products,
+  defaultMarginPct,
   onClose,
 }: {
   products: ExistingProduct[];
+  defaultMarginPct: number | null;
   onClose: () => void;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [nfe, setNfe] = useState<ParsedNfe | null>(null);
   const [lines, setLines] = useState<LineState[]>([]);
+  const [margin, setMargin] = useState(defaultMarginPct != null ? String(defaultMarginPct) : "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -102,6 +106,7 @@ export function NfeImportDialog({
     try {
       const text = await file.text();
       const parsed = parseNfe(text);
+      const m = margin.trim() === "" ? null : Number(margin);
       setNfe(parsed);
       setLines(
         parsed.items.map((it) => {
@@ -118,7 +123,7 @@ export function NfeImportDialog({
             origem: it.origem,
             qty: it.qty,
             unitCost: it.unitCost,
-            priceBrl: 0,
+            priceBrl: priceFromCostMargin(it.unitCost, m) ?? 0,
           };
         }),
       );
@@ -127,6 +132,18 @@ export function NfeImportDialog({
       setNfe(null);
       setLines([]);
     }
+  };
+
+  // Recalcula o preço de todas as linhas pela margem (custo da nota ÷ (1 - margem)).
+  const applyMargin = (value: string) => {
+    setMargin(value);
+    const m = value.trim() === "" ? null : Number(value);
+    setLines((ls) =>
+      ls.map((l) => {
+        const p = priceFromCostMargin(l.unitCost, m);
+        return p != null ? { ...l, priceBrl: p } : l;
+      }),
+    );
   };
 
   const setLine = (i: number, patch: Partial<LineState>) =>
@@ -198,6 +215,24 @@ export function NfeImportDialog({
             </div>
           ) : (
             <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3 rounded-xl bg-neutral-50 p-3">
+                <label className="text-sm font-medium text-neutral-700">Margem (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="99"
+                  step="0.5"
+                  value={margin}
+                  onChange={(e) => applyMargin(e.target.value)}
+                  placeholder="ex: 30"
+                  className="w-24 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                />
+                <span className="text-xs text-neutral-500">
+                  preenche o preço de venda pelo custo da nota (e atualiza o preço dos produtos
+                  vinculados).
+                </span>
+              </div>
+
               {lines.map((l, i) => (
                 <div key={i} className="rounded-xl border border-neutral-200 p-3">
                   <div className="flex items-start justify-between gap-3">
@@ -240,7 +275,7 @@ export function NfeImportDialog({
                           onChange={(e) => setLine(i, { updateCost: e.target.checked })}
                           className="h-4 w-4 rounded border-neutral-300"
                         />
-                        atualizar custo
+                        atualizar custo{margin.trim() !== "" ? " e preço" : ""}
                       </label>
                     </div>
                   )}

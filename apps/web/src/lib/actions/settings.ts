@@ -27,6 +27,7 @@ export interface StoreSettingsInput {
   logoUrl?: string;
   pixKey?: string;
   pixCity?: string;
+  defaultMarginPct?: number | null;
 }
 
 export async function updateStoreSettingsAction(input: StoreSettingsInput): Promise<ActionResult> {
@@ -39,6 +40,14 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
       return { ok: false, error: "Cor inválida — use o formato #RRGGBB." };
     }
 
+    let margin: number | null = null;
+    if (input.defaultMarginPct != null && !Number.isNaN(input.defaultMarginPct)) {
+      if (input.defaultMarginPct < 0 || input.defaultMarginPct >= 100) {
+        return { ok: false, error: "Margem inválida — use um valor entre 0 e 99." };
+      }
+      margin = input.defaultMarginPct;
+    }
+
     // tenants é tabela global (sem RLS); atualizamos só a loja do próprio usuário.
     await prisma.tenant.update({
       where: { id: tenantId },
@@ -48,6 +57,7 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
         logoUrl: input.logoUrl?.trim() || null,
         pixKey: input.pixKey?.trim() || null,
         pixCity: input.pixCity?.trim() || null,
+        defaultMarginPct: margin,
       },
     });
 

@@ -22,6 +22,7 @@ export default async function SettingsPage() {
       logoUrl={tenant.logoUrl}
       pixKey={tenant.pixKey}
       pixCity={tenant.pixCity}
+      defaultMarginPct={tenant.defaultMarginPct != null ? Number(tenant.defaultMarginPct) : null}
       nicheLabel={nicheLabel}
       email={session.user.email}
     />

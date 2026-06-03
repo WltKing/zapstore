@@ -11,6 +11,7 @@ import {
 } from "@/lib/actions/products";
 import { ImageUpload } from "@/components/image-upload";
 import { NfeImportDialog } from "@/components/nfe-import-dialog";
+import { priceFromCostMargin } from "@/lib/pricing";
 
 export interface ProductRow {
   id: string;
@@ -65,7 +66,15 @@ function marginLabel(price: number, cost: number | null): string {
   return `${(((price - cost) / price) * 100).toFixed(0)}%`;
 }
 
-export function ProductsView({ initial, storeName }: { initial: ProductRow[]; storeName: string }) {
+export function ProductsView({
+  initial,
+  storeName,
+  defaultMarginPct,
+}: {
+  initial: ProductRow[];
+  storeName: string;
+  defaultMarginPct: number | null;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState<ProductRow | "new" | null>(null);
@@ -135,8 +144,10 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
       {lowStockItems.length > 0 && (
         <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
           ⚠️ {lowStockItems.length}{" "}
-          {lowStockItems.length === 1 ? "produto com estoque baixo" : "produtos com estoque baixo"}:{" "}
-          {lowStockItems.map((p) => p.name).join(", ")}.
+          {lowStockItems.length === 1
+            ? "produto com estoque baixo"
+            : "produtos com estoque baixo"}{" "}
+          (destacados em vermelho).
         </p>
       )}
 
@@ -274,6 +285,7 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
       {importing && (
         <NfeImportDialog
           products={initial.map((p) => ({ id: p.id, name: p.name, fiscalName: p.fiscalName }))}
+          defaultMarginPct={defaultMarginPct}
           onClose={() => setImporting(false)}
         />
       )}
@@ -283,6 +295,7 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
           initial={editing === "new" ? blank() : toInput(editing)}
           editingId={editing === "new" ? null : editing.id}
           allProducts={initial}
+          defaultMarginPct={defaultMarginPct}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -320,18 +333,23 @@ function ProductDialog({
   initial,
   editingId,
   allProducts,
+  defaultMarginPct,
   onClose,
   onSaved,
 }: {
   initial: ProductInput;
   editingId: string | null;
   allProducts: ProductRow[];
+  defaultMarginPct: number | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [form, setForm] = useState<ProductInput>(initial);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Preço sugerido pela margem padrão da loja (margem sobre a venda).
+  const suggestedPrice = priceFromCostMargin(form.costBrl, defaultMarginPct);
 
   // Produtos que podem entrar num kit: simples e diferentes do próprio.
   const componentOptions = allProducts.filter((p) => p.kind === "simple" && p.id !== editingId);
@@ -495,6 +513,15 @@ function ProductDialog({
               onChange={(e) => setForm({ ...form, priceBrl: Number(e.target.value) })}
               className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
             />
+            {suggestedPrice != null && (
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, priceBrl: suggestedPrice }))}
+                className="mt-1 text-xs font-medium text-neutral-600 underline hover:text-neutral-900"
+              >
+                Aplicar margem base ({defaultMarginPct}%): {formatBrl(suggestedPrice)}
+              </button>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700">Custo (R$, opcional)</label>

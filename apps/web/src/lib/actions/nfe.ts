@@ -64,11 +64,16 @@ export async function importNfeAction(lines: NfeImportLine[]): Promise<NfeImport
 
         if (line.action === "link") {
           if (!line.linkProductId) continue;
+          const newPrice =
+            line.updateCost && line.priceBrl != null && Number.isFinite(line.priceBrl) && line.priceBrl > 0
+              ? line.priceBrl
+              : null;
           await tx.product.update({
             where: { id: line.linkProductId },
             data: {
               stock: { increment: qty },
               ...(line.updateCost && unitCost != null ? { costBrl: unitCost } : {}),
+              ...(newPrice != null ? { priceBrl: newPrice } : {}),
             },
           });
           updated++;
