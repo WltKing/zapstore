@@ -21,8 +21,8 @@ function loadImage(file: File): Promise<HTMLImageElement> {
   });
 }
 
-/** Redimensiona pra no máximo MAX_DIM e comprime em JPEG. Reduz muito o tamanho. */
-async function resizeImage(file: File): Promise<Blob> {
+/** Redimensiona pra no máximo MAX_DIM. JPEG (menor) ou PNG (preserva transparência, p/ logo). */
+async function resizeImage(file: File, keepTransparency: boolean): Promise<Blob> {
   const img = await loadImage(file);
   let { width, height } = img;
   if (width > MAX_DIM || height > MAX_DIM) {
@@ -40,11 +40,12 @@ async function resizeImage(file: File): Promise<Blob> {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Falha ao processar a imagem.");
   ctx.drawImage(img, 0, 0, width, height);
+  const type = keepTransparency ? "image/png" : "image/jpeg";
   return await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob(
       (b) => (b ? resolve(b) : reject(new Error("Falha ao processar a imagem."))),
-      "image/jpeg",
-      QUALITY,
+      type,
+      keepTransparency ? undefined : QUALITY,
     ),
   );
 }
@@ -54,10 +55,12 @@ export function ImageUpload({
   value,
   onChange,
   label,
+  keepTransparency = false,
 }: {
   value: string;
   onChange: (url: string) => void;
   label: string;
+  keepTransparency?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -69,9 +72,9 @@ export function ImageUpload({
     setError(null);
     setUploading(true);
     try {
-      const blob = await resizeImage(file);
+      const blob = await resizeImage(file, keepTransparency);
       const fd = new FormData();
-      fd.append("file", blob, "image.jpg");
+      fd.append("file", blob, keepTransparency ? "image.png" : "image.jpg");
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Falha no upload.");

@@ -149,7 +149,7 @@ export function OrderForm({
         <div className="flex gap-2">
           {orderId && (
             <a
-              href={`/orders/${orderId}/print`}
+              href={`/print/order/${orderId}`}
               target="_blank"
               className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
             >

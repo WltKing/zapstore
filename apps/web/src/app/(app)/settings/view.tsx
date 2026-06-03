@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateStoreSettingsAction } from "@/lib/actions/settings";
+import { ImageUpload } from "@/components/image-upload";
 
 const DEFAULT_COLOR = "#171717";
 
@@ -120,16 +121,12 @@ export function SettingsView({
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700">URL do logo (opcional)</label>
-                <input
-                  type="url"
-                  value={logo}
-                  onChange={(e) => setLogo(e.target.value)}
-                  placeholder="https://..."
-                  className={inputClass}
-                />
-              </div>
+              <ImageUpload
+                label="Logo da loja (opcional)"
+                value={logo}
+                onChange={setLogo}
+                keepTransparency
+              />
             </div>
           </div>
         </section>
