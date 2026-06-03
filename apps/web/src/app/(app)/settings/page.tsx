@@ -20,6 +20,8 @@ export default async function SettingsPage() {
       storeName={tenant.name}
       brandColor={tenant.brandColor}
       logoUrl={tenant.logoUrl}
+      pixKey={tenant.pixKey}
+      pixCity={tenant.pixCity}
       nicheLabel={nicheLabel}
       email={session.user.email}
     />

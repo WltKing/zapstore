@@ -2,7 +2,9 @@ import { headers } from "next/headers";
 import { redirect, notFound } from "next/navigation";
 import { withTenant } from "@zapstore/db";
 import { auth } from "@/lib/auth";
+import QRCode from "qrcode";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
+import { buildPixPayload } from "@/lib/pix";
 import { PrintButton } from "./print-button";
 
 interface PrintItem {
@@ -47,6 +49,20 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ id:
   const discount = order.discountBrl != null ? Number(order.discountBrl) : 0;
   const freight = order.freightBrl != null ? Number(order.freightBrl) : 0;
   const brand = tenant.brandColor || "#171717";
+
+  // QR Pix — quando há chave Pix e o pedido é "a receber".
+  let pixSvg: string | null = null;
+  let pixPayload: string | null = null;
+  if (tenant.pixKey && order.toReceive && Number(order.totalBrl) > 0) {
+    pixPayload = buildPixPayload({
+      key: tenant.pixKey,
+      merchantName: tenant.name,
+      merchantCity: tenant.pixCity ?? "",
+      amount: Number(order.totalBrl),
+      txid: `PED${order.orderNumber}`,
+    });
+    pixSvg = await QRCode.toString(pixPayload, { type: "svg", margin: 1, width: 150 });
+  }
 
   return (
     <main className="mx-auto max-w-2xl bg-white p-8 text-neutral-900 print:max-w-none print:p-2 print:text-[12px]">
@@ -171,6 +187,24 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ id:
         <section className="mt-5 border-t border-neutral-200 pt-3 text-sm">
           <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Observações</div>
           <div className="mt-1">{order.notes}</div>
+        </section>
+      )}
+
+      {pixSvg && (
+        <section className="mt-6 border-t border-neutral-200 pt-4 text-center">
+          <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Pague com Pix
+          </div>
+          <div
+            className="mx-auto mt-2 h-36 w-36"
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{ __html: pixSvg }}
+          />
+          {pixPayload && (
+            <div className="mx-auto mt-2 max-w-md break-all text-[8px] leading-tight text-neutral-500">
+              {pixPayload}
+            </div>
+          )}
         </section>
       )}
 

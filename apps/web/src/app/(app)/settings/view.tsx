@@ -11,12 +11,16 @@ export function SettingsView({
   storeName,
   brandColor,
   logoUrl,
+  pixKey,
+  pixCity,
   nicheLabel,
   email,
 }: {
   storeName: string;
   brandColor: string | null;
   logoUrl: string | null;
+  pixKey: string | null;
+  pixCity: string | null;
   nicheLabel: string;
   email: string;
 }) {
@@ -24,6 +28,8 @@ export function SettingsView({
   const [name, setName] = useState(storeName);
   const [color, setColor] = useState(brandColor ?? DEFAULT_COLOR);
   const [logo, setLogo] = useState(logoUrl ?? "");
+  const [pix, setPix] = useState(pixKey ?? "");
+  const [pixCityState, setPixCityState] = useState(pixCity ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -33,7 +39,13 @@ export function SettingsView({
     setError(null);
     setSaved(false);
     startTransition(async () => {
-      const res = await updateStoreSettingsAction({ name, brandColor: color, logoUrl: logo });
+      const res = await updateStoreSettingsAction({
+        name,
+        brandColor: color,
+        logoUrl: logo,
+        pixKey: pix,
+        pixCity: pixCityState,
+      });
       if (!res.ok) setError(res.error ?? "Erro");
       else {
         setSaved(true);
@@ -126,6 +138,35 @@ export function SettingsView({
                 value={logo}
                 onChange={setLogo}
                 keepTransparency
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Pix */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="font-semibold">Recebimento Pix</h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            Com a chave Pix preenchida, o sistema gera o <strong>QR Code Pix</strong> na impressão do
+            pedido (quando marcado como &quot;a receber&quot;). O dinheiro cai direto na sua conta.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700">Chave Pix</label>
+              <input
+                value={pix}
+                onChange={(e) => setPix(e.target.value)}
+                placeholder="e-mail, telefone, CPF/CNPJ ou aleatória"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700">Cidade (do recebedor)</label>
+              <input
+                value={pixCityState}
+                onChange={(e) => setPixCityState(e.target.value)}
+                placeholder="Ex: Goiânia"
+                className={inputClass}
               />
             </div>
           </div>

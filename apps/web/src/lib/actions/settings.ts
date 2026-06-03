@@ -25,6 +25,8 @@ export interface StoreSettingsInput {
   name: string;
   brandColor?: string;
   logoUrl?: string;
+  pixKey?: string;
+  pixCity?: string;
 }
 
 export async function updateStoreSettingsAction(input: StoreSettingsInput): Promise<ActionResult> {
@@ -44,6 +46,8 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
         name: input.name.trim(),
         brandColor: color,
         logoUrl: input.logoUrl?.trim() || null,
+        pixKey: input.pixKey?.trim() || null,
+        pixCity: input.pixCity?.trim() || null,
       },
     });
 
