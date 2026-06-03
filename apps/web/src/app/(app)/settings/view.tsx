@@ -14,6 +14,7 @@ export function SettingsView({
   pixKey,
   pixCity,
   defaultMarginPct,
+  roundTo90,
   nicheLabel,
   email,
 }: {
@@ -23,6 +24,7 @@ export function SettingsView({
   pixKey: string | null;
   pixCity: string | null;
   defaultMarginPct: number | null;
+  roundTo90: boolean;
   nicheLabel: string;
   email: string;
 }) {
@@ -33,6 +35,7 @@ export function SettingsView({
   const [pix, setPix] = useState(pixKey ?? "");
   const [pixCityState, setPixCityState] = useState(pixCity ?? "");
   const [margin, setMargin] = useState(defaultMarginPct != null ? String(defaultMarginPct) : "");
+  const [round90, setRound90] = useState(roundTo90);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -49,6 +52,7 @@ export function SettingsView({
         pixKey: pix,
         pixCity: pixCityState,
         defaultMarginPct: margin.trim() === "" ? null : Number(margin),
+        roundTo90: round90,
       });
       if (!res.ok) setError(res.error ?? "Erro");
       else {
@@ -172,6 +176,27 @@ export function SettingsView({
               Deixe em branco pra não sugerir preço automaticamente.
             </p>
           </div>
+
+          <label className="mt-4 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setRound90((v) => !v)}
+              className={`inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${
+                round90 ? "bg-emerald-500" : "bg-neutral-300"
+              }`}
+              aria-pressed={round90}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                  round90 ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <span className="text-sm text-neutral-700">
+              Arredondar pra terminar em <strong>,90</strong>{" "}
+              <span className="text-neutral-400">(ex: R$ 142,86 → R$ 149,90)</span>
+            </span>
+          </label>
         </section>
 
         {/* Pix */}

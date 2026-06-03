@@ -70,10 +70,12 @@ export function ProductsView({
   initial,
   storeName,
   defaultMarginPct,
+  roundTo90,
 }: {
   initial: ProductRow[];
   storeName: string;
   defaultMarginPct: number | null;
+  roundTo90: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -286,6 +288,7 @@ export function ProductsView({
         <NfeImportDialog
           products={initial.map((p) => ({ id: p.id, name: p.name, fiscalName: p.fiscalName }))}
           defaultMarginPct={defaultMarginPct}
+          roundTo90={roundTo90}
           onClose={() => setImporting(false)}
         />
       )}
@@ -296,6 +299,7 @@ export function ProductsView({
           editingId={editing === "new" ? null : editing.id}
           allProducts={initial}
           defaultMarginPct={defaultMarginPct}
+          roundTo90={roundTo90}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -334,6 +338,7 @@ function ProductDialog({
   editingId,
   allProducts,
   defaultMarginPct,
+  roundTo90,
   onClose,
   onSaved,
 }: {
@@ -341,6 +346,7 @@ function ProductDialog({
   editingId: string | null;
   allProducts: ProductRow[];
   defaultMarginPct: number | null;
+  roundTo90: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -349,7 +355,7 @@ function ProductDialog({
   const [isPending, startTransition] = useTransition();
 
   // Preço sugerido pela margem padrão da loja (margem sobre a venda).
-  const suggestedPrice = priceFromCostMargin(form.costBrl, defaultMarginPct);
+  const suggestedPrice = priceFromCostMargin(form.costBrl, defaultMarginPct, roundTo90);
 
   // Produtos que podem entrar num kit: simples e diferentes do próprio.
   const componentOptions = allProducts.filter((p) => p.kind === "simple" && p.id !== editingId);
@@ -533,7 +539,7 @@ function ProductDialog({
               onChange={(e) => {
                 const cost = e.target.value === "" ? null : Number(e.target.value);
                 // Mexeu no custo → recalcula o preço pela margem base (sempre, se houver margem).
-                const p = priceFromCostMargin(cost, defaultMarginPct);
+                const p = priceFromCostMargin(cost, defaultMarginPct, roundTo90);
                 setForm((f) => ({ ...f, costBrl: cost, ...(p != null ? { priceBrl: p } : {}) }));
               }}
               placeholder="pra calcular margem"

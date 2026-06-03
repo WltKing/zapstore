@@ -47,5 +47,12 @@ export default async function ProductsPage() {
 
   const defaultMarginPct = tenant.defaultMarginPct != null ? Number(tenant.defaultMarginPct) : null;
 
-  return <ProductsView initial={items} storeName={tenant.name} defaultMarginPct={defaultMarginPct} />;
+  return (
+    <ProductsView
+      initial={items}
+      storeName={tenant.name}
+      defaultMarginPct={defaultMarginPct}
+      roundTo90={tenant.roundTo90}
+    />
+  );
 }

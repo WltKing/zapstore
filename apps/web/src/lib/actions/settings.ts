@@ -28,6 +28,7 @@ export interface StoreSettingsInput {
   pixKey?: string;
   pixCity?: string;
   defaultMarginPct?: number | null;
+  roundTo90?: boolean;
 }
 
 export async function updateStoreSettingsAction(input: StoreSettingsInput): Promise<ActionResult> {
@@ -58,6 +59,7 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
         pixKey: input.pixKey?.trim() || null,
         pixCity: input.pixCity?.trim() || null,
         defaultMarginPct: margin,
+        roundTo90: input.roundTo90 ?? false,
       },
     });
 

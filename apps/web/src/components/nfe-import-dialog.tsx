@@ -77,10 +77,12 @@ type LineState = NfeImportLine & { _xProd: string };
 export function NfeImportDialog({
   products,
   defaultMarginPct,
+  roundTo90,
   onClose,
 }: {
   products: ExistingProduct[];
   defaultMarginPct: number | null;
+  roundTo90: boolean;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -123,7 +125,7 @@ export function NfeImportDialog({
             origem: it.origem,
             qty: it.qty,
             unitCost: it.unitCost,
-            priceBrl: priceFromCostMargin(it.unitCost, m) ?? 0,
+            priceBrl: priceFromCostMargin(it.unitCost, m, roundTo90) ?? 0,
           };
         }),
       );
@@ -140,7 +142,7 @@ export function NfeImportDialog({
     const m = value.trim() === "" ? null : Number(value);
     setLines((ls) =>
       ls.map((l) => {
-        const p = priceFromCostMargin(l.unitCost, m);
+        const p = priceFromCostMargin(l.unitCost, m, roundTo90);
         return p != null ? { ...l, priceBrl: p } : l;
       }),
     );
