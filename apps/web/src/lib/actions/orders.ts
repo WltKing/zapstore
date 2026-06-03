@@ -147,6 +147,46 @@ function buildOrderData(input: OrderInput) {
   };
 }
 
+type Tx = Parameters<Parameters<typeof withTenant>[1]>[0];
+
+/** Ajusta o estoque dos itens. sign=-1 dá baixa (venda); sign=+1 devolve. */
+async function applyStockDelta(
+  tx: Tx,
+  items: Array<{ productId?: string; qty?: number }>,
+  sign: 1 | -1,
+) {
+  for (const it of items) {
+    const pid = it.productId;
+    const qty = Number(it.qty ?? 0);
+    if (pid && qty > 0) {
+      try {
+        await tx.product.update({
+          where: { id: pid },
+          data: { stock: { increment: sign * qty } },
+        });
+      } catch {
+        // produto pode ter sido removido — ignora
+      }
+    }
+  }
+}
+
+/** Cria/atualiza o cliente (chave = telefone) a partir dos dados do pedido. */
+async function upsertCustomerFromOrder(tx: Tx, tenantId: string, input: OrderInput) {
+  const phone = input.customerPhone.replace(/\D/g, "");
+  if (!phone) return;
+  const data = {
+    name: input.customerName.trim(),
+    email: input.customerEmail?.trim() || null,
+    address: composeAddress(input),
+  };
+  await tx.customer.upsert({
+    where: { tenantId_phone: { tenantId, phone } },
+    create: { tenantId, phone, ...data },
+    update: data,
+  });
+}
+
 export async function createOrderAction(
   input: OrderInput,
 ): Promise<ActionResult & { orderId?: string }> {
@@ -157,6 +197,8 @@ export async function createOrderAction(
 
     const orderId = await withTenant(tenantId, async (tx) => {
       const { items, totalBrl } = await buildItemsAndTotal(tx, input);
+      await applyStockDelta(tx, items, -1); // dá baixa no estoque
+      await upsertCustomerFromOrder(tx, tenantId, input); // sincroniza cliente
       const last = await tx.order.findFirst({
         where: { tenantId },
         orderBy: { orderNumber: "desc" },
@@ -190,7 +232,17 @@ export async function updateOrderAction(id: string, input: OrderInput): Promise<
     if (err) return { ok: false, error: err };
 
     await withTenant(tenantId, async (tx) => {
+      const existing = await tx.order.findUnique({
+        where: { id },
+        select: { items: true, status: true },
+      });
       const { items, totalBrl } = await buildItemsAndTotal(tx, input);
+      // Estoque: se o pedido estava "vivo", devolve os itens antigos e dá baixa nos novos.
+      if (existing && existing.status !== "CANCELED") {
+        await applyStockDelta(tx, (Array.isArray(existing.items) ? existing.items : []) as Array<{ productId?: string; qty?: number }>, 1);
+        await applyStockDelta(tx, items, -1);
+      }
+      await upsertCustomerFromOrder(tx, tenantId, input);
       await tx.order.update({
         where: { id },
         data: {
@@ -213,6 +265,16 @@ export async function updateOrderStatusAction(id: string, status: OrderStatus): 
   try {
     const tenantId = await requireTenantId();
     await withTenant(tenantId, async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id },
+        select: { items: true, status: true },
+      });
+      if (order && order.status !== status) {
+        const its = (Array.isArray(order.items) ? order.items : []) as Array<{ productId?: string; qty?: number }>;
+        // Cancelar devolve o estoque; reativar um cancelado dá baixa de novo.
+        if (status === "CANCELED" && order.status !== "CANCELED") await applyStockDelta(tx, its, 1);
+        else if (status !== "CANCELED" && order.status === "CANCELED") await applyStockDelta(tx, its, -1);
+      }
       await tx.order.update({ where: { id }, data: { status } });
     });
     revalidatePath("/orders");
@@ -227,9 +289,18 @@ export async function deleteOrderAction(id: string): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
     await withTenant(tenantId, async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id },
+        select: { items: true, status: true },
+      });
+      // Devolve o estoque se o pedido ainda estava "vivo".
+      if (order && order.status !== "CANCELED") {
+        await applyStockDelta(tx, (Array.isArray(order.items) ? order.items : []) as Array<{ productId?: string; qty?: number }>, 1);
+      }
       await tx.order.delete({ where: { id } });
     });
     revalidatePath("/orders");
+    revalidatePath("/dashboard");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
