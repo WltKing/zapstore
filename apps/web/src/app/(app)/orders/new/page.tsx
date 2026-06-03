@@ -3,7 +3,33 @@ import { redirect } from "next/navigation";
 import { prisma, withTenant } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
-import { OrderForm, blankOrder } from "../order-form";
+import { OrderForm } from "../order-form";
+import type { OrderInput } from "@/lib/actions/orders";
+
+const BLANK: OrderInput = {
+  customerName: "",
+  customerPhone: "",
+  customerCpf: "",
+  customerEmail: "",
+  cep: "",
+  street: "",
+  streetNumber: "",
+  complement: "",
+  neighborhood: "",
+  city: "",
+  state: "",
+  channel: "presencial",
+  sellerName: "",
+  invoiceType: "none",
+  toReceive: false,
+  deliveryType: "delivery",
+  deliveryDate: "",
+  deliveryShift: "",
+  paymentMethod: "",
+  installments: 1,
+  notes: "",
+  items: [{ productId: "", qty: 1 }],
+};
 
 export default async function NewOrderPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -30,7 +56,7 @@ export default async function NewOrderPage() {
     <OrderForm
       products={products.map((p) => ({ id: p.id, name: p.name, priceBrl: Number(p.priceBrl) }))}
       sellers={sellers}
-      initial={blankOrder()}
+      initial={BLANK}
     />
   );
 }
