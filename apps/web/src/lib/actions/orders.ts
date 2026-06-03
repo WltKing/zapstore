@@ -147,20 +147,22 @@ function buildOrderData(input: OrderInput) {
   };
 }
 
-export async function createOrderAction(input: OrderInput): Promise<ActionResult> {
+export async function createOrderAction(
+  input: OrderInput,
+): Promise<ActionResult & { orderId?: string }> {
   try {
     const tenantId = await requireTenantId();
     const err = validateOrder(input);
     if (err) return { ok: false, error: err };
 
-    await withTenant(tenantId, async (tx) => {
+    const orderId = await withTenant(tenantId, async (tx) => {
       const { items, totalBrl } = await buildItemsAndTotal(tx, input);
       const last = await tx.order.findFirst({
         where: { tenantId },
         orderBy: { orderNumber: "desc" },
       });
       const orderNumber = (last?.orderNumber ?? 0) + 1;
-      await tx.order.create({
+      const order = await tx.order.create({
         data: {
           tenantId,
           orderNumber,
@@ -170,11 +172,12 @@ export async function createOrderAction(input: OrderInput): Promise<ActionResult
           ...buildOrderData(input),
         },
       });
+      return order.id;
     });
 
     revalidatePath("/orders");
     revalidatePath("/dashboard");
-    return { ok: true };
+    return { ok: true, orderId };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
   }

@@ -12,23 +12,9 @@ export default async function OrdersPage() {
   const tenant = await getPrimaryTenantForUser(session.user.id);
   if (!tenant) redirect("/onboarding");
 
-  const { orders, products } = await withTenant(tenant.id, async (tx) => {
-    const [orders, products] = await Promise.all([
-      tx.order.findMany({ orderBy: { createdAt: "desc" }, take: 100 }),
-      tx.product.findMany({
-        where: { active: true },
-        orderBy: { name: "asc" },
-        select: { id: true, name: true, priceBrl: true },
-      }),
-    ]);
-    return { orders, products };
-  });
-
-  const productOptions = products.map((p) => ({
-    id: p.id,
-    name: p.name,
-    priceBrl: Number(p.priceBrl),
-  }));
+  const orders = await withTenant(tenant.id, (tx) =>
+    tx.order.findMany({ orderBy: { createdAt: "desc" }, take: 100 }),
+  );
 
   const rows = orders.map((o) => ({
     id: o.id,
@@ -44,5 +30,5 @@ export default async function OrdersPage() {
     createdAt: o.createdAt.toISOString(),
   }));
 
-  return <OrdersView storeName={tenant.name} orders={rows} products={productOptions} />;
+  return <OrdersView storeName={tenant.name} orders={rows} />;
 }

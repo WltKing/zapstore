@@ -1,0 +1,387 @@
+"use client";
+
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { createOrderAction, updateOrderAction, type OrderInput } from "@/lib/actions/orders";
+import { lookupCepAction } from "@/lib/actions/cep";
+
+export interface ProductOpt {
+  id: string;
+  name: string;
+  priceBrl: number;
+}
+
+const PAYMENTS = [
+  { value: "pix", label: "Pix" },
+  { value: "cartao", label: "Cartão" },
+  { value: "dinheiro", label: "Dinheiro" },
+  { value: "boleto", label: "Boleto" },
+];
+
+const inputClass =
+  "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900";
+
+function formatBrl(v: number): string {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+}
+
+export function blankOrder(): OrderInput {
+  return {
+    customerName: "",
+    customerPhone: "",
+    customerCpf: "",
+    customerEmail: "",
+    cep: "",
+    street: "",
+    streetNumber: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    channel: "presencial",
+    sellerName: "",
+    invoiceType: "none",
+    toReceive: false,
+    deliveryType: "delivery",
+    deliveryDate: "",
+    deliveryShift: "",
+    paymentMethod: "",
+    installments: 1,
+    notes: "",
+    items: [{ productId: "", qty: 1 }],
+  };
+}
+
+export function OrderForm({
+  products,
+  sellers,
+  initial,
+  orderId,
+  orderNumber,
+}: {
+  products: ProductOpt[];
+  sellers: string[];
+  initial: OrderInput;
+  orderId?: string;
+  orderNumber?: number;
+}) {
+  const router = useRouter();
+  const [form, setForm] = useState<OrderInput>(initial);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const set = (patch: Partial<OrderInput>) => setForm((f) => ({ ...f, ...patch }));
+  const priceOf = (id: string) => products.find((p) => p.id === id)?.priceBrl ?? 0;
+
+  const setItem = (i: number, patch: Partial<OrderInput["items"][number]>) =>
+    setForm((f) => ({ ...f, items: f.items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)) }));
+  const addItem = () => setForm((f) => ({ ...f, items: [...f.items, { productId: "", qty: 1 }] }));
+  const removeItem = (i: number) =>
+    setForm((f) => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }));
+
+  const lineTotal = (it: OrderInput["items"][number]) =>
+    it.qty * priceOf(it.productId) - (it.discountBrl ?? 0) + (it.freightBrl ?? 0);
+
+  const total = useMemo(
+    () =>
+      form.items.reduce((s, it) => s + lineTotal(it), 0) -
+      (form.discountBrl ?? 0) +
+      (form.freightBrl ?? 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [form.items, form.discountBrl, form.freightBrl],
+  );
+
+  const buscarCep = () => {
+    setCepLoading(true);
+    startTransition(async () => {
+      const r = await lookupCepAction(form.cep ?? "");
+      setCepLoading(false);
+      if (!r.ok || !r.data) {
+        setError(r.error ?? "CEP não encontrado.");
+        return;
+      }
+      setError(null);
+      set({
+        street: r.data.street || form.street,
+        neighborhood: r.data.neighborhood || form.neighborhood,
+        city: r.data.city,
+        state: r.data.state,
+      });
+    });
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSaved(false);
+    startTransition(async () => {
+      if (orderId) {
+        const r = await updateOrderAction(orderId, form);
+        if (!r.ok) setError(r.error ?? "Erro");
+        else {
+          setSaved(true);
+          router.refresh();
+        }
+      } else {
+        const r = await createOrderAction(form);
+        if (!r.ok) setError(r.error ?? "Erro");
+        else if (r.orderId) router.push(`/orders/${r.orderId}`);
+        else router.push("/orders");
+      }
+    });
+  };
+
+  const isDelivery = form.deliveryType !== "pickup";
+
+  return (
+    <form onSubmit={submit} className="mx-auto max-w-3xl px-6 py-10 space-y-6">
+      <header className="flex items-center justify-between">
+        <div>
+          <a href="/orders" className="text-sm text-neutral-500 hover:text-neutral-800">
+            ← Pedidos
+          </a>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {orderId ? `Pedido #${orderNumber}` : "Novo pedido"}
+          </h1>
+        </div>
+        <div className="flex gap-2">
+          {orderId && (
+            <a
+              href={`/orders/${orderId}/print`}
+              target="_blank"
+              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+            >
+              Imprimir
+            </a>
+          )}
+          <a
+            href="/orders/new"
+            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+          >
+            + Nova venda
+          </a>
+        </div>
+      </header>
+
+      {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+      {saved && <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Salvo! ✅</p>}
+
+      {/* Cliente */}
+      <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <h2 className="font-semibold">Cliente</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Nome</label>
+            <input required value={form.customerName} onChange={(e) => set({ customerName: e.target.value })} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Telefone</label>
+            <input required value={form.customerPhone} onChange={(e) => set({ customerPhone: e.target.value })} placeholder="(62) 99157-2500" className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">CPF/CNPJ (opcional)</label>
+            <input value={form.customerCpf} onChange={(e) => set({ customerCpf: e.target.value })} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">E-mail (opcional)</label>
+            <input type="email" value={form.customerEmail} onChange={(e) => set({ customerEmail: e.target.value })} className={inputClass} />
+          </div>
+        </div>
+      </section>
+
+      {/* Venda */}
+      <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <h2 className="font-semibold">Venda</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Canal</label>
+            <select value={form.channel} onChange={(e) => set({ channel: e.target.value })} className={inputClass}>
+              <option value="presencial">Presencial</option>
+              <option value="online">Online</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Vendedor</label>
+            <input list="sellers" value={form.sellerName} onChange={(e) => set({ sellerName: e.target.value })} className={inputClass} />
+            <datalist id="sellers">
+              {sellers.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Nota fiscal</label>
+            <select value={form.invoiceType} onChange={(e) => set({ invoiceType: e.target.value })} className={inputClass}>
+              <option value="none">Sem nota</option>
+              <option value="nfce">NFC-e</option>
+              <option value="nfe">NF-e</option>
+            </select>
+          </div>
+        </div>
+        <label className="mt-3 flex items-center gap-2">
+          <input type="checkbox" checked={form.toReceive ?? false} onChange={(e) => set({ toReceive: e.target.checked })} className="h-4 w-4 rounded border-neutral-300" />
+          <span className="text-sm text-neutral-700">A receber (ex: recebimento na entrega)</span>
+        </label>
+      </section>
+
+      {/* Entrega */}
+      <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <h2 className="font-semibold">Entrega</h2>
+        <div className="mt-3 flex gap-4">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="radio" name="dtype" checked={isDelivery} onChange={() => set({ deliveryType: "delivery" })} />
+            Entregar no endereço
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="radio" name="dtype" checked={!isDelivery} onChange={() => set({ deliveryType: "pickup" })} />
+            Retirada na loja
+          </label>
+        </div>
+
+        {isDelivery && (
+          <>
+            <div className="mt-3 flex items-end gap-2">
+              <div className="w-40">
+                <label className="block text-sm font-medium text-neutral-700">CEP</label>
+                <input value={form.cep} onChange={(e) => set({ cep: e.target.value })} placeholder="00000-000" className={inputClass} />
+              </div>
+              <button type="button" onClick={buscarCep} disabled={cepLoading || isPending} className="mb-0.5 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50">
+                {cepLoading ? "Buscando..." : "Buscar"}
+              </button>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-6">
+              <div className="sm:col-span-4">
+                <label className="block text-sm font-medium text-neutral-700">Rua</label>
+                <input value={form.street} onChange={(e) => set({ street: e.target.value })} className={inputClass} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-neutral-700">Número</label>
+                <input value={form.streetNumber} onChange={(e) => set({ streetNumber: e.target.value })} className={inputClass} />
+              </div>
+              <div className="sm:col-span-3">
+                <label className="block text-sm font-medium text-neutral-700">Complemento</label>
+                <input value={form.complement} onChange={(e) => set({ complement: e.target.value })} className={inputClass} />
+              </div>
+              <div className="sm:col-span-3">
+                <label className="block text-sm font-medium text-neutral-700">Bairro</label>
+                <input value={form.neighborhood} onChange={(e) => set({ neighborhood: e.target.value })} className={inputClass} />
+              </div>
+              <div className="sm:col-span-4">
+                <label className="block text-sm font-medium text-neutral-700">Cidade</label>
+                <input value={form.city} onChange={(e) => set({ city: e.target.value })} className={inputClass} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-neutral-700">UF</label>
+                <input maxLength={2} value={form.state} onChange={(e) => set({ state: e.target.value.toUpperCase() })} className={inputClass} />
+              </div>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700">Data de entrega</label>
+                <input type="date" value={form.deliveryDate} onChange={(e) => set({ deliveryDate: e.target.value })} className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700">Turno</label>
+                <select value={form.deliveryShift} onChange={(e) => set({ deliveryShift: e.target.value })} className={inputClass}>
+                  <option value="">—</option>
+                  <option value="morning">Manhã</option>
+                  <option value="afternoon">Tarde</option>
+                </select>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* Itens */}
+      <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold">Itens</h2>
+          <button type="button" onClick={addItem} className="text-sm font-medium text-neutral-700 hover:text-neutral-900">
+            + Item
+          </button>
+        </div>
+        {products.length === 0 && (
+          <p className="mt-2 text-sm text-amber-700">Cadastre produtos antes de criar o pedido.</p>
+        )}
+        <div className="mt-3 space-y-2">
+          {form.items.map((it, i) => (
+            <div key={i} className="grid grid-cols-12 items-center gap-2">
+              <select required value={it.productId} onChange={(e) => setItem(i, { productId: e.target.value })} className="col-span-5 min-w-0 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900">
+                <option value="">Produto...</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} — {formatBrl(p.priceBrl)}
+                  </option>
+                ))}
+              </select>
+              <input type="number" min="1" step="1" value={it.qty} onChange={(e) => setItem(i, { qty: Number(e.target.value) })} title="Qtd" className="col-span-2 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm" />
+              <input type="number" min="0" step="0.01" value={it.discountBrl ?? ""} onChange={(e) => setItem(i, { discountBrl: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="Desc." title="Desconto" className="col-span-2 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm" />
+              <span className="col-span-2 text-right text-sm font-medium">{formatBrl(lineTotal(it))}</span>
+              {form.items.length > 1 && (
+                <button type="button" onClick={() => removeItem(i)} className="col-span-1 text-neutral-400 hover:text-red-600" aria-label="Remover">✕</button>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Pagamento + totais */}
+      <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <h2 className="font-semibold">Pagamento</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Forma</label>
+            <select value={form.paymentMethod} onChange={(e) => set({ paymentMethod: e.target.value })} className={inputClass}>
+              <option value="">—</option>
+              {PAYMENTS.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+          </div>
+          {form.paymentMethod === "cartao" && (
+            <div>
+              <label className="block text-sm font-medium text-neutral-700">Parcelas</label>
+              <select value={form.installments ?? 1} onChange={(e) => set({ installments: Number(e.target.value) })} className={inputClass}>
+                {Array.from({ length: 12 }, (_, k) => k + 1).map((nn) => (
+                  <option key={nn} value={nn}>{nn}x</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Desconto no total (R$)</label>
+            <input type="number" min="0" step="0.01" value={form.discountBrl ?? ""} onChange={(e) => set({ discountBrl: e.target.value === "" ? undefined : Number(e.target.value) })} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Frete (R$)</label>
+            <input type="number" min="0" step="0.01" value={form.freightBrl ?? ""} onChange={(e) => set({ freightBrl: e.target.value === "" ? undefined : Number(e.target.value) })} className={inputClass} />
+          </div>
+        </div>
+        <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3">
+          <span className="text-sm uppercase tracking-wide text-neutral-500">Total</span>
+          <span className="text-2xl font-bold">{formatBrl(total)}</span>
+        </div>
+      </section>
+
+      {/* Obs */}
+      <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <label className="block text-sm font-medium text-neutral-700">Observações</label>
+        <textarea rows={2} value={form.notes} onChange={(e) => set({ notes: e.target.value })} className={inputClass} />
+      </section>
+
+      <div className="flex justify-end gap-2">
+        <a href="/orders" className="rounded-lg border border-neutral-300 px-5 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100">
+          Cancelar
+        </a>
+        <button type="submit" disabled={isPending} className="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400">
+          {isPending ? "Salvando..." : orderId ? "Atualizar pedido" : "Salvar pedido"}
+        </button>
+      </div>
+    </form>
+  );
+}
