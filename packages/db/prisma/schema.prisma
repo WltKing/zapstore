@@ -282,11 +282,35 @@ model Order {
   orderNumber     Int         // sequencial por tenant
   customerName    String
   customerPhone   String
-  customerAddress String?     @db.Text
+  customerAddress String?     @db.Text // endereço montado (compatibilidade/exibição)
+  // Cliente — identidade
+  customerCpf     String?
+  customerEmail   String?
+  // Endereço estruturado
+  cep             String?
+  street          String?
+  streetNumber    String?
+  complement      String?
+  neighborhood    String?
+  city            String?
+  state           String?
+  // Venda — metadados
+  channel         String      @default("presencial") // "online" | "presencial"
+  sellerName      String? // responsável pela venda
+  invoiceType     String      @default("none") // "none" | "nfce" | "nfe"
+  toReceive       Boolean     @default(false) // a receber (ex: na entrega)
+  // Entrega
+  deliveryType    String      @default("delivery") // "delivery" | "pickup"
+  deliveryDate    DateTime?
+  deliveryShift   String? // "morning" | "afternoon"
+  // Valores
   status          OrderStatus @default(PENDING)
-  items           Json        // [{ productId, name, qty, priceBrl }]
+  items           Json        // [{ productId, name, qty, priceBrl, discountBrl, freightBrl }]
+  discountBrl     Decimal?    @db.Decimal(10, 2)
+  freightBrl      Decimal?    @db.Decimal(10, 2)
   totalBrl        Decimal     @db.Decimal(10, 2)
   paymentMethod   String?
+  installments    Int         @default(1) // parcelas (cartão)
   notes           String?     @db.Text
   scheduledFor    DateTime?
   createdAt       DateTime    @default(now())
