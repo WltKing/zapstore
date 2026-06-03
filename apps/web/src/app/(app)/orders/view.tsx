@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteOrderAction, updateOrderStatusAction } from "@/lib/actions/orders";
 
@@ -59,11 +59,50 @@ function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
 }
 
+function monthKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function monthLabel(key: string): string {
+  const [y, m] = key.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+}
+
 export function OrdersView({ storeName, orders }: { storeName: string; orders: OrderRow[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState<string>(currentMonth);
+
+  const months = useMemo(() => {
+    const set = new Set(orders.map((o) => monthKey(o.createdAt)));
+    set.add(currentMonth);
+    return Array.from(set).sort().reverse();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const qd = q.replace(/\D/g, "");
+    return orders.filter((o) => {
+      if (monthFilter !== "all" && monthKey(o.createdAt) !== monthFilter) return false;
+      if (statusFilter !== "all" && o.status !== statusFilter) return false;
+      if (q) {
+        const hit =
+          o.customerName.toLowerCase().includes(q) ||
+          String(o.orderNumber).includes(qd || q) ||
+          (!!qd && o.customerPhone.includes(qd));
+        if (!hit) return false;
+      }
+      return true;
+    });
+  }, [orders, query, statusFilter, monthFilter]);
 
   const advance = (id: string, status: string) => {
     const next = NEXT_STATUS[status];
@@ -120,18 +159,55 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
         <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
       )}
 
-      <section className="mt-8 rounded-2xl bg-white shadow-sm">
-        {orders.length === 0 ? (
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por cliente, telefone ou nº..."
+          className="min-w-56 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        />
+        <select
+          value={monthFilter}
+          onChange={(e) => setMonthFilter(e.target.value)}
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        >
+          <option value="all">Todos os meses</option>
+          {months.map((m) => (
+            <option key={m} value={m} className="capitalize">
+              {monthLabel(m)}
+            </option>
+          ))}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        >
+          <option value="all">Todos os status</option>
+          {Object.entries(STATUS_LABELS).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <section className="mt-4 rounded-2xl bg-white shadow-sm">
+        {filtered.length === 0 ? (
           <div className="p-12 text-center">
-            <h2 className="text-lg font-semibold">Nenhum pedido ainda</h2>
+            <h2 className="text-lg font-semibold">
+              {orders.length === 0 ? "Nenhum pedido ainda" : "Nenhum pedido neste filtro"}
+            </h2>
             <p className="mt-1 text-sm text-neutral-500">
-              Crie um pedido no botão acima, ou deixe o bot fechar a venda — aparece aqui
-              automaticamente.
+              {orders.length === 0
+                ? "Crie um pedido no botão acima, ou deixe o bot fechar a venda — aparece aqui automaticamente."
+                : "Ajuste a busca, o mês ou o status."}
             </p>
           </div>
         ) : (
           <ul className="divide-y divide-neutral-100">
-            {orders.map((o) => {
+            {filtered.map((o) => {
               const isOpen = expanded === o.id;
               const items = Array.isArray(o.items) ? (o.items as OrderItem[]) : [];
               return (
@@ -157,6 +233,14 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
                       >
                         {STATUS_LABELS[o.status] ?? o.status}
                       </span>
+                      <a
+                        href={`/print/order/${o.id}`}
+                        target="_blank"
+                        title="Imprimir"
+                        className="text-neutral-400 hover:text-neutral-700"
+                      >
+                        🖨
+                      </a>
                       <a href={`/orders/${o.id}`} className="text-sm text-neutral-600 hover:text-neutral-900">
                         Abrir
                       </a>
