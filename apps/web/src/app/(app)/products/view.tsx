@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   createProductAction,
@@ -83,6 +83,35 @@ export function ProductsView({
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Busca + filtros
+  const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all"); // all | active | inactive
+  const [stockFilter, setStockFilter] = useState("all"); // all | low | out
+  const [kindFilter, setKindFilter] = useState("all"); // all | simple | kit
+
+  const categories = useMemo(() => {
+    const set = new Set(initial.map((p) => p.category).filter((c): c is string => !!c?.trim()));
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [initial]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return initial.filter((p) => {
+      if (categoryFilter !== "all" && (p.category ?? "") !== categoryFilter) return false;
+      if (statusFilter === "active" && !p.active) return false;
+      if (statusFilter === "inactive" && p.active) return false;
+      if (kindFilter !== "all" && p.kind !== kindFilter) return false;
+      if (stockFilter === "low" && !(p.stock <= p.lowStockThreshold)) return false;
+      if (stockFilter === "out" && p.stock > 0) return false;
+      if (q) {
+        const hay = `${p.name} ${p.fiscalName ?? ""} ${p.category ?? ""} ${p.description ?? ""} ${p.ncm ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [initial, query, categoryFilter, statusFilter, kindFilter, stockFilter]);
+
   const lowStockItems = initial.filter((p) => p.active && p.stock <= p.lowStockThreshold);
 
   const handleToggle = (id: string, active: boolean) => {
@@ -153,12 +182,69 @@ export function ProductsView({
         </p>
       )}
 
-      <section className="mt-8 rounded-2xl bg-white shadow-sm">
-        {initial.length === 0 ? (
+      {/* Busca + filtros */}
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por nome, categoria, NCM..."
+          className="min-w-56 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        />
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        >
+          <option value="all">Todas as categorias</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <select
+          value={kindFilter}
+          onChange={(e) => setKindFilter(e.target.value)}
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        >
+          <option value="all">Todos os tipos</option>
+          <option value="simple">Simples</option>
+          <option value="kit">Kit</option>
+        </select>
+        <select
+          value={stockFilter}
+          onChange={(e) => setStockFilter(e.target.value)}
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        >
+          <option value="all">Todo estoque</option>
+          <option value="low">Estoque baixo</option>
+          <option value="out">Sem estoque</option>
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        >
+          <option value="all">Ativos e inativos</option>
+          <option value="active">Só ativos</option>
+          <option value="inactive">Só inativos</option>
+        </select>
+      </div>
+      <p className="mt-2 text-xs text-neutral-500">
+        {filtered.length} de {initial.length} produto{initial.length === 1 ? "" : "s"}
+      </p>
+
+      <section className="mt-3 rounded-2xl bg-white shadow-sm">
+        {filtered.length === 0 ? (
           <div className="p-12 text-center">
-            <h2 className="text-lg font-semibold">Nenhum produto cadastrado</h2>
+            <h2 className="text-lg font-semibold">
+              {initial.length === 0 ? "Nenhum produto cadastrado" : "Nenhum produto neste filtro"}
+            </h2>
             <p className="mt-1 text-sm text-neutral-500">
-              Cadastre o primeiro produto pro bot começar a oferecer.
+              {initial.length === 0
+                ? "Cadastre o primeiro produto pro bot começar a oferecer."
+                : "Ajuste a busca ou os filtros."}
             </p>
           </div>
         ) : (
@@ -174,7 +260,7 @@ export function ProductsView({
               </tr>
             </thead>
             <tbody>
-              {initial.map((p) => (
+              {filtered.map((p) => (
                 <tr
                   key={p.id}
                   onClick={() => {

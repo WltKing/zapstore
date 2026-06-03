@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
 import { NICHE_TEMPLATES } from "@/lib/niches";
+import { parseCardFees, emptyCardFees } from "@/lib/fees";
 import { SettingsView } from "./view";
 
 export default async function SettingsPage() {
@@ -24,7 +25,7 @@ export default async function SettingsPage() {
       pixCity={tenant.pixCity}
       defaultMarginPct={tenant.defaultMarginPct != null ? Number(tenant.defaultMarginPct) : null}
       roundTo90={tenant.roundTo90}
-      cardFeePct={tenant.cardFeePct != null ? Number(tenant.cardFeePct) : null}
+      cardFees={parseCardFees(tenant.cardFees) ?? emptyCardFees()}
       taxEstimatePct={tenant.taxEstimatePct != null ? Number(tenant.taxEstimatePct) : null}
       nicheLabel={nicheLabel}
       email={session.user.email}

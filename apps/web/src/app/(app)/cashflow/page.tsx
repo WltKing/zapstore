@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { withTenant } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
+import { parseCardFees, feePctForOrder, hasAnyFee } from "@/lib/fees";
 import { CashflowView, type Movement, type DayPoint } from "./view";
 
 function monthRange(month?: string): { key: string; start: Date; end: Date } {
@@ -40,7 +41,7 @@ export default async function CashflowPage({
   const { month } = await searchParams;
   const { key, start, end } = monthRange(month);
 
-  const cardFeePct = tenant.cardFeePct != null ? Number(tenant.cardFeePct) : null;
+  const cardFees = parseCardFees(tenant.cardFees);
   const taxEstimatePct = tenant.taxEstimatePct != null ? Number(tenant.taxEstimatePct) : null;
 
   const todayStart = new Date();
@@ -60,6 +61,7 @@ export default async function CashflowPage({
           toReceive: true,
           installments: true,
           invoiceType: true,
+          paymentMethod: true,
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -92,12 +94,10 @@ export default async function CashflowPage({
   const aReceberMes = orders.filter((o) => o.toReceive).reduce((s, o) => s + Number(o.totalBrl), 0);
   const despesasMes = expenses.reduce((s, e) => s + Number(e.amountBrl), 0);
 
-  const taxaMaquininha =
-    cardFeePct != null
-      ? orders
-          .filter((o) => o.installments > 1)
-          .reduce((s, o) => s + (Number(o.totalBrl) * cardFeePct) / 100, 0)
-      : 0;
+  const taxaMaquininha = orders.reduce(
+    (s, o) => s + (Number(o.totalBrl) * feePctForOrder(o.paymentMethod, o.installments, cardFees)) / 100,
+    0,
+  );
   const impostoEstimado =
     taxEstimatePct != null
       ? orders
@@ -155,7 +155,7 @@ export default async function CashflowPage({
       impostoEstimado={impostoEstimado}
       entradaLiquida={entradaLiquida}
       resultado={resultado}
-      hasCardFee={cardFeePct != null}
+      hasCardFee={hasAnyFee(cardFees)}
       hasTax={taxEstimatePct != null}
       chart={chart}
       movements={movements}

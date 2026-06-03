@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { prisma } from "@zapstore/db";
 import { auth } from "@/lib/auth";
+import { parseCardFees, type CardFees } from "@/lib/fees";
 
 async function requireTenantId(): Promise<string> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -29,7 +30,7 @@ export interface StoreSettingsInput {
   pixCity?: string;
   defaultMarginPct?: number | null;
   roundTo90?: boolean;
-  cardFeePct?: number | null;
+  cardFees?: CardFees | null;
   taxEstimatePct?: number | null;
 }
 
@@ -51,16 +52,23 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
       margin = input.defaultMarginPct;
     }
 
-    // Taxas do caixa (% entre 0 e 100). null = não configurado.
-    const pctOrNull = (v: number | null | undefined, label: string): number | null | "err" => {
-      if (v == null || Number.isNaN(v)) return null;
-      if (v < 0 || v > 100) return "err";
-      return v;
-    };
-    const cardFee = pctOrNull(input.cardFeePct, "taxa");
-    if (cardFee === "err") return { ok: false, error: "Taxa da maquininha inválida (0 a 100)." };
-    const taxEst = pctOrNull(input.taxEstimatePct, "imposto");
-    if (taxEst === "err") return { ok: false, error: "Imposto estimado inválido (0 a 100)." };
+    // Imposto estimado (% entre 0 e 100). null = não configurado.
+    let taxEst: number | null = null;
+    if (input.taxEstimatePct != null && !Number.isNaN(input.taxEstimatePct)) {
+      if (input.taxEstimatePct < 0 || input.taxEstimatePct > 100) {
+        return { ok: false, error: "Imposto estimado inválido (0 a 100)." };
+      }
+      taxEst = input.taxEstimatePct;
+    }
+
+    // Taxas de cartão (Pix/débito/crédito por parcela). Normaliza e valida 0–100.
+    const fees = input.cardFees ? parseCardFees(input.cardFees) : null;
+    if (fees) {
+      const bad = (v: number) => v < 0 || v > 100;
+      if (bad(fees.pix) || bad(fees.debit) || fees.credit.some((c) => bad(c.fee))) {
+        return { ok: false, error: "Taxa inválida — use valores entre 0 e 100." };
+      }
+    }
 
     // tenants é tabela global (sem RLS); atualizamos só a loja do próprio usuário.
     await prisma.tenant.update({
@@ -73,7 +81,7 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
         pixCity: input.pixCity?.trim() || null,
         defaultMarginPct: margin,
         roundTo90: input.roundTo90 ?? false,
-        cardFeePct: cardFee,
+        cardFees: fees ? (JSON.parse(JSON.stringify(fees)) as object) : undefined,
         taxEstimatePct: taxEst,
       },
     });

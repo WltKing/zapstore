@@ -31,7 +31,8 @@ model Tenant {
   pixCity     String?  // cidade do recebedor (p/ o código Pix)
   defaultMarginPct Decimal? @db.Decimal(5, 2) // margem padrão (% sobre a venda) p/ auto-preencher preço
   roundTo90   Boolean  @default(false) // arredondar preço sugerido p/ terminar em ,90
-  cardFeePct  Decimal? @db.Decimal(5, 2) // taxa da maquininha no cartão parcelado (% p/ líquido do caixa)
+  cardFeePct  Decimal? @db.Decimal(5, 2) // DEPRECADO (substituído por cardFees); mantido p/ compat
+  cardFees    Json?    // taxas: { pix, debit, credit: [{n, fee}] } — % por forma/parcela
   taxEstimatePct Decimal? @db.Decimal(5, 2) // imposto estimado sobre vendas com nota (% p/ caixa)
   status      TenantStatus @default(TRIAL)
   createdAt   DateTime @default(now())

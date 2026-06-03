@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateStoreSettingsAction } from "@/lib/actions/settings";
 import { ImageUpload } from "@/components/image-upload";
+import type { CardFees } from "@/lib/fees";
 
 const DEFAULT_COLOR = "#171717";
 
@@ -15,7 +16,7 @@ export function SettingsView({
   pixCity,
   defaultMarginPct,
   roundTo90,
-  cardFeePct,
+  cardFees,
   taxEstimatePct,
   nicheLabel,
   email,
@@ -27,7 +28,7 @@ export function SettingsView({
   pixCity: string | null;
   defaultMarginPct: number | null;
   roundTo90: boolean;
-  cardFeePct: number | null;
+  cardFees: CardFees;
   taxEstimatePct: number | null;
   nicheLabel: string;
   email: string;
@@ -40,8 +41,22 @@ export function SettingsView({
   const [pixCityState, setPixCityState] = useState(pixCity ?? "");
   const [margin, setMargin] = useState(defaultMarginPct != null ? String(defaultMarginPct) : "");
   const [round90, setRound90] = useState(roundTo90);
-  const [cardFee, setCardFee] = useState(cardFeePct != null ? String(cardFeePct) : "");
   const [taxEst, setTaxEst] = useState(taxEstimatePct != null ? String(taxEstimatePct) : "");
+  // Taxas: pix/débito como string; crédito como lista editável de {n, fee}.
+  const [pixFee, setPixFee] = useState(cardFees.pix ? String(cardFees.pix) : "");
+  const [debitFee, setDebitFee] = useState(cardFees.debit ? String(cardFees.debit) : "");
+  const [creditRows, setCreditRows] = useState<{ n: string; fee: string }[]>(
+    cardFees.credit.length
+      ? cardFees.credit.map((c) => ({ n: String(c.n), fee: String(c.fee) }))
+      : [{ n: "1", fee: "" }],
+  );
+
+  const addCreditRow = () =>
+    setCreditRows((rows) => [...rows, { n: String(rows.length + 1), fee: "" }]);
+  const setCreditRow = (i: number, patch: Partial<{ n: string; fee: string }>) =>
+    setCreditRows((rows) => rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  const removeCreditRow = (i: number) =>
+    setCreditRows((rows) => rows.filter((_, idx) => idx !== i));
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -59,7 +74,13 @@ export function SettingsView({
         pixCity: pixCityState,
         defaultMarginPct: margin.trim() === "" ? null : Number(margin),
         roundTo90: round90,
-        cardFeePct: cardFee.trim() === "" ? null : Number(cardFee),
+        cardFees: {
+          pix: pixFee.trim() === "" ? 0 : Number(pixFee),
+          debit: debitFee.trim() === "" ? 0 : Number(debitFee),
+          credit: creditRows
+            .filter((r) => r.n.trim() !== "" && r.fee.trim() !== "")
+            .map((r) => ({ n: Number(r.n), fee: Number(r.fee) })),
+        },
         taxEstimatePct: taxEst.trim() === "" ? null : Number(taxEst),
       });
       if (!res.ok) setError(res.error ?? "Erro");
@@ -211,43 +232,106 @@ export function SettingsView({
         <section className="rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="font-semibold">Financeiro (caixa)</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            Usadas no <strong>Caixa</strong> pra calcular o resultado líquido. A taxa da maquininha é
-            descontada das vendas <strong>parceladas no cartão</strong>; o imposto estimado incide
-            sobre as vendas <strong>com nota</strong> (NFC-e/NF-e).
+            Usadas no <strong>Caixa</strong> e no <strong>Dashboard</strong> pra calcular o líquido.
+            Cada forma de pagamento (e cada parcela do crédito) pode ter uma taxa diferente.
           </p>
+
+          {/* Pix + débito */}
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-neutral-700">
-                Taxa da maquininha (%)
-              </label>
+              <label className="block text-sm font-medium text-neutral-700">Taxa Pix (%)</label>
               <input
                 type="number"
                 min="0"
                 max="100"
                 step="0.01"
-                value={cardFee}
-                onChange={(e) => setCardFee(e.target.value)}
-                placeholder="ex: 3.5"
+                value={pixFee}
+                onChange={(e) => setPixFee(e.target.value)}
+                placeholder="ex: 0"
                 className={inputClass}
               />
-              <p className="mt-1 text-xs text-neutral-400">No cartão parcelado.</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700">
-                Imposto estimado (%)
-              </label>
+              <label className="block text-sm font-medium text-neutral-700">Taxa Débito (%)</label>
               <input
                 type="number"
                 min="0"
                 max="100"
                 step="0.01"
-                value={taxEst}
-                onChange={(e) => setTaxEst(e.target.value)}
-                placeholder="ex: 4"
+                value={debitFee}
+                onChange={(e) => setDebitFee(e.target.value)}
+                placeholder="ex: 1.5"
                 className={inputClass}
               />
-              <p className="mt-1 text-xs text-neutral-400">Sobre vendas com nota.</p>
             </div>
+          </div>
+
+          {/* Crédito por parcela */}
+          <div className="mt-4 rounded-xl border border-neutral-200 p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-neutral-700">Crédito — taxa por parcela</span>
+              <button
+                type="button"
+                onClick={addCreditRow}
+                className="text-sm font-medium text-neutral-700 hover:text-neutral-900"
+              >
+                + Parcela
+              </button>
+            </div>
+            <div className="mt-3 space-y-2">
+              {creditRows.map((r, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={r.n}
+                    onChange={(e) => setCreditRow(i, { n: e.target.value })}
+                    className="w-16 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                  />
+                  <span className="text-sm text-neutral-500">x →</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={r.fee}
+                    onChange={(e) => setCreditRow(i, { fee: e.target.value })}
+                    placeholder="taxa"
+                    className="w-28 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                  />
+                  <span className="text-sm text-neutral-500">%</span>
+                  <button
+                    type="button"
+                    onClick={() => removeCreditRow(i)}
+                    className="ml-auto text-neutral-400 hover:text-red-600"
+                    aria-label="Remover"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-neutral-400">
+              Ex: 1x = 3,09% · 2x = 4,5% · 3x = 5,2%… Aplica nas vendas no cartão conforme o nº de
+              parcelas.
+            </p>
+          </div>
+
+          {/* Imposto */}
+          <div className="mt-4 max-w-xs">
+            <label className="block text-sm font-medium text-neutral-700">Imposto estimado (%)</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={taxEst}
+              onChange={(e) => setTaxEst(e.target.value)}
+              placeholder="ex: 4"
+              className={inputClass}
+            />
+            <p className="mt-1 text-xs text-neutral-400">Sobre vendas com nota (NFC-e/NF-e).</p>
           </div>
         </section>
 

@@ -1,3 +1,5 @@
+import { MonthSelect } from "./month-select";
+
 export interface Movement {
   date: string;
   label: string;
@@ -88,21 +90,10 @@ export function CashflowView({
         />
       </div>
 
-      {/* Navegação de mês */}
-      <div className="mt-8 flex items-center justify-center gap-4">
-        <a
-          href={`/cashflow?month=${prevMonth}`}
-          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
-        >
-          ← Mês anterior
-        </a>
-        <span className="min-w-44 text-center text-lg font-semibold capitalize">{monthLabel(monthKey)}</span>
-        <a
-          href={`/cashflow?month=${nextMonth}`}
-          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-100"
-        >
-          Próximo mês →
-        </a>
+      {/* Seletor de mês */}
+      <div className="mt-8 flex items-center gap-3">
+        <span className="text-sm text-neutral-500">Mês:</span>
+        <MonthSelect current={monthKey} />
       </div>
 
       {/* Resumo do mês */}

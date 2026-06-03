@@ -1,4 +1,5 @@
 import { prisma, withTenant } from "@zapstore/db";
+import { parseCardFees, feePctForOrder, hasAnyFee } from "@/lib/fees";
 
 /** Retorna a primeira loja do usuario (com botConfig+subscription), ou null. */
 export async function getPrimaryTenantForUser(userId: string) {
@@ -154,9 +155,9 @@ export async function getDashboardExtras(tenantId: string) {
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: { cardFeePct: true, taxEstimatePct: true },
+    select: { cardFees: true, taxEstimatePct: true },
   });
-  const cardFeePct = tenant?.cardFeePct != null ? Number(tenant.cardFeePct) : null;
+  const cardFees = parseCardFees(tenant?.cardFees);
   const taxEstimatePct = tenant?.taxEstimatePct != null ? Number(tenant.taxEstimatePct) : null;
 
   return withTenant(tenantId, async (tx) => {
@@ -213,8 +214,9 @@ export async function getDashboardExtras(tenantId: string) {
       if (inst > 1) {
         parceladoCount++;
         parceladoTotal += total;
-        if (cardFeePct != null) taxaMaquininha += (total * cardFeePct) / 100;
       }
+
+      taxaMaquininha += (total * feePctForOrder(o.paymentMethod, o.installments, cardFees)) / 100;
 
       if (taxEstimatePct != null && o.invoiceType && o.invoiceType !== "none") {
         impostoEstimado += (total * taxEstimatePct) / 100;
@@ -274,7 +276,7 @@ export async function getDashboardExtras(tenantId: string) {
       taxaMaquininha,
       impostoEstimado,
       liquidoMes,
-      hasCardFee: cardFeePct != null,
+      hasCardFee: hasAnyFee(cardFees),
       hasTax: taxEstimatePct != null,
       evolution,
     };
