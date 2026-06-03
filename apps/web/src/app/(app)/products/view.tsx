@@ -10,6 +10,7 @@ import {
   type ProductInput,
 } from "@/lib/actions/products";
 import { ImageUpload } from "@/components/image-upload";
+import { NfeImportDialog } from "@/components/nfe-import-dialog";
 
 export interface ProductRow {
   id: string;
@@ -68,6 +69,7 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState<ProductRow | "new" | null>(null);
+  const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const lowStockItems = initial.filter((p) => p.active && p.stock <= p.lowStockThreshold);
@@ -103,6 +105,16 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
           >
             Voltar
           </a>
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setImporting(true);
+            }}
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+          >
+            Importar XML
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -258,6 +270,13 @@ export function ProductsView({ initial, storeName }: { initial: ProductRow[]; st
           </table>
         )}
       </section>
+
+      {importing && (
+        <NfeImportDialog
+          products={initial.map((p) => ({ id: p.id, name: p.name, fiscalName: p.fiscalName }))}
+          onClose={() => setImporting(false)}
+        />
+      )}
 
       {editing && (
         <ProductDialog
