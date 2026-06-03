@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getPrimaryTenantForUser, getTenantStats } from "@/lib/tenant";
+import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras } from "@/lib/tenant";
 import { NICHE_TEMPLATES } from "@/lib/niches";
 
 const DEFAULT_QUOTA = 2500;
@@ -16,6 +16,7 @@ export default async function DashboardPage() {
 
   const tenant = await getPrimaryTenantForUser(session.user.id);
   const stats = tenant ? await getTenantStats(tenant.id) : null;
+  const extras = tenant ? await getDashboardExtras(tenant.id) : null;
   const quota = tenant?.subscription?.messageQuota ?? DEFAULT_QUOTA;
   const used = stats?.messagesUsedThisMonth ?? 0;
   const pct = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
@@ -150,6 +151,86 @@ export default async function DashboardPage() {
             />
           </section>
 
+          {/* Desempenho do mês (quebras) */}
+          {extras && extras.brutoMes > 0 && (
+            <>
+              {(extras.hasCardFee || extras.hasTax) && (
+                <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <Card title="Vendas brutas" value={formatBrl(extras.brutoMes)} hint="Mês atual" />
+                  <Card
+                    title="Taxa maquininha"
+                    value={extras.hasCardFee ? `− ${formatBrl(extras.taxaMaquininha)}` : "—"}
+                    hint="Cartão parcelado"
+                  />
+                  <Card
+                    title="Imposto estimado"
+                    value={extras.hasTax ? `− ${formatBrl(extras.impostoEstimado)}` : "—"}
+                    hint="Vendas com nota"
+                  />
+                  <Card
+                    title="Líquido"
+                    value={formatBrl(extras.liquidoMes)}
+                    hint="Bruto − taxas − imposto"
+                    valueClass="text-emerald-700"
+                  />
+                </section>
+              )}
+
+              <section className="mt-8 grid gap-4 lg:grid-cols-2">
+                <Breakdown
+                  title="Por canal"
+                  rows={[
+                    { label: "Presencial", value: extras.byChannel.presencial },
+                    { label: "Online", value: extras.byChannel.online },
+                  ]}
+                />
+                <Breakdown
+                  title="Formas de pagamento"
+                  rows={extras.byPayment.map((p) => ({ label: p.method, value: p.total }))}
+                />
+                <Breakdown
+                  title="Por vendedor"
+                  rows={extras.bySeller.map((s) => ({ label: s.name, value: s.total }))}
+                />
+                <Breakdown
+                  title="Parcelamento"
+                  rows={extras.byInstallments.map((i) => ({
+                    label: i.n === 1 ? "À vista (1x)" : `${i.n}x`,
+                    value: i.total,
+                    suffix: `${i.count} venda${i.count > 1 ? "s" : ""}`,
+                  }))}
+                />
+              </section>
+
+              {extras.topProducts.length > 0 && (
+                <section className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                    Top produtos do mês
+                  </h2>
+                  <ul className="mt-4 divide-y divide-neutral-100">
+                    {extras.topProducts.map((p, i) => (
+                      <li key={i} className="flex items-center justify-between py-2.5">
+                        <span className="text-sm">
+                          <span className="mr-2 text-neutral-400">{i + 1}.</span>
+                          {p.name}
+                          <span className="ml-2 text-xs text-neutral-400">{p.qty} un.</span>
+                        </span>
+                        <span className="text-sm font-medium">{formatBrl(p.revenue)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              <section className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                  Evolução mensal (6 meses)
+                </h2>
+                <MonthlyChart data={extras.evolution} />
+              </section>
+            </>
+          )}
+
           {/* Próximos passos */}
           <section className="mt-10 rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold">Próximos passos</h2>
@@ -266,6 +347,71 @@ function Step({
         <span className="text-sm text-neutral-400">→</span>
       </a>
     </li>
+  );
+}
+
+function Breakdown({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: { label: string; value: number; suffix?: string }[];
+}) {
+  const max = Math.max(...rows.map((r) => r.value), 1);
+  const nonZero = rows.filter((r) => r.value > 0);
+  return (
+    <div className="rounded-2xl bg-white p-6 shadow-sm">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">{title}</h2>
+      {nonZero.length === 0 ? (
+        <p className="mt-4 text-xs text-neutral-400">Sem dados neste mês.</p>
+      ) : (
+        <ul className="mt-4 space-y-3">
+          {nonZero.map((r, i) => (
+            <li key={i}>
+              <div className="flex items-center justify-between text-sm">
+                <span className="truncate pr-2 capitalize">{r.label}</span>
+                <span className="shrink-0 font-medium">
+                  {formatBrl(r.value)}
+                  {r.suffix && <span className="ml-1 text-xs text-neutral-400">· {r.suffix}</span>}
+                </span>
+              </div>
+              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+                <div
+                  className="h-full bg-neutral-700"
+                  style={{ width: `${(r.value / max) * 100}%` }}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function MonthlyChart({ data }: { data: { label: string; total: number }[] }) {
+  const max = Math.max(...data.map((d) => d.total), 1);
+  const hasData = data.some((d) => d.total > 0);
+  return (
+    <div className="mt-4">
+      <div className="flex h-44 items-end gap-3">
+        {data.map((d, i) => (
+          <div key={i} className="flex flex-1 flex-col items-center justify-end" title={formatBrl(d.total)}>
+            <span className="mb-1 text-[10px] text-neutral-500">
+              {d.total > 0 ? formatBrl(d.total) : ""}
+            </span>
+            <div
+              className="w-full rounded-t bg-emerald-400"
+              style={{ height: `${(d.total / max) * 100}%`, minHeight: d.total > 0 ? "4px" : "0px" }}
+            />
+            <span className="mt-1 text-[10px] text-neutral-400">{d.label}</span>
+          </div>
+        ))}
+      </div>
+      {!hasData && (
+        <p className="mt-3 text-center text-xs text-neutral-400">Sem vendas nos últimos meses ainda.</p>
+      )}
+    </div>
   );
 }
 
