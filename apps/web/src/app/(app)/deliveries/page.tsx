@@ -14,7 +14,7 @@ export default async function DeliveriesPage() {
 
   const orders = await withTenant(tenant.id, async (tx) =>
     tx.order.findMany({
-      where: { status: { not: "CANCELED" }, customerAddress: { not: null } },
+      where: { status: { not: "CANCELED" }, deliveryType: { not: "pickup" } },
       orderBy: { createdAt: "desc" },
       take: 300,
       select: {
@@ -25,28 +25,38 @@ export default async function DeliveriesPage() {
         customerAddress: true,
         status: true,
         totalBrl: true,
+        deliveryDate: true,
+        deliveryShift: true,
         scheduledFor: true,
         createdAt: true,
       },
     }),
   );
 
+  const dateInput = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
   return (
     <DeliveriesView
       storeName={tenant.name}
       capacity={tenant.botConfig?.dailyDeliveryCapacity ?? 0}
-      deliveries={orders.map((o) => ({
-        id: o.id,
-        orderNumber: o.orderNumber,
-        customerName: o.customerName,
-        customerPhone: o.customerPhone,
-        customerAddress: o.customerAddress ?? "",
-        status: o.status,
-        totalBrl: Number(o.totalBrl),
-        // Dia da entrega: agendado, senão a data do pedido.
-        deliveryDate: (o.scheduledFor ?? o.createdAt).toISOString(),
-        scheduled: o.scheduledFor != null,
-      }))}
+      deliveries={orders.map((o) => {
+        const effective = o.deliveryDate ?? o.scheduledFor ?? o.createdAt;
+        return {
+          id: o.id,
+          orderNumber: o.orderNumber,
+          customerName: o.customerName,
+          customerPhone: o.customerPhone,
+          customerAddress: o.customerAddress ?? "",
+          status: o.status,
+          totalBrl: Number(o.totalBrl),
+          // Dia da entrega: deliveryDate ?? agendado ?? data do pedido (igual à Rota).
+          deliveryDate: effective.toISOString(),
+          dateValue: dateInput(effective),
+          shift: o.deliveryShift ?? "",
+          scheduled: o.deliveryDate != null || o.scheduledFor != null,
+        };
+      })}
     />
   );
 }

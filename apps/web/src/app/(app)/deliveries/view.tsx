@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateOrderStatusAction } from "@/lib/actions/orders";
-import { setDeliveryCapacityAction } from "@/lib/actions/deliveries";
+import { setDeliveryCapacityAction, updateDeliveryAction } from "@/lib/actions/deliveries";
 
 export interface DeliveryRow {
   id: string;
@@ -14,6 +14,8 @@ export interface DeliveryRow {
   status: string;
   totalBrl: number;
   deliveryDate: string;
+  dateValue: string; // YYYY-MM-DD pra prefirar o input de remarcar
+  shift: string; // "" | morning | afternoon
   scheduled: boolean;
 }
 
@@ -59,16 +61,6 @@ export function DeliveriesView({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [cap, setCap] = useState(capacity);
-
-  const advance = (id: string, status: string) => {
-    const next = NEXT[status];
-    if (!next) return;
-    startTransition(async () => {
-      const r = await updateOrderStatusAction(id, next.status as never);
-      if (!r.ok) setError(r.error ?? "Erro");
-      else router.refresh();
-    });
-  };
 
   const saveCapacity = () => {
     startTransition(async () => {
@@ -159,44 +151,9 @@ export function DeliveriesView({
                     </span>
                   </div>
                   <ul className="divide-y divide-neutral-100 rounded-2xl bg-white shadow-sm">
-                    {g.items.map((d) => {
-                      const next = NEXT[d.status];
-                      return (
-                        <li key={d.id} className="flex items-center justify-between gap-4 px-5 py-4">
-                          <div className="flex items-center gap-4">
-                            <span className="text-sm font-mono text-neutral-500">#{d.orderNumber}</span>
-                            <div>
-                              <div className="font-medium">
-                                {d.customerName}
-                                <span className="ml-2 text-xs font-normal text-neutral-500">
-                                  {formatBrl(d.totalBrl)}
-                                </span>
-                              </div>
-                              <div className="text-xs text-neutral-500">
-                                {d.customerAddress} · {d.customerPhone}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[d.status]}`}
-                            >
-                              {STATUS_LABELS[d.status] ?? d.status}
-                            </span>
-                            {next && (
-                              <button
-                                type="button"
-                                onClick={() => advance(d.id, d.status)}
-                                disabled={isPending}
-                                className="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
-                              >
-                                {next.label}
-                              </button>
-                            )}
-                          </div>
-                        </li>
-                      );
-                    })}
+                    {g.items.map((d) => (
+                      <DeliveryItem key={d.id} d={d} />
+                    ))}
                   </ul>
                 </div>
               );
@@ -205,5 +162,141 @@ export function DeliveriesView({
         )}
       </section>
     </main>
+  );
+}
+
+const SHIFT_OPTIONS = [
+  { value: "", label: "Sem turno" },
+  { value: "morning", label: "Manhã" },
+  { value: "afternoon", label: "Tarde" },
+];
+
+function DeliveryItem({ d }: { d: DeliveryRow }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [managing, setManaging] = useState(false);
+  const [date, setDate] = useState(d.dateValue);
+  const [shift, setShift] = useState(d.shift);
+  const [err, setErr] = useState<string | null>(null);
+
+  const next = NEXT[d.status];
+
+  const run = (fn: () => Promise<{ ok: boolean; error?: string }>) => {
+    setErr(null);
+    startTransition(async () => {
+      const r = await fn();
+      if (!r.ok) setErr(r.error ?? "Erro");
+      else router.refresh();
+    });
+  };
+
+  const advance = () => next && run(() => updateOrderStatusAction(d.id, next.status as never));
+  const saveRemarcar = () =>
+    run(async () => {
+      const r = await updateDeliveryAction(d.id, { date, shift });
+      if (r.ok) setManaging(false);
+      return r;
+    });
+  const virarRetirada = () => {
+    if (!confirm("Mudar para retirada na loja? Sai da lista de entregas.")) return;
+    run(() => updateDeliveryAction(d.id, { deliveryType: "pickup" }));
+  };
+  const cancelar = () => {
+    if (!confirm(`Cancelar o pedido #${d.orderNumber}?`)) return;
+    run(() => updateOrderStatusAction(d.id, "CANCELED" as never));
+  };
+
+  return (
+    <li className="px-5 py-4">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <span className="font-mono text-sm text-neutral-500">#{d.orderNumber}</span>
+          <div>
+            <div className="font-medium">
+              {d.customerName}
+              <span className="ml-2 text-xs font-normal text-neutral-500">{formatBrl(d.totalBrl)}</span>
+            </div>
+            <div className="text-xs text-neutral-500">
+              {d.customerAddress} · {d.customerPhone}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[d.status]}`}>
+            {STATUS_LABELS[d.status] ?? d.status}
+          </span>
+          {next && (
+            <button
+              type="button"
+              onClick={advance}
+              disabled={isPending}
+              className="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+            >
+              {next.label}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setManaging((v) => !v)}
+            className="rounded-lg border border-neutral-300 px-2.5 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100"
+          >
+            Gerenciar
+          </button>
+        </div>
+      </div>
+
+      {managing && (
+        <div className="mt-3 flex flex-wrap items-end gap-3 rounded-xl bg-neutral-50 p-3">
+          <div>
+            <label className="block text-xs text-neutral-500">Data</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="mt-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-neutral-500">Turno</label>
+            <select
+              value={shift}
+              onChange={(e) => setShift(e.target.value)}
+              className="mt-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+            >
+              {SHIFT_OPTIONS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={saveRemarcar}
+            disabled={isPending}
+            className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+          >
+            Remarcar
+          </button>
+          <button
+            type="button"
+            onClick={virarRetirada}
+            disabled={isPending}
+            className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+          >
+            Virar retirada
+          </button>
+          <button
+            type="button"
+            onClick={cancelar}
+            disabled={isPending}
+            className="ml-auto rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
+          >
+            Cancelar pedido
+          </button>
+          {err && <p className="w-full text-sm text-red-700">{err}</p>}
+        </div>
+      )}
+    </li>
   );
 }

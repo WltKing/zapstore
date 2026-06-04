@@ -35,7 +35,10 @@ const SECTIONS: NavSection[] = [
   },
   {
     title: "Serviços",
-    items: [{ href: "/scheduling", label: "Agendamentos", icon: "📅" }],
+    items: [
+      { href: "/agenda", label: "Agenda", icon: "🗓️" },
+      { href: "/scheduling", label: "Agendamentos", icon: "📅" },
+    ],
   },
   {
     title: "Financeiro",
