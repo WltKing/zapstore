@@ -8,6 +8,7 @@ import {
   updateExpenseAction,
   type ExpenseInput,
 } from "@/lib/actions/expenses";
+import { printReport, esc, formatBrlReport } from "@/lib/print-report";
 
 export interface ExpenseRow {
   id: string;
@@ -61,14 +62,70 @@ export function ExpensesView({ storeName, expenses }: { storeName: string; expen
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<ExpenseRow | "new" | null>(null);
 
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const [month, setMonth] = useState<string>(currentMonth);
+  const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+
   const months = useMemo(() => {
     const set = new Set(expenses.map((e) => monthKey(e.paidAt)));
+    set.add(currentMonth);
     return Array.from(set).sort().reverse();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expenses]);
 
-  const [month, setMonth] = useState<string>("all");
-  const filtered = month === "all" ? expenses : expenses.filter((e) => monthKey(e.paidAt) === month);
+  const categories = useMemo(() => {
+    const set = new Set(expenses.map((e) => e.category).filter((c) => !!c?.trim()));
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [expenses]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return expenses.filter((e) => {
+      if (month !== "all" && monthKey(e.paidAt) !== month) return false;
+      if (categoryFilter !== "all" && e.category !== categoryFilter) return false;
+      if (q) {
+        const hay = `${e.category} ${e.description ?? ""} ${e.notes ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [expenses, month, categoryFilter, query]);
   const total = filtered.reduce((s, e) => s + e.amountBrl, 0);
+
+  const periodLabel = month === "all" ? "Todos os meses" : monthLabel(month);
+
+  const exportPdf = () => {
+    const byCat = new Map<string, number>();
+    for (const e of filtered) byCat.set(e.category, (byCat.get(e.category) ?? 0) + e.amountBrl);
+    const catRows = [...byCat.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([c, v]) => `<tr><td>${esc(c)}</td><td class="r">${formatBrlReport(v)}</td></tr>`)
+      .join("");
+    const rows = filtered
+      .map(
+        (e) =>
+          `<tr><td>${fmtDate(e.paidAt)}</td><td>${esc(e.category)}</td><td>${esc(
+            e.description ?? "—",
+          )}</td><td class="r">${formatBrlReport(e.amountBrl)}</td></tr>`,
+      )
+      .join("");
+    const body = `
+      <div class="cards">
+        <div class="card"><div class="k">Total no período</div><div class="v">${formatBrlReport(total)}</div></div>
+        <div class="card"><div class="k">Lançamentos</div><div class="v">${filtered.length}</div></div>
+      </div>
+      <h2 style="font-size:13px;margin:18px 0 0">Por categoria</h2>
+      <table><tbody>${catRows || '<tr><td colspan="2">Sem dados</td></tr>'}</tbody></table>
+      <h2 style="font-size:13px;margin:18px 0 0">Lançamentos</h2>
+      <table>
+        <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th class="r">Valor</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="4">Sem lançamentos</td></tr>'}</tbody>
+        <tfoot><tr><td colspan="3">Total</td><td class="r">${formatBrlReport(total)}</td></tr></tfoot>
+      </table>`;
+    printReport(`Despesas — ${storeName}`, periodLabel, body);
+  };
 
   const remove = (id: string, cat: string) => {
     if (!confirm(`Excluir a despesa "${cat}"?`)) return;
@@ -95,6 +152,13 @@ export function ExpensesView({ storeName, expenses }: { storeName: string; expen
           </a>
           <button
             type="button"
+            onClick={exportPdf}
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+          >
+            PDF
+          </button>
+          <button
+            type="button"
             onClick={() => {
               setError(null);
               setEditing("new");
@@ -108,7 +172,14 @@ export function ExpensesView({ storeName, expenses }: { storeName: string; expen
 
       {error && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por categoria, descrição..."
+          className="min-w-52 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        />
         <select
           value={month}
           onChange={(e) => setMonth(e.target.value)}
@@ -121,7 +192,19 @@ export function ExpensesView({ storeName, expenses }: { storeName: string; expen
             </option>
           ))}
         </select>
-        <div className="text-right">
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        >
+          <option value="all">Todas as categorias</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <div className="ml-auto text-right">
           <span className="text-xs uppercase tracking-wide text-neutral-500">Total no período</span>
           <div className="text-xl font-bold text-red-700">{formatBrl(total)}</div>
         </div>

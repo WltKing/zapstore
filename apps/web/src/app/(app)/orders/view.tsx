@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteOrderAction, updateOrderStatusAction } from "@/lib/actions/orders";
+import { printReport, esc, formatBrlReport } from "@/lib/print-report";
 
 interface OrderItem {
   productId?: string;
@@ -104,6 +105,33 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
     });
   }, [orders, query, statusFilter, monthFilter]);
 
+  const exportPdf = () => {
+    const total = filtered.reduce((s, o) => s + o.totalBrl, 0);
+    const periodLabel =
+      monthFilter === "all" ? "Todos os meses" : monthLabel(monthFilter);
+    const rows = filtered
+      .map(
+        (o) =>
+          `<tr><td>#${o.orderNumber}</td><td>${formatDate(o.createdAt)}</td><td>${esc(
+            o.customerName,
+          )}</td><td>${esc(STATUS_LABELS[o.status] ?? o.status)}</td><td class="r">${formatBrlReport(
+            o.totalBrl,
+          )}</td></tr>`,
+      )
+      .join("");
+    const body = `
+      <div class="cards">
+        <div class="card"><div class="k">Total</div><div class="v">${formatBrlReport(total)}</div></div>
+        <div class="card"><div class="k">Pedidos</div><div class="v">${filtered.length}</div></div>
+      </div>
+      <table>
+        <thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Status</th><th class="r">Total</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="5">Sem pedidos</td></tr>'}</tbody>
+        <tfoot><tr><td colspan="4">Total</td><td class="r">${formatBrlReport(total)}</td></tr></tfoot>
+      </table>`;
+    printReport(`Vendas — ${storeName}`, periodLabel, body);
+  };
+
   const advance = (id: string, status: string) => {
     const next = NEXT_STATUS[status];
     if (!next) return;
@@ -146,6 +174,13 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
           >
             Voltar
           </a>
+          <button
+            type="button"
+            onClick={exportPdf}
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+          >
+            PDF
+          </button>
           <a
             href="/orders/new"
             className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"

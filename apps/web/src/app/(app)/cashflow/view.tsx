@@ -1,4 +1,5 @@
 import { MonthSelect } from "./month-select";
+import { CaixaPdfButton } from "./pdf-button";
 
 export interface Movement {
   date: string;
@@ -70,12 +71,26 @@ export function CashflowView({
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Caixa</h1>
         </div>
-        <a
-          href="/dashboard"
-          className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-        >
-          Voltar
-        </a>
+        <div className="flex gap-2">
+          <a
+            href="/dashboard"
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+          >
+            Voltar
+          </a>
+          <CaixaPdfButton
+            storeName={storeName}
+            periodLabel={monthLabel(monthKey)}
+            vendidoMes={vendidoMes}
+            despesasMes={despesasMes}
+            taxaMaquininha={taxaMaquininha}
+            impostoEstimado={impostoEstimado}
+            entradaLiquida={entradaLiquida}
+            resultado={resultado}
+            aReceberMes={aReceberMes}
+            movements={movements}
+          />
+        </div>
       </header>
 
       {/* Hoje + a receber em aberto */}
