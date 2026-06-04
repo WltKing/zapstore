@@ -46,7 +46,10 @@ const SECTIONS: NavSection[] = [
   },
   {
     title: "Logística",
-    items: [{ href: "/deliveries", label: "Entregas", icon: "🚚" }],
+    items: [
+      { href: "/route", label: "Rota do dia", icon: "🗺️" },
+      { href: "/deliveries", label: "Entregas", icon: "🚚" },
+    ],
   },
   {
     title: "Sistema",

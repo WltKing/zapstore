@@ -320,6 +320,9 @@ model Order {
   installments    Int         @default(1) // parcelas (cartão)
   notes           String?     @db.Text
   scheduledFor    DateTime?
+  // Rota do dia (entrega)
+  routeSeq        Int         @default(0) // ordem da parada na rota
+  routeStatus     String?     // pending | en_route | at_door | delivered | skipped | absent
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
