@@ -45,10 +45,13 @@ export function feePctForOrder(
   fees: CardFees | null,
 ): number {
   if (!fees) return 0;
-  const pm = (paymentMethod ?? "").toLowerCase();
-  if (/pix/.test(pm)) return fees.pix || 0;
-  if (/d[eé]bito|debit/.test(pm)) return fees.debit || 0;
-  if (/dinheiro|esp[eé]cie|cash/.test(pm)) return 0; // dinheiro não tem taxa
+  const pm = (paymentMethod ?? "").toLowerCase().trim();
+  // Valores canônicos do form (pix/debito/credito/dinheiro/boleto) + fallback por
+  // palavra-chave (pedidos do bot ou texto livre antigo).
+  if (pm === "pix" || /pix/.test(pm)) return fees.pix || 0;
+  if (pm === "debito" || /d[eé]bito|debit/.test(pm)) return fees.debit || 0;
+  if (pm === "dinheiro" || pm === "boleto" || /dinheiro|esp[eé]cie|cash|boleto/.test(pm)) return 0;
+  // crédito / cartão (legado) / parcelado / desconhecido → taxa da parcela.
   const n = installments > 0 ? installments : 1;
   const row = fees.credit.find((c) => c.n === n);
   return row ? row.fee : 0;

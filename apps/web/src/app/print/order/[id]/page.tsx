@@ -25,6 +25,8 @@ function fmtDate(d: Date | null): string {
 }
 const PAYMENT_LABELS: Record<string, string> = {
   pix: "Pix",
+  debito: "Cartão de débito",
+  credito: "Cartão de crédito",
   cartao: "Cartão",
   dinheiro: "Dinheiro",
   boleto: "Boleto",
@@ -177,7 +179,10 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ id:
         {order.paymentMethod && (
           <div className="mt-1 text-right text-neutral-600">
             {PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}
-            {order.paymentMethod === "cartao" && order.installments > 1 ? ` · ${order.installments}x` : ""}
+            {(order.paymentMethod === "credito" || order.paymentMethod === "cartao") &&
+            order.installments > 1
+              ? ` · ${order.installments}x`
+              : ""}
             {order.toReceive ? " · a receber" : ""}
           </div>
         )}

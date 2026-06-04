@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteOrderAction, updateOrderStatusAction } from "@/lib/actions/orders";
 import { printReport, esc, formatBrlReport } from "@/lib/print-report";
+import { paymentLabel } from "@/lib/payments";
 
 interface OrderItem {
   productId?: string;
@@ -313,7 +314,7 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
                           <div className="mt-2 space-y-1 text-sm">
                             <div><strong>Telefone:</strong> {o.customerPhone}</div>
                             {o.customerAddress && <div><strong>Endereço:</strong> {o.customerAddress}</div>}
-                            {o.paymentMethod && <div><strong>Pagamento:</strong> {o.paymentMethod}</div>}
+                            {o.paymentMethod && <div><strong>Pagamento:</strong> {paymentLabel(o.paymentMethod)}</div>}
                             {o.notes && <div><strong>Obs:</strong> {o.notes}</div>}
                           </div>
                         </div>

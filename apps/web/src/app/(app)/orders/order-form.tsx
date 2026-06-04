@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createOrderAction, updateOrderAction, type OrderInput } from "@/lib/actions/orders";
 import { lookupCepAction, searchCepAction } from "@/lib/actions/cep";
+import { PAYMENT_OPTIONS, paymentHasInstallments } from "@/lib/payments";
 
 export interface ProductOpt {
   id: string;
@@ -11,12 +12,7 @@ export interface ProductOpt {
   priceBrl: number;
 }
 
-const PAYMENTS = [
-  { value: "pix", label: "Pix" },
-  { value: "cartao", label: "Cartão" },
-  { value: "dinheiro", label: "Dinheiro" },
-  { value: "boleto", label: "Boleto" },
-];
+const PAYMENTS = PAYMENT_OPTIONS;
 
 const inputClass =
   "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900";
@@ -380,7 +376,7 @@ export function OrderForm({
               ))}
             </select>
           </div>
-          {form.paymentMethod === "cartao" && (
+          {paymentHasInstallments(form.paymentMethod) && (
             <div>
               <label className="block text-sm font-medium text-neutral-700">Parcelas</label>
               <select value={form.installments ?? 1} onChange={(e) => set({ installments: Number(e.target.value) })} className={inputClass}>
