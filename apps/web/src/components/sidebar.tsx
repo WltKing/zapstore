@@ -48,6 +48,10 @@ const SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: "Marketing",
+    items: [{ href: "/marketing", label: "Marketing", icon: "📣" }],
+  },
+  {
     title: "Logística",
     items: [
       { href: "/route", label: "Rota do dia", icon: "🗺️" },

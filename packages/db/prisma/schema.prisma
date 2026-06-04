@@ -51,6 +51,7 @@ model Tenant {
   appointments  Appointment[]
   expenses      Expense[]
   productKitItems ProductKitItem[]
+  marketingSpends MarketingSpend[]
 
   @@map("tenants")
 }
@@ -479,4 +480,24 @@ model Expense {
 
   @@index([tenantId, paidAt])
   @@map("expenses")
+}
+
+// ============================================================
+// MARKETING (investimento em anúncios por canal/mês)
+// ============================================================
+
+model MarketingSpend {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  month     DateTime // 1º dia do mês de competência
+  channel   String   // "meta" | "google" | "outros" (ou livre)
+  amountBrl Decimal  @db.Decimal(10, 2)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, month])
+  @@map("marketing_spends")
 }
