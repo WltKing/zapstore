@@ -137,6 +137,7 @@ model TenantUser {
   tenantId  String   @db.Uuid
   userId    String   @db.Uuid
   role      TenantRole @default(ADMIN)
+  permissions Json?   // perfil personalizado: lista de áreas; null = usa o preset do role
   createdAt DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)

@@ -1,15 +1,22 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { changeUserRoleAction, inviteUserAction, removeUserAction } from "@/lib/actions/users";
+import { inviteUserAction, removeUserAction, setUserAccessAction } from "@/lib/actions/users";
 import { ROLES, ROLE_LABELS } from "@/lib/roles";
+import { AREAS, AREA_LABELS, isCustom } from "@/lib/permissions";
 
 interface UserRow {
   userId: string;
   email: string;
   role: string;
+  permissions: string[] | null;
   verified: boolean;
+}
+
+function accessLabel(u: UserRow): string {
+  if (isCustom(u.permissions)) return "Personalizado";
+  return ROLE_LABELS[u.role as keyof typeof ROLE_LABELS] ?? u.role;
 }
 
 export function UsersView({
@@ -28,6 +35,7 @@ export function UsersView({
   const [error, setError] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<string>("OPERATOR");
+  const [editing, setEditing] = useState<string | null>(null);
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) => {
     setError(null);
@@ -132,51 +140,70 @@ export function UsersView({
                 {users.map((u) => {
                   const self = u.userId === currentUserId;
                   return (
-                    <tr key={u.userId} className="border-b border-neutral-100 last:border-0">
-                      <td className="px-6 py-4">
-                        <div className="font-medium">
-                          {u.email}
-                          {self && (
-                            <span className="ml-2 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-500">
-                              VOCÊ
-                            </span>
+                    <Fragment key={u.userId}>
+                      <tr className="border-b border-neutral-100 last:border-0">
+                        <td className="px-6 py-4">
+                          <div className="font-medium">
+                            {u.email}
+                            {self && (
+                              <span className="ml-2 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-500">
+                                VOCÊ
+                              </span>
+                            )}
+                          </div>
+                          {!u.verified && (
+                            <div className="text-xs text-amber-600">Convite pendente (ainda não acessou)</div>
                           )}
-                        </div>
-                        {!u.verified && (
-                          <div className="text-xs text-amber-600">Convite pendente (ainda não acessou)</div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <select
-                          value={u.role}
-                          disabled={self || isPending}
-                          onChange={(e) => run(() => changeUserRoleAction(u.userId, e.target.value))}
-                          className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 disabled:bg-neutral-50 disabled:text-neutral-400"
-                        >
-                          {ROLES.map((r) => (
-                            <option key={r} value={r}>
-                              {ROLE_LABELS[r]}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {self ? (
-                          <span className="text-xs text-neutral-400">—</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (confirm(`Remover ${u.email} da loja?`)) run(() => removeUserAction(u.userId));
-                            }}
-                            disabled={isPending}
-                            className="text-sm text-red-600 hover:text-red-700"
-                          >
-                            Remover
-                          </button>
-                        )}
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-700">
+                            {accessLabel(u)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {self ? (
+                            <span className="text-xs text-neutral-400">—</span>
+                          ) : (
+                            <div className="flex items-center justify-end gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setEditing(editing === u.userId ? null : u.userId)}
+                                className="text-sm text-neutral-600 hover:text-neutral-900"
+                              >
+                                {editing === u.userId ? "Fechar" : "Editar acesso"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (confirm(`Remover ${u.email} da loja?`)) run(() => removeUserAction(u.userId));
+                                }}
+                                disabled={isPending}
+                                className="text-sm text-red-600 hover:text-red-700"
+                              >
+                                Remover
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                      {editing === u.userId && !self && (
+                        <tr className="border-b border-neutral-100 bg-neutral-50">
+                          <td colSpan={3} className="px-6 py-4">
+                            <AccessEditor
+                              user={u}
+                              disabled={isPending}
+                              onSave={(role, permissions) => {
+                                run(async () => {
+                                  const r = await setUserAccessAction(u.userId, { role, permissions });
+                                  if (r.ok) setEditing(null);
+                                  return r;
+                                });
+                              }}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -184,12 +211,91 @@ export function UsersView({
           </section>
 
           <p className="mt-4 text-xs text-neutral-500">
-            <strong>Perfis:</strong> Administrador (tudo, inclui equipe e assinatura) · Operador
-            (dia a dia: pedidos, agenda) · Financeiro (caixa, despesas) · Entregador (entregas). A
-            restrição fina por perfil será aprofundada nas próximas camadas.
+            <strong>Perfis prontos:</strong> Administrador (tudo, inclui equipe e assinatura) ·
+            Operador (pedidos, produtos, clientes, agenda) · Financeiro (caixa, despesas, assinatura)
+            · Entregador (rota, entregas, agenda). Ou escolha <strong>Personalizado</strong> e marque
+            exatamente as áreas que a pessoa pode acessar.
           </p>
         </>
       )}
     </main>
+  );
+}
+
+function AccessEditor({
+  user,
+  disabled,
+  onSave,
+}: {
+  user: UserRow;
+  disabled: boolean;
+  onSave: (role: string, permissions: string[] | null) => void;
+}) {
+  const startCustom = isCustom(user.permissions);
+  const [mode, setMode] = useState<string>(startCustom ? "CUSTOM" : user.role);
+  const [checked, setChecked] = useState<string[]>(
+    startCustom ? (user.permissions ?? []) : ["dashboard"],
+  );
+
+  const toggle = (area: string) =>
+    setChecked((c) => (c.includes(area) ? c.filter((a) => a !== area) : [...c, area]));
+
+  const save = () => {
+    if (mode === "CUSTOM") onSave("OPERATOR", checked.length ? checked : ["dashboard"]);
+    else onSave(mode, null);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="text-sm font-medium text-neutral-700">Perfil:</label>
+        <select
+          value={mode}
+          onChange={(e) => setMode(e.target.value)}
+          className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        >
+          {ROLES.map((r) => (
+            <option key={r} value={r}>
+              {ROLE_LABELS[r]}
+            </option>
+          ))}
+          <option value="CUSTOM">Personalizado</option>
+        </select>
+        <button
+          type="button"
+          onClick={save}
+          disabled={disabled}
+          className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+        >
+          Salvar acesso
+        </button>
+      </div>
+
+      {mode === "CUSTOM" && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {AREAS.map((area) => {
+            const isDash = area === "dashboard";
+            const on = isDash || checked.includes(area);
+            return (
+              <label
+                key={area}
+                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                  on ? "border-neutral-400 bg-white" : "border-neutral-200 bg-neutral-50"
+                } ${isDash ? "opacity-60" : "cursor-pointer"}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={on}
+                  disabled={isDash}
+                  onChange={() => toggle(area)}
+                  className="h-4 w-4 rounded border-neutral-300"
+                />
+                {AREA_LABELS[area]}
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

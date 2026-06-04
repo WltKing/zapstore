@@ -30,6 +30,7 @@ export default async function UsersPage() {
         userId: l.userId,
         email: l.user.email,
         role: l.role,
+        permissions: Array.isArray(l.permissions) ? (l.permissions as string[]) : null,
         verified: l.user.emailVerified,
       }))}
     />

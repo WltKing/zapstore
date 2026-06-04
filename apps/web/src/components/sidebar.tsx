@@ -68,13 +68,23 @@ export function Sidebar({
   storeName,
   brandColor,
   logoUrl,
+  allowed,
 }: {
   storeName: string;
   brandColor?: string | null;
   logoUrl?: string | null;
+  allowed?: string[];
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+
+  // Filtra itens por permissão (área = 1º segmento do href). Sem `allowed` = mostra tudo.
+  const sections = allowed
+    ? SECTIONS.map((s) => ({
+        ...s,
+        items: s.items.filter((it) => allowed.includes(it.href.split("/").filter(Boolean)[0] ?? "")),
+      })).filter((s) => s.items.length > 0)
+    : SECTIONS;
 
   return (
     <>
@@ -130,7 +140,7 @@ export function Sidebar({
         </div>
 
         <nav className="px-3 pb-8">
-          {SECTIONS.map((section) => (
+          {sections.map((section) => (
             <div key={section.title} className="mt-4">
               <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
                 {section.title}

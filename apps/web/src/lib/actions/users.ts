@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { prisma } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { ROLES, type Role } from "@/lib/roles";
+import { isArea } from "@/lib/permissions";
 
 export interface ActionResult {
   ok: boolean;
@@ -67,6 +68,43 @@ export async function changeUserRoleAction(targetUserId: string, role: string): 
     await prisma.tenantUser.update({
       where: { tenantId_userId: { tenantId, userId: targetUserId } },
       data: { role: role as Role },
+    });
+    revalidatePath("/users");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
+/**
+ * Define o acesso de um usuário: perfil pronto (role) OU personalizado (lista de
+ * áreas). Personalizado guarda `permissions` (array); preset zera com [].
+ */
+export async function setUserAccessAction(
+  targetUserId: string,
+  input: { role: string; permissions: string[] | null },
+): Promise<ActionResult> {
+  try {
+    const { tenantId, userId } = await requireAdmin();
+    if (targetUserId === userId) {
+      return { ok: false, error: "Você não pode alterar seu próprio acesso (evita bloqueio)." };
+    }
+
+    const custom = Array.isArray(input.permissions) && input.permissions.length > 0;
+    let data: { role: Role; permissions: string[] };
+    if (custom) {
+      const areas = Array.from(new Set(input.permissions!.filter((p) => isArea(p))));
+      if (!areas.includes("dashboard")) areas.unshift("dashboard");
+      // Personalizado: role fica como OPERATOR (base), o que vale é a lista.
+      data = { role: "OPERATOR", permissions: areas };
+    } else {
+      if (!isValidRole(input.role)) return { ok: false, error: "Perfil inválido." };
+      data = { role: input.role, permissions: [] }; // [] = sem personalização → usa o preset
+    }
+
+    await prisma.tenantUser.update({
+      where: { tenantId_userId: { tenantId, userId: targetUserId } },
+      data,
     });
     revalidatePath("/users");
     return { ok: true };
