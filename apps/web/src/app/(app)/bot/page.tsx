@@ -15,12 +15,17 @@ export default async function BotConfigPage() {
 
   const cfg = tenant.botConfig;
   const businessHours = (cfg.businessHours ?? {}) as BusinessHoursMap;
-  const firstOpenDay = Object.values(businessHours).find((v) => v && typeof v === "object");
-  const open = firstOpenDay?.open ?? "08:00";
-  const close = firstOpenDay?.close ?? "18:00";
-  const weekdays = Object.entries(businessHours)
-    .filter(([, v]) => v && typeof v === "object")
-    .map(([k]) => k);
+  const allDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+  // Horário por dia: honra o salvo; pra dias ausentes usa padrão (seg-sáb aberto, dom fechado).
+  const hours = Object.fromEntries(
+    allDays.map((d) => {
+      if (d in businessHours) {
+        const v = businessHours[d];
+        return [d, v && typeof v === "object" ? { open: v.open ?? "08:00", close: v.close ?? "18:00" } : null];
+      }
+      return [d, d === "sun" ? null : { open: "08:00", close: "18:00" }];
+    }),
+  ) as Record<string, { open: string; close: string } | null>;
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -45,9 +50,7 @@ export default async function BotConfigPage() {
           botName: cfg.botName,
           tone: cfg.tone,
           template: cfg.template,
-          businessHoursOpen: open,
-          businessHoursClose: close,
-          weekdays: weekdays.length ? weekdays : ["mon", "tue", "wed", "thu", "fri", "sat"],
+          hours,
           deliveryCities: cfg.deliveryCities.join(", "),
           paymentMethods: cfg.paymentMethods,
           acceptsScheduling: cfg.acceptsScheduling,

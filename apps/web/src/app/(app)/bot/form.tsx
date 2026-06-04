@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { updateBotConfigAction, type BotConfigInput } from "@/lib/actions/bot";
-import { NICHE_TEMPLATES, PAYMENT_METHOD_LABELS, type NicheId } from "@/lib/niches";
+import { NICHE_TEMPLATES, type NicheId } from "@/lib/niches";
+
+const PAYMENT_SUGGESTIONS = ["Pix", "Cartão de crédito", "Cartão de débito", "Dinheiro", "Boleto", "Crediário"];
 
 const WEEKDAYS = [
   { id: "mon", label: "Seg" },
@@ -20,13 +22,12 @@ const TONES = [
   { id: "casual", label: "Descontraído" },
 ];
 
-const PAYMENT_OPTIONS = ["pix", "cartao", "dinheiro", "boleto"];
-
 export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
   const [form, setForm] = useState<BotConfigInput>(initial);
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [newPayment, setNewPayment] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,21 +45,29 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
     });
   };
 
-  const togglePayment = (m: string) => {
-    setForm({
-      ...form,
-      paymentMethods: form.paymentMethods.includes(m)
-        ? form.paymentMethods.filter((p) => p !== m)
-        : [...form.paymentMethods, m],
-    });
+  const addPayment = (m: string) => {
+    const v = m.trim();
+    if (!v) return;
+    setForm((f) =>
+      f.paymentMethods.some((p) => p.toLowerCase() === v.toLowerCase())
+        ? f
+        : { ...f, paymentMethods: [...f.paymentMethods, v] },
+    );
+    setNewPayment("");
   };
+  const removePayment = (m: string) =>
+    setForm((f) => ({ ...f, paymentMethods: f.paymentMethods.filter((p) => p !== m) }));
 
-  const toggleWeekday = (d: string) => {
-    setForm({
-      ...form,
-      weekdays: form.weekdays.includes(d)
-        ? form.weekdays.filter((w) => w !== d)
-        : [...form.weekdays, d],
+  const toggleDayOpen = (d: string, open: boolean) => {
+    setForm((f) => ({
+      ...f,
+      hours: { ...f.hours, [d]: open ? f.hours[d] ?? { open: "08:00", close: "18:00" } : null },
+    }));
+  };
+  const setDayTime = (d: string, field: "open" | "close", value: string) => {
+    setForm((f) => {
+      const cur = f.hours[d] ?? { open: "08:00", close: "18:00" };
+      return { ...f, hours: { ...f.hours, [d]: { ...cur, [field]: value } } };
     });
   };
 
@@ -108,42 +117,47 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
       </section>
 
       <section className="rounded-2xl bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">Horário</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-neutral-700">Abre às</label>
-            <input
-              type="time"
-              value={form.businessHoursOpen}
-              onChange={(e) => setForm({ ...form, businessHoursOpen: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700">Fecha às</label>
-            <input
-              type="time"
-              value={form.businessHoursClose}
-              onChange={(e) => setForm({ ...form, businessHoursClose: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm"
-            />
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {WEEKDAYS.map((d) => (
-            <button
-              type="button"
-              key={d.id}
-              onClick={() => toggleWeekday(d.id)}
-              className={`rounded-lg border px-3 py-1.5 text-sm transition ${
-                form.weekdays.includes(d.id)
-                  ? "border-neutral-900 bg-neutral-900 text-white"
-                  : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400"
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
+        <h2 className="text-lg font-semibold">Horário de funcionamento</h2>
+        <p className="mt-1 text-xs text-neutral-500">
+          Cada dia pode ter um horário diferente (ex: sábado e domingo). Desmarque pra fechar o dia.
+        </p>
+        <div className="mt-4 space-y-2">
+          {WEEKDAYS.map((d) => {
+            const h = form.hours[d.id];
+            const isOpen = !!h;
+            return (
+              <div key={d.id} className="flex flex-wrap items-center gap-3">
+                <label className="flex w-28 items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={isOpen}
+                    onChange={(e) => toggleDayOpen(d.id, e.target.checked)}
+                    className="h-4 w-4 rounded border-neutral-300"
+                  />
+                  <span className="text-sm font-medium text-neutral-700">{d.label}</span>
+                </label>
+                {isOpen ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="time"
+                      value={h.open}
+                      onChange={(e) => setDayTime(d.id, "open", e.target.value)}
+                      className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm"
+                    />
+                    <span className="text-sm text-neutral-400">às</span>
+                    <input
+                      type="time"
+                      value={h.close}
+                      onChange={(e) => setDayTime(d.id, "close", e.target.value)}
+                      className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm"
+                    />
+                  </div>
+                ) : (
+                  <span className="text-sm text-neutral-400">Fechado</span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -161,21 +175,65 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
           />
         </div>
         <div className="mt-4">
-          <label className="block text-sm font-medium text-neutral-700">Formas de pagamento</label>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {PAYMENT_OPTIONS.map((m) => (
-              <label
-                key={m}
-                className="flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 hover:border-neutral-400"
+          <label className="block text-sm font-medium text-neutral-700">
+            Formas de pagamento aceitas
+          </label>
+          <p className="mt-0.5 text-xs text-neutral-500">
+            O que o bot informa ao cliente. Adicione as suas (texto livre).
+          </p>
+          {form.paymentMethods.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {form.paymentMethods.map((m) => (
+                <span
+                  key={m}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-sm text-neutral-700"
+                >
+                  {m}
+                  <button
+                    type="button"
+                    onClick={() => removePayment(m)}
+                    className="text-neutral-400 hover:text-red-600"
+                    aria-label={`Remover ${m}`}
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="mt-2 flex gap-2">
+            <input
+              value={newPayment}
+              onChange={(e) => setNewPayment(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addPayment(newPayment);
+                }
+              }}
+              placeholder="Ex: Pix, Crediário, PicPay..."
+              className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+            />
+            <button
+              type="button"
+              onClick={() => addPayment(newPayment)}
+              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+            >
+              Adicionar
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {PAYMENT_SUGGESTIONS.filter(
+              (s) => !form.paymentMethods.some((p) => p.toLowerCase() === s.toLowerCase()),
+            ).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => addPayment(s)}
+                className="rounded-full border border-dashed border-neutral-300 px-2.5 py-0.5 text-xs text-neutral-500 hover:border-neutral-500 hover:text-neutral-700"
               >
-                <input
-                  type="checkbox"
-                  checked={form.paymentMethods.includes(m)}
-                  onChange={() => togglePayment(m)}
-                  className="h-4 w-4 rounded border-neutral-300"
-                />
-                <span className="text-sm text-neutral-700">{PAYMENT_METHOD_LABELS[m]}</span>
-              </label>
+                + {s}
+              </button>
             ))}
           </div>
         </div>

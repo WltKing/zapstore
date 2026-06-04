@@ -16,13 +16,16 @@ async function requireTenantId(): Promise<string> {
   return link.tenantId;
 }
 
+export interface DayHours {
+  open: string;
+  close: string;
+}
+
 export interface BotConfigInput {
   botName: string;
   tone: string;
   template: string;
-  businessHoursOpen: string;
-  businessHoursClose: string;
-  weekdays: string[];
+  hours: Record<string, DayHours | null>; // por dia (mon..sun); null = fechado
   deliveryCities: string;
   paymentMethods: string[];
   acceptsScheduling: boolean;
@@ -41,12 +44,10 @@ export async function updateBotConfigAction(input: BotConfigInput): Promise<Acti
 
     const allDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
     const businessHours = Object.fromEntries(
-      allDays.map((d) => [
-        d,
-        input.weekdays.includes(d)
-          ? { open: input.businessHoursOpen, close: input.businessHoursClose }
-          : null,
-      ]),
+      allDays.map((d) => {
+        const h = input.hours?.[d];
+        return [d, h && h.open && h.close ? { open: h.open, close: h.close } : null];
+      }),
     );
 
     const deliveryCities = input.deliveryCities
