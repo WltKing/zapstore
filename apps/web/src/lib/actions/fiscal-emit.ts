@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { prisma, withTenant } from "@zapstore/db";
 import { auth } from "@/lib/auth";
-import { emitNota, consultarNota, focusFileUrl, focusErrorMessage } from "@/lib/focus";
+import { emitNota, consultarNota, cancelarNota, focusFileUrl, focusErrorMessage } from "@/lib/focus";
 
 async function requireTenantId(): Promise<string> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -285,6 +285,44 @@ export async function emitNotaAction(orderId: string, model: "nfce" | "nfe"): Pr
     revalidatePath(`/orders/${orderId}`);
     revalidatePath("/orders");
     return { ok: true, status: finalStatus, message: message ?? undefined };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
+/** Cancela a nota autorizada do pedido (justificativa mín. 15 caracteres). */
+export async function cancelNotaAction(orderId: string, justificativa: string): Promise<EmitResult> {
+  try {
+    const tenantId = await requireTenantId();
+    const just = (justificativa ?? "").trim();
+    if (just.length < 15) return { ok: false, error: "A justificativa precisa ter pelo menos 15 caracteres." };
+
+    const cfg = await withTenant(tenantId, (tx) => tx.fiscalConfig.findUnique({ where: { tenantId } }));
+    if (!cfg) return { ok: false, error: "Fiscal não configurado." };
+    const order = await withTenant(tenantId, (tx) =>
+      tx.order.findUnique({
+        where: { id: orderId },
+        select: { fiscalModel: true, fiscalRef: true, fiscalStatus: true },
+      }),
+    );
+    if (!order?.fiscalRef || !order.fiscalModel) return { ok: false, error: "Pedido sem nota emitida." };
+    if (order.fiscalStatus !== "autorizado") return { ok: false, error: "Só dá pra cancelar nota autorizada." };
+
+    const token = cfg.ambiente === "producao" ? cfg.focusTokenProd : cfg.focusTokenHomolog;
+    if (!token) return { ok: false, error: "Token da empresa ausente." };
+
+    const res = await cancelarNota(order.fiscalModel as "nfce" | "nfe", cfg.ambiente, token, order.fiscalRef, just);
+    if (!res.ok) return { ok: false, error: focusErrorMessage(res.data) };
+
+    await withTenant(tenantId, (tx) =>
+      tx.order.update({
+        where: { id: orderId },
+        data: { fiscalStatus: "cancelado", fiscalMessage: `Cancelada: ${just}` },
+      }),
+    );
+    revalidatePath(`/orders/${orderId}`);
+    revalidatePath("/orders");
+    return { ok: true, status: "cancelado" };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
   }

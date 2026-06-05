@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { emitNotaAction, refreshNotaAction } from "@/lib/actions/fiscal-emit";
+import { emitNotaAction, refreshNotaAction, cancelNotaAction } from "@/lib/actions/fiscal-emit";
 
 export interface OrderFiscal {
   model: string | null;
@@ -127,6 +127,20 @@ export function OrderFiscalCard({
                 >
                   ↻ Atualizar status
                 </button>
+                {fiscal.status === "autorizado" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const j = prompt("Motivo do cancelamento (mínimo 15 caracteres):");
+                      if (j && j.trim().length >= 15) run(() => cancelNotaAction(orderId, j));
+                      else if (j !== null) alert("A justificativa precisa ter pelo menos 15 caracteres.");
+                    }}
+                    disabled={isPending}
+                    className="rounded-lg border border-red-300 px-3 py-1 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    Cancelar nota
+                  </button>
+                )}
               </div>
             </div>
           )}

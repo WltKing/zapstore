@@ -148,6 +148,22 @@ export async function consultarNota(
   );
 }
 
+/** Cancela uma nota autorizada (justificativa mín. 15 caracteres). */
+export async function cancelarNota(
+  model: "nfce" | "nfe",
+  ambiente: string,
+  empresaToken: string,
+  ref: string,
+  justificativa: string,
+): Promise<FocusResult<NotaResponse>> {
+  return focusRequest<NotaResponse>(
+    `${emissionBase(ambiente)}/v2/${model}/${encodeURIComponent(ref)}`,
+    empresaToken,
+    "DELETE",
+    { justificativa },
+  );
+}
+
 /** URL absoluta de um caminho retornado pelo Focus (danfe/xml). */
 export function focusFileUrl(ambiente: string, caminho: string | undefined): string | null {
   if (!caminho) return null;
