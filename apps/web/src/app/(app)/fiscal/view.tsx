@@ -418,10 +418,13 @@ export function FiscalView({
           </button>
         </div>
 
-        <div className="mt-5 border-t border-neutral-100 pt-4">
-          <p className="text-sm text-neutral-500">
-            Já tem essa empresa cadastrada no Focus (com certificado)? Vincule sem reenviar o arquivo —
-            o sistema puxa os tokens pelo CNPJ.
+        <details className="mt-5 border-t border-neutral-100 pt-4">
+          <summary className="cursor-pointer text-xs text-neutral-400 hover:text-neutral-600">
+            Já uso o Focus com essa empresa? (migração)
+          </summary>
+          <p className="mt-2 text-sm text-neutral-500">
+            Se essa empresa <strong>já está cadastrada no Focus</strong> (com certificado), vincule sem
+            reenviar o arquivo — o sistema puxa os tokens pelo CNPJ.
           </p>
           <button
             type="button"
@@ -431,7 +434,7 @@ export function FiscalView({
           >
             Vincular empresa já cadastrada no Focus
           </button>
-        </div>
+        </details>
       </section>
     </main>
   );
