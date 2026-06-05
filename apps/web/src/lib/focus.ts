@@ -74,6 +74,7 @@ export interface EmpresaPayload {
   habilita_nfce?: boolean;
   arquivo_certificado_base64?: string;
   senha_certificado?: string;
+  arquivo_logo_base64?: string;
 }
 
 export interface EmpresaResponse {

@@ -104,6 +104,75 @@ export async function saveFiscalConfigAction(input: FiscalConfigInput): Promise<
   }
 }
 
+/** Monta o payload da empresa a partir da config salva (sem certificado/logo). */
+function empresaPayloadFromConfig(cfg: {
+  cnpj: string;
+  razaoSocial: string;
+  nomeFantasia: string | null;
+  inscricaoEstadual: string | null;
+  regimeTributario: number;
+  email: string | null;
+  telefone: string | null;
+  cep: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  municipio: string | null;
+  uf: string | null;
+  habilitaNfce: boolean;
+  habilitaNfe: boolean;
+}): EmpresaPayload {
+  return {
+    nome: cfg.razaoSocial,
+    nome_fantasia: cfg.nomeFantasia ?? undefined,
+    cnpj: cfg.cnpj,
+    inscricao_estadual: cfg.inscricaoEstadual ?? undefined,
+    regime_tributario: cfg.regimeTributario,
+    email: cfg.email ?? undefined,
+    telefone: cfg.telefone ?? undefined,
+    logradouro: cfg.logradouro ?? undefined,
+    numero: cfg.numero ?? undefined,
+    complemento: cfg.complemento ?? undefined,
+    bairro: cfg.bairro ?? undefined,
+    municipio: cfg.municipio ?? undefined,
+    cep: cfg.cep ?? undefined,
+    uf: cfg.uf ?? undefined,
+    habilita_nfe: cfg.habilitaNfe,
+    habilita_nfce: cfg.habilitaNfce,
+  };
+}
+
+/**
+ * Envia a logo da loja (a que foi subida no Zapstore) pro Focus, pra aparecer no
+ * DANFE/cupom daquela empresa. Busca a imagem do R2 no servidor (sem CORS) e
+ * manda como arquivo_logo_base64 no update da empresa.
+ */
+export async function syncFiscalLogoAction(): Promise<ActionResult> {
+  try {
+    const tenantId = await requireAdminTenant();
+    const [cfg, tenant] = await Promise.all([
+      withTenant(tenantId, (tx) => tx.fiscalConfig.findUnique({ where: { tenantId } })),
+      prisma.tenant.findUnique({ where: { id: tenantId }, select: { logoUrl: true } }),
+    ]);
+    if (!cfg?.focusEmpresaId) return { ok: false, error: "Cadastre/vincule a empresa no Focus primeiro." };
+    if (!tenant?.logoUrl) return { ok: false, error: "Suba a logo da loja em Configurações → Identidade visual primeiro." };
+
+    const resp = await fetch(tenant.logoUrl, { cache: "no-store" });
+    if (!resp.ok) return { ok: false, error: "Não consegui baixar a logo da loja." };
+    const b64 = Buffer.from(await resp.arrayBuffer()).toString("base64");
+
+    const payload: EmpresaPayload = { ...empresaPayloadFromConfig(cfg), arquivo_logo_base64: b64 };
+    const res = await updateEmpresa(cfg.focusEmpresaId, payload);
+    if (!res.ok) return { ok: false, error: focusErrorMessage(res.data) };
+
+    revalidatePath("/fiscal");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
 /**
  * Vincula a uma empresa JÁ cadastrada no Focus (pelo CNPJ), puxando os tokens —
  * sem reenviar o certificado. Útil quando a loja já existe no Focus (caso do dono).

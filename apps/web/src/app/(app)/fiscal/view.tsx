@@ -6,6 +6,7 @@ import {
   saveFiscalConfigAction,
   uploadCertificateAction,
   linkExistingEmpresaAction,
+  syncFiscalLogoAction,
   type FiscalConfigInput,
 } from "@/lib/actions/fiscal";
 import { lookupCepAction } from "@/lib/actions/cep";
@@ -161,6 +162,18 @@ export function FiscalView({
         setCertBase64("");
         setCertName("");
         setSenha("");
+        router.refresh();
+      }
+    });
+  };
+
+  const syncLogo = () => {
+    setMsg(null);
+    startTransition(async () => {
+      const r = await syncFiscalLogoAction();
+      if (!r.ok) setMsg({ kind: "err", text: r.error ?? "Erro ao enviar logo" });
+      else {
+        setMsg({ kind: "ok", text: "Logo enviada pro Focus! Aparece nas próximas notas ✅" });
         router.refresh();
       }
     });
@@ -435,6 +448,23 @@ export function FiscalView({
             Vincular empresa já cadastrada no Focus
           </button>
         </details>
+      </section>
+
+      {/* Logo no DANFE */}
+      <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+        <h2 className="font-semibold">Logo no cupom/DANFE</h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          Usa a <strong>logo da loja</strong> (subida em Configurações → Identidade visual) na nota
+          fiscal. Envie depois de cadastrar/vincular a empresa. PNG até 200×200 fica melhor.
+        </p>
+        <button
+          type="button"
+          onClick={syncLogo}
+          disabled={isPending}
+          className="mt-3 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
+        >
+          Enviar logo da loja pro Focus
+        </button>
       </section>
     </main>
   );
