@@ -110,7 +110,7 @@ export function MarketingView({
         <select
           value={monthKey}
           onChange={(e) => router.push(`/marketing?month=${e.target.value}`)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm capitalize shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm capitalize shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         >
           {monthOptions.map((m) => (
             <option key={m} value={m} className="capitalize">
@@ -196,7 +196,7 @@ export function MarketingView({
               setError(null);
               setEditing("new");
             }}
-            className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800"
+            className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-hover"
           >
             + Lançar investimento
           </button>
@@ -341,7 +341,7 @@ function SpendDialog({
   };
 
   const inputClass =
-    "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900";
+    "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
@@ -403,7 +403,7 @@ function SpendDialog({
           <button
             type="submit"
             disabled={isPending}
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
           >
             {isPending ? "Salvando..." : "Salvar"}
           </button>

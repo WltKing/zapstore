@@ -113,14 +113,14 @@ export function DeliveriesView({
           step="1"
           value={cap}
           onChange={(e) => setCap(Number(e.target.value))}
-          className="w-24 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          className="w-24 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
         <span className="text-sm text-neutral-500">entregas</span>
         <button
           type="button"
           onClick={saveCapacity}
           disabled={isPending || cap === capacity}
-          className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-300"
+          className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-300"
         >
           Salvar
         </button>
@@ -230,7 +230,7 @@ function DeliveryItem({ d }: { d: DeliveryRow }) {
               type="button"
               onClick={advance}
               disabled={isPending}
-              className="rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+              className="rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
             >
               {next.label}
             </button>
@@ -274,7 +274,7 @@ function DeliveryItem({ d }: { d: DeliveryRow }) {
             type="button"
             onClick={saveRemarcar}
             disabled={isPending}
-            className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+            className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
           >
             Remarcar
           </button>

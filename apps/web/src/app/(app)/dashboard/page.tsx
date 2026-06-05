@@ -65,7 +65,7 @@ export default async function DashboardPage() {
           </p>
           <a
             href="/onboarding"
-            className="mt-6 inline-block rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-800"
+            className="mt-6 inline-block rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-hover"
           >
             Criar minha loja
           </a>

@@ -106,7 +106,7 @@ export function ImageUpload({
             accept="image/*"
             onChange={handleFile}
             disabled={uploading}
-            className="block w-full text-sm text-neutral-600 file:mr-3 file:rounded-lg file:border-0 file:bg-neutral-900 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-neutral-800"
+            className="block w-full text-sm text-neutral-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-neutral-800"
           />
           {uploading && <p className="mt-1 text-xs text-neutral-500">Enviando...</p>}
           {error && <p className="mt-1 text-xs text-red-600">{error}</p>}

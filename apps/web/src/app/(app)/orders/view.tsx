@@ -184,7 +184,7 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
           </button>
           <a
             href="/orders/new"
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
           >
             + Novo pedido
           </a>
@@ -201,12 +201,12 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar por cliente, telefone ou nº..."
-          className="min-w-56 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          className="min-w-56 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
         <select
           value={monthFilter}
           onChange={(e) => setMonthFilter(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         >
           <option value="all">Todos os meses</option>
           {months.map((m) => (
@@ -218,7 +218,7 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         >
           <option value="all">Todos os status</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => (
@@ -326,7 +326,7 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
                             type="button"
                             onClick={() => advance(o.id, o.status)}
                             disabled={isPending}
-                            className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+                            className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
                           >
                             Avançar → {STATUS_LABELS[NEXT_STATUS[o.status]!]}
                           </button>

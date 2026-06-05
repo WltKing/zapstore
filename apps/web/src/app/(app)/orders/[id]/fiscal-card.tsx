@@ -151,7 +151,7 @@ export function OrderFiscalCard({
                 type="button"
                 onClick={() => run(() => emitNotaAction(orderId, "nfce"))}
                 disabled={isPending}
-                className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
               >
                 {isPending ? "Emitindo..." : hasNota ? "Reemitir NFC-e" : "Emitir NFC-e"}
               </button>

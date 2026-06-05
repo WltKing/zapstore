@@ -162,7 +162,7 @@ export function Sidebar({
                     style={active && brandColor ? { backgroundColor: brandColor } : undefined}
                     className={`mt-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
                       active
-                        ? "bg-neutral-900 text-white"
+                        ? "bg-brand text-white"
                         : "text-neutral-700 hover:bg-neutral-100"
                     }`}
                   >

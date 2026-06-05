@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
 import { effectivePermissions, areaForPath } from "@/lib/permissions";
 import { isSuperAdminEmail } from "@/lib/super-admin";
+import { brandCssVars } from "@/lib/theme";
 import { Sidebar } from "@/components/sidebar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -31,6 +32,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-neutral-50">
+      {/* Tema white-label: cor da loja aplicada no sistema todo. */}
+      <style dangerouslySetInnerHTML={{ __html: brandCssVars(tenant.brandColor) }} />
       <Sidebar
         storeName={tenant.name}
         brandColor={tenant.brandColor}

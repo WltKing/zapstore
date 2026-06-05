@@ -207,7 +207,7 @@ export function NfeImportDialog({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-800"
+                className="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-hover"
               >
                 Escolher arquivo XML
               </button>
@@ -330,7 +330,7 @@ export function NfeImportDialog({
                 type="button"
                 onClick={handleImport}
                 disabled={isPending}
-                className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
               >
                 {isPending ? "Importando..." : "Importar"}
               </button>

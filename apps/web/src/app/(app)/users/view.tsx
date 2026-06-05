@@ -94,7 +94,7 @@ export function UsersView({
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="pessoa@email.com"
-                  className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </div>
               <div>
@@ -102,7 +102,7 @@ export function UsersView({
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
-                  className="mt-1 block rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                  className="mt-1 block rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 >
                   {ROLES.map((r) => (
                     <option key={r} value={r}>
@@ -114,7 +114,7 @@ export function UsersView({
               <button
                 type="submit"
                 disabled={isPending}
-                className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
               >
                 Convidar
               </button>
@@ -252,7 +252,7 @@ function AccessEditor({
         <select
           value={mode}
           onChange={(e) => setMode(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         >
           {ROLES.map((r) => (
             <option key={r} value={r}>
@@ -265,7 +265,7 @@ function AccessEditor({
           type="button"
           onClick={save}
           disabled={disabled}
-          className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+          className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
         >
           Salvar acesso
         </button>

@@ -90,7 +90,7 @@ function toInput(d: FiscalConfigData): FiscalConfigInput {
 }
 
 const input =
-  "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900";
+  "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
 export function FiscalView({
   storeName,
@@ -377,7 +377,7 @@ export function FiscalView({
             type="button"
             onClick={saveConfig}
             disabled={isPending}
-            className="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+            className="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
           >
             {isPending ? "Salvando..." : "Salvar dados"}
           </button>
@@ -425,7 +425,7 @@ export function FiscalView({
             type="button"
             onClick={sendCert}
             disabled={isPending || !certBase64}
-            className="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+            className="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
           >
             {isPending ? "Enviando..." : "Enviar certificado"}
           </button>

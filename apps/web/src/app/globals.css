@@ -1,3 +1,40 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Variáveis de tema (white-label). Default = neutro; o layout injeta a cor da loja. */
+:root {
+  --brand: #171717;
+  --brand-fg: #ffffff;
+  --brand-hover: #2a2a2a;
+  --brand-soft: #f5f5f5;
+  --brand-soft-fg: #404040;
+}
+
+/* Utilitários da marca. Em @layer utilities pra vencerem empates (ex.: o text-white
+   que sobra nos botões primários é sobrescrito pela cor de contraste). */
+@layer utilities {
+  .bg-brand {
+    background-color: var(--brand);
+    color: var(--brand-fg);
+  }
+  .hover\:bg-brand-hover:hover {
+    background-color: var(--brand-hover);
+  }
+  .text-brand {
+    color: var(--brand);
+  }
+  .bg-brand-soft {
+    background-color: var(--brand-soft);
+    color: var(--brand-soft-fg);
+  }
+  .border-brand {
+    border-color: var(--brand);
+  }
+  .focus\:border-brand:focus {
+    border-color: var(--brand);
+  }
+  .focus\:ring-brand:focus {
+    --tw-ring-color: var(--brand);
+  }
+}

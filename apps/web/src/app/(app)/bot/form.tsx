@@ -82,7 +82,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
               required
               value={form.botName}
               onChange={(e) => setForm({ ...form, botName: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
           <div>
@@ -90,7 +90,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
             <select
               value={form.tone}
               onChange={(e) => setForm({ ...form, tone: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             >
               {TONES.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -105,7 +105,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
           <select
             value={form.template}
             onChange={(e) => setForm({ ...form, template: e.target.value as NicheId })}
-            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           >
             {Object.values(NICHE_TEMPLATES).map((t) => (
               <option key={t.id} value={t.id}>
@@ -212,7 +212,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
                 }
               }}
               placeholder="Ex: Pix, Crediário, PicPay..."
-              className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+              className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
             <button
               type="button"
@@ -281,7 +281,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-lg bg-neutral-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+          className="rounded-lg bg-brand px-6 py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
         >
           {isPending ? "Salvando..." : "Salvar"}
         </button>

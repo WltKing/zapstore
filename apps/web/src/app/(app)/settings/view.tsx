@@ -92,7 +92,7 @@ export function SettingsView({
   };
 
   const inputClass =
-    "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900";
+    "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -166,7 +166,7 @@ export function SettingsView({
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
                     placeholder="#16a34a"
-                    className="w-32 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                    className="w-32 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                   />
                 </div>
               </div>
@@ -388,7 +388,7 @@ export function SettingsView({
           <button
             type="submit"
             disabled={isPending}
-            className="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+            className="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
           >
             {isPending ? "Salvando..." : "Salvar configurações"}
           </button>

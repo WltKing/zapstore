@@ -140,7 +140,7 @@ export function SchedulingView({
               setError(null);
               setNewAppt(true);
             }}
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
           >
             + Novo agendamento
           </button>
@@ -390,7 +390,7 @@ function ManageCard({
 }
 
 const inputClass =
-  "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900";
+  "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
 function DialogShell({
   title,
@@ -428,7 +428,7 @@ function DialogShell({
           <button
             type="submit"
             disabled={isPending}
-            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
           >
             {isPending ? "Salvando..." : "Salvar"}
           </button>

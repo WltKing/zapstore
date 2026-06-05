@@ -105,7 +105,7 @@ export function SimulatorView({
                 <div
                   className={`max-w-[75%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm ${
                     m.role === "user"
-                      ? "bg-neutral-900 text-white"
+                      ? "bg-brand text-white"
                       : "bg-neutral-100 text-neutral-900"
                   }`}
                 >
@@ -155,12 +155,12 @@ export function SimulatorView({
           onChange={(e) => setInput(e.target.value)}
           placeholder="Manda uma mensagem como se fosse um cliente..."
           disabled={isPending}
-          className="flex-1 rounded-lg border border-neutral-300 px-4 py-2.5 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 disabled:bg-neutral-50"
+          className="flex-1 rounded-lg border border-neutral-300 px-4 py-2.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-neutral-50"
         />
         <button
           type="submit"
           disabled={isPending || !input.trim()}
-          className="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+          className="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
         >
           Enviar
         </button>

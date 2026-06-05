@@ -118,7 +118,7 @@ export function BillingView({
                 value={cpfCnpj}
                 onChange={(e) => setCpfCnpj(e.target.value)}
                 placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
               <p className="mt-1 text-xs text-neutral-500">Email da cobrança: <strong>{userEmail}</strong></p>
             </div>
@@ -131,7 +131,7 @@ export function BillingView({
                     key={b}
                     className={`cursor-pointer rounded-lg border px-3 py-2 text-center text-sm transition ${
                       billingType === b
-                        ? "border-neutral-900 bg-neutral-900 text-white"
+                        ? "border-neutral-900 bg-brand text-white"
                         : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400"
                     }`}
                   >
@@ -154,7 +154,7 @@ export function BillingView({
             <button
               type="submit"
               disabled={isPending || !cpfCnpj}
-              className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
+              className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
             >
               {isPending ? "Criando assinatura..." : "Ativar trial de 7 dias"}
             </button>

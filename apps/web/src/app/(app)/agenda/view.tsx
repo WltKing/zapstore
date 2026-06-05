@@ -90,7 +90,7 @@ export function AgendaView({
           type="date"
           value={dayKey}
           onChange={(e) => go(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
         <button
           type="button"
@@ -126,7 +126,7 @@ export function AgendaView({
             <ul className="mt-4 space-y-2">
               {appointments.map((a) => (
                 <li key={a.id} className="flex items-start gap-3 rounded-xl border border-neutral-100 p-3">
-                  <span className="rounded-lg bg-neutral-900 px-2 py-1 text-xs font-bold text-white">
+                  <span className="rounded-lg bg-brand px-2 py-1 text-xs font-bold text-white">
                     {a.time}
                   </span>
                   <div className="min-w-0">

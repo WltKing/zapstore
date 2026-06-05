@@ -15,7 +15,7 @@ export interface ProductOpt {
 const PAYMENTS = PAYMENT_OPTIONS;
 
 const inputClass =
-  "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900";
+  "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
 function formatBrl(v: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -344,7 +344,7 @@ export function OrderForm({
         <div className="mt-3 space-y-2">
           {form.items.map((it, i) => (
             <div key={i} className="grid grid-cols-12 items-center gap-2">
-              <select required value={it.productId} onChange={(e) => setItem(i, { productId: e.target.value })} className="col-span-5 min-w-0 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900">
+              <select required value={it.productId} onChange={(e) => setItem(i, { productId: e.target.value })} className="col-span-5 min-w-0 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand">
                 <option value="">Produto...</option>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -413,7 +413,7 @@ export function OrderForm({
         <a href="/orders" className="rounded-lg border border-neutral-300 px-5 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100">
           Cancelar
         </a>
-        <button type="submit" disabled={isPending} className="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400">
+        <button type="submit" disabled={isPending} className="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400">
           {isPending ? "Salvando..." : orderId ? "Atualizar pedido" : "Salvar pedido"}
         </button>
       </div>

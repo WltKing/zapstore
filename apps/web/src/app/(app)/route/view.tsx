@@ -150,7 +150,7 @@ export function RouteView({
           type="date"
           value={dayKey}
           onChange={(e) => router.push(`/route?day=${e.target.value}`)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
         <span className="text-sm text-neutral-500">
           {pendingCount} a entregar · {doneCount} entregue{doneCount === 1 ? "" : "s"}
@@ -163,7 +163,7 @@ export function RouteView({
             if (!mapsAll) e.preventDefault();
           }}
           className={`ml-auto rounded-lg px-4 py-2 text-sm font-medium text-white ${
-            mapsAll ? "bg-neutral-900 hover:bg-neutral-800" : "cursor-not-allowed bg-neutral-300"
+            mapsAll ? "bg-brand hover:bg-brand-hover" : "cursor-not-allowed bg-neutral-300"
           }`}
         >
           🗺️ Abrir rota no Maps
@@ -197,7 +197,7 @@ export function RouteView({
                 <div className="flex items-start gap-3">
                   {/* Ordem + reordenar */}
                   <div className="flex flex-col items-center gap-1">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-900 text-sm font-bold text-white">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
                       {i + 1}
                     </span>
                     <div className="flex flex-col">
