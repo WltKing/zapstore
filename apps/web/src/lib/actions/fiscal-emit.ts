@@ -207,22 +207,23 @@ export async function emitNotaAction(orderId: string, model: "nfce" | "nfe"): Pr
 
     const ref = `o${order.orderNumber}-${model}-${Date.now().toString(36)}`;
 
-    // Comprador (campos _comprador, como no Sistema 2.0 que já funciona).
-    // NFC-e: só inclui se houver CPF/CNPJ (senão anônima). NF-e: sempre inclui.
+    // Destinatário (campos _destinatario — nomes oficiais da API Focus).
+    // NFC-e: só inclui se houver CPF/CNPJ (senão anônima). NF-e: sempre inclui + endereço.
     const doc = digits(order.customerCpf);
     const comprador: Record<string, unknown> = {};
     if (model === "nfe" || doc) {
-      comprador.nome_comprador = order.customerName || "Consumidor Final";
-      if (doc.length === 14) comprador.cnpj_comprador = doc;
-      else if (doc.length === 11) comprador.cpf_comprador = doc;
+      comprador.nome_destinatario = order.customerName || "Consumidor Final";
+      if (doc.length === 14) comprador.cnpj_destinatario = doc;
+      else if (doc.length === 11) comprador.cpf_destinatario = doc;
     }
     if (model === "nfe") {
-      comprador.logradouro_comprador = order.street || "Não informado";
-      comprador.numero_comprador = order.streetNumber || "S/N";
-      comprador.bairro_comprador = order.neighborhood || "Centro";
-      comprador.municipio_comprador = order.city || "Senador Canedo";
-      comprador.uf_comprador = order.state || "GO";
-      comprador.cep_comprador = digits(order.cep) || "75250000";
+      comprador.indicador_inscricao_estadual_destinatario = 9; // 9 = não contribuinte
+      comprador.logradouro_destinatario = order.street || "Não informado";
+      comprador.numero_destinatario = order.streetNumber || "S/N";
+      comprador.bairro_destinatario = order.neighborhood || "Centro";
+      comprador.municipio_destinatario = order.city || "Senador Canedo";
+      comprador.uf_destinatario = order.state || "GO";
+      comprador.cep_destinatario = digits(order.cep) || "75250000";
     }
 
     const payload: Record<string, unknown> = {
