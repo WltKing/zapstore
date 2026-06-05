@@ -191,6 +191,19 @@ export async function emitNotaAction(orderId: string, model: "nfce" | "nfe"): Pr
 
     const total = Number(order.totalBrl);
     const ref = `o${order.orderNumber}-${model}-${Date.now().toString(36)}`;
+
+    // Destinatário: só inclui se houver CPF (11) ou CNPJ (14). Sem documento =
+    // NFC-e anônima (não pode mandar nome sozinho — SEFAZ rejeita).
+    const doc = digits(order.customerCpf);
+    const dest: Record<string, unknown> = {};
+    if (doc.length === 11) {
+      dest.cpf_destinatario = doc;
+      if (order.customerName) dest.nome_destinatario = order.customerName;
+    } else if (doc.length === 14) {
+      dest.cnpj_destinatario = doc;
+      if (order.customerName) dest.nome_destinatario = order.customerName;
+    }
+
     const payload: Record<string, unknown> = {
       cnpj_emitente: cfg.cnpj,
       natureza_operacao: "VENDA AO CONSUMIDOR",
@@ -198,8 +211,7 @@ export async function emitNotaAction(orderId: string, model: "nfce" | "nfe"): Pr
       presenca_comprador: order.deliveryType === "delivery" ? "4" : "1",
       modalidade_frete: "9",
       local_destino: "1",
-      nome_destinatario: order.customerName || undefined,
-      cpf_destinatario: digits(order.customerCpf) || undefined,
+      ...dest,
       formas_pagamento: [{ forma_pagamento: payCode(order.paymentMethod), valor_pagamento: round2(total) }],
       items,
     };
@@ -223,12 +235,14 @@ export async function emitNotaAction(orderId: string, model: "nfce" | "nfe"): Pr
     const danfe = focusFileUrl(cfg.ambiente, d.caminho_danfe);
     const xml = focusFileUrl(cfg.ambiente, d.caminho_xml_nota_fiscal);
     const message = d.mensagem_sefaz || (d.erros?.map((e) => e.mensagem).filter(Boolean).join("; ")) || d.mensagem || null;
+    // Sem status mas com erro/mensagem = rejeitada (não ficar "processando" eterno).
+    const finalStatus = d.status ?? (d.erros?.length || (!res.ok && message) ? "erro_autorizacao" : "processando");
 
     await withTenant(tenantId, (tx) =>
       tx.order.update({
         where: { id: orderId },
         data: {
-          fiscalStatus: d.status ?? "processando",
+          fiscalStatus: finalStatus,
           fiscalChave: d.chave_nfe ?? null,
           fiscalNumero: d.numero ?? null,
           fiscalDanfeUrl: danfe,
@@ -241,7 +255,7 @@ export async function emitNotaAction(orderId: string, model: "nfce" | "nfe"): Pr
 
     revalidatePath(`/orders/${orderId}`);
     revalidatePath("/orders");
-    return { ok: true, status: d.status, message: message ?? undefined };
+    return { ok: true, status: finalStatus, message: message ?? undefined };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
   }

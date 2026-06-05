@@ -55,6 +55,8 @@ export function OrderFiscalCard({
 
   const hasNota = !!fiscal.status;
   const statusUi = fiscal.status ? STATUS_UI[fiscal.status] ?? { label: fiscal.status, cls: "bg-neutral-100 text-neutral-600" } : null;
+  // Pode emitir/reemitir enquanto não estiver autorizada nem cancelada.
+  const canEmit = fiscal.status !== "autorizado" && fiscal.status !== "cancelado";
 
   return (
     <section className="mx-auto mt-6 max-w-3xl rounded-2xl bg-white p-5 shadow-sm">
@@ -111,7 +113,7 @@ export function OrderFiscalCard({
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {(!hasNota || fiscal.status === "erro_autorizacao") && habilitaNfce && (
+            {canEmit && habilitaNfce && (
               <button
                 type="button"
                 onClick={() => run(() => emitNotaAction(orderId, "nfce"))}
