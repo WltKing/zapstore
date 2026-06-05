@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import {
   createEmpresa,
   updateEmpresa,
+  findEmpresaByCnpj,
   focusErrorMessage,
   type EmpresaPayload,
 } from "@/lib/focus";
@@ -104,6 +105,43 @@ export async function saveFiscalConfigAction(input: FiscalConfigInput): Promise<
 }
 
 /**
+ * Vincula a uma empresa JÁ cadastrada no Focus (pelo CNPJ), puxando os tokens —
+ * sem reenviar o certificado. Útil quando a loja já existe no Focus (caso do dono).
+ */
+export async function linkExistingEmpresaAction(): Promise<ActionResult> {
+  try {
+    const tenantId = await requireAdminTenant();
+    const cfg = await withTenant(tenantId, (tx) => tx.fiscalConfig.findUnique({ where: { tenantId } }));
+    if (!cfg) return { ok: false, error: "Salve os dados da empresa primeiro." };
+
+    const found = await findEmpresaByCnpj(cfg.cnpj);
+    if (!found?.id) {
+      return {
+        ok: false,
+        error: "Empresa não encontrada no Focus com esse CNPJ. Envie o certificado pra cadastrar.",
+      };
+    }
+
+    await withTenant(tenantId, (tx) =>
+      tx.fiscalConfig.update({
+        where: { tenantId },
+        data: {
+          focusEmpresaId: found.id,
+          focusTokenHomolog: found.token_homologacao ?? cfg.focusTokenHomolog,
+          focusTokenProd: found.token_producao ?? cfg.focusTokenProd,
+          certStatus: "ok",
+          enabled: true,
+        },
+      }),
+    );
+    revalidatePath("/fiscal");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
+/**
  * Envia o certificado A1 (base64) + senha ao Focus: cria a empresa (1ª vez) ou
  * atualiza (renovação). Guarda os tokens de emissão e a validade do certificado.
  * NÃO persiste o .pfx nem a senha.
@@ -140,8 +178,22 @@ export async function uploadCertificateAction(
       senha_certificado: senha,
     };
 
-    const res = cfg.focusEmpresaId
-      ? await updateEmpresa(cfg.focusEmpresaId, payload)
+    // Descobre a empresa: id já salvo; senão procura no Focus pelo CNPJ (caso a
+    // empresa já exista lá — ex.: a própria loja do dono). Só cria se não achar.
+    let empresaId = cfg.focusEmpresaId ?? null;
+    let existingHomolog: string | null = null;
+    let existingProd: string | null = null;
+    if (!empresaId) {
+      const found = await findEmpresaByCnpj(cfg.cnpj);
+      if (found?.id) {
+        empresaId = found.id;
+        existingHomolog = found.token_homologacao ?? null;
+        existingProd = found.token_producao ?? null;
+      }
+    }
+
+    const res = empresaId
+      ? await updateEmpresa(empresaId, payload)
       : await createEmpresa(payload);
 
     if (!res.ok) {
@@ -156,11 +208,12 @@ export async function uploadCertificateAction(
       tx.fiscalConfig.update({
         where: { tenantId },
         data: {
-          focusEmpresaId: d.id ?? cfg.focusEmpresaId,
-          focusTokenHomolog: d.token_homologacao ?? cfg.focusTokenHomolog,
-          focusTokenProd: d.token_producao ?? cfg.focusTokenProd,
-          certCnpj: d.certificado_cnpj ?? null,
-          certValidoAte: d.certificado_valido_ate ? new Date(d.certificado_valido_ate) : null,
+          focusEmpresaId: d.id ?? empresaId ?? cfg.focusEmpresaId,
+          // O PUT às vezes não retorna tokens: cai pros já existentes / salvos.
+          focusTokenHomolog: d.token_homologacao ?? existingHomolog ?? cfg.focusTokenHomolog,
+          focusTokenProd: d.token_producao ?? existingProd ?? cfg.focusTokenProd,
+          certCnpj: d.certificado_cnpj ?? cfg.certCnpj ?? null,
+          certValidoAte: d.certificado_valido_ate ? new Date(d.certificado_valido_ate) : cfg.certValidoAte,
           certStatus: "ok",
           enabled: true,
         },

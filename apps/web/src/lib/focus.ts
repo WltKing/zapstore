@@ -115,6 +115,19 @@ export async function createEmpresa(payload: EmpresaPayload): Promise<FocusResul
   return focusRequest<EmpresaResponse>(`${await empresasBase()}/v2/empresas`, await masterToken(), "POST", payload);
 }
 
+/** Busca uma empresa já cadastrada no Focus pelo CNPJ (ou null). */
+export async function findEmpresaByCnpj(cnpj: string): Promise<EmpresaResponse | null> {
+  const res = await focusRequest<EmpresaResponse[] | EmpresaResponse>(
+    `${await empresasBase()}/v2/empresas?cnpj=${encodeURIComponent(cnpj)}`,
+    await masterToken(),
+    "GET",
+  );
+  if (!res.ok) return null;
+  const data = res.data;
+  if (Array.isArray(data)) return data[0] ?? null;
+  return data && (data as EmpresaResponse).id ? (data as EmpresaResponse) : null;
+}
+
 /** Atualiza uma empresa existente (ex.: renovar certificado). */
 export async function updateEmpresa(
   id: number,

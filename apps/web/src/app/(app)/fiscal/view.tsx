@@ -2,7 +2,12 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { saveFiscalConfigAction, uploadCertificateAction, type FiscalConfigInput } from "@/lib/actions/fiscal";
+import {
+  saveFiscalConfigAction,
+  uploadCertificateAction,
+  linkExistingEmpresaAction,
+  type FiscalConfigInput,
+} from "@/lib/actions/fiscal";
 import { lookupCepAction } from "@/lib/actions/cep";
 
 export interface FiscalConfigData {
@@ -156,6 +161,18 @@ export function FiscalView({
         setCertBase64("");
         setCertName("");
         setSenha("");
+        router.refresh();
+      }
+    });
+  };
+
+  const linkExisting = () => {
+    setMsg(null);
+    startTransition(async () => {
+      const r = await linkExistingEmpresaAction();
+      if (!r.ok) setMsg({ kind: "err", text: r.error ?? "Erro ao vincular" });
+      else {
+        setMsg({ kind: "ok", text: "Empresa vinculada do Focus! Emissão ativada ✅" });
         router.refresh();
       }
     });
@@ -398,6 +415,21 @@ export function FiscalView({
             className="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-400"
           >
             {isPending ? "Enviando..." : "Enviar certificado"}
+          </button>
+        </div>
+
+        <div className="mt-5 border-t border-neutral-100 pt-4">
+          <p className="text-sm text-neutral-500">
+            Já tem essa empresa cadastrada no Focus (com certificado)? Vincule sem reenviar o arquivo —
+            o sistema puxa os tokens pelo CNPJ.
+          </p>
+          <button
+            type="button"
+            onClick={linkExisting}
+            disabled={isPending}
+            className="mt-2 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
+          >
+            Vincular empresa já cadastrada no Focus
           </button>
         </div>
       </section>
