@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { emitNotaAction, refreshNotaAction } from "@/lib/actions/fiscal-emit";
 
@@ -53,6 +53,25 @@ export function OrderFiscalCard({
     });
   };
 
+  // Enquanto "processando", consulta sozinho a cada 5s (até ~6 tentativas).
+  const pollsRef = useRef(0);
+  const processing = fiscal.status === "processando" || fiscal.status === "processando_autorizacao";
+  useEffect(() => {
+    if (!processing) {
+      pollsRef.current = 0;
+      return;
+    }
+    if (pollsRef.current >= 6) return;
+    const t = setTimeout(() => {
+      pollsRef.current += 1;
+      startTransition(async () => {
+        await refreshNotaAction(orderId);
+        router.refresh();
+      });
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [processing, fiscal.status, orderId, router]);
+
   const hasNota = !!fiscal.status;
   const statusUi = fiscal.status ? STATUS_UI[fiscal.status] ?? { label: fiscal.status, cls: "bg-neutral-100 text-neutral-600" } : null;
   // Pode emitir/reemitir enquanto não estiver autorizada nem cancelada.
@@ -104,9 +123,9 @@ export function OrderFiscalCard({
                   type="button"
                   onClick={() => run(() => refreshNotaAction(orderId))}
                   disabled={isPending}
-                  className="text-sm text-neutral-500 hover:text-neutral-900"
+                  className="rounded-lg border border-neutral-300 px-3 py-1 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                 >
-                  Atualizar status
+                  ↻ Atualizar status
                 </button>
               </div>
             </div>

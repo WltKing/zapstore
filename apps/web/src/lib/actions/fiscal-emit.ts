@@ -75,6 +75,8 @@ interface FiscalItem {
   valor_bruto: number;
   icms_origem: string;
   icms_situacao_tributaria: string;
+  pis_situacao_tributaria: string;
+  cofins_situacao_tributaria: string;
   codigo_cest?: string;
 }
 
@@ -137,6 +139,9 @@ async function buildItems(
       valor_bruto: bruto,
       icms_origem: prod.origem || "0",
       icms_situacao_tributaria: csosn,
+      // Simples Nacional: PIS/COFINS isentos (CST 07) — exigido na NF-e (modelo 55).
+      pis_situacao_tributaria: "07",
+      cofins_situacao_tributaria: "07",
     };
     const cest = digits(prod.cest);
     if (cest) item.codigo_cest = cest;
