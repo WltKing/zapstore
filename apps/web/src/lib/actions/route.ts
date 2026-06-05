@@ -103,7 +103,8 @@ export async function setRouteStatusAction(
             status === "en_route"
               ? `🛵 Oi ${first}! Seu pedido da *${store}* saiu para entrega e está a caminho. 😊`
               : `📦 Chegamos! O entregador da *${store}* está na porta com seu pedido, ${first}.`;
-          await getWhatsAppProvider().send(tenantId, { to: phone, text });
+          const wa = await getWhatsAppProvider();
+          await wa.send(tenantId, { to: phone, text });
           whatsappSent = true;
         } catch (e) {
           whatsappError = e instanceof Error ? e.message : "Falha ao enviar WhatsApp";

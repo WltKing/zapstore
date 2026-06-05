@@ -2,15 +2,15 @@ import { randomUUID } from "node:crypto";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { magicLink } from "better-auth/plugins";
-import { prisma } from "@zapstore/db";
+import { prisma, getPlatformSetting } from "@zapstore/db";
 
 // Envia o magic link. Estrategia:
 // 1. Se RESEND_API_KEY existe -> envia email de verdade via Resend.
 // 2. Senao -> loga o link no console (dev e tambem prod sem email configurado).
 //    Nunca lanca erro: melhor logar do que quebrar o login.
 async function sendMagicLinkEmail(email: string, url: string): Promise<void> {
-  const resendKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.EMAIL_FROM ?? "Zapstore <onboarding@resend.dev>";
+  const resendKey = await getPlatformSetting("RESEND_API_KEY");
+  const fromEmail = (await getPlatformSetting("EMAIL_FROM")) ?? "Zapstore <onboarding@resend.dev>";
 
   if (resendKey) {
     try {

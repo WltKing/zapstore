@@ -48,7 +48,7 @@ export async function activateSubscriptionAction(input: ActivateInput): Promise<
       return { ok: false, error: "Voce ja tem assinatura ativa." };
     }
 
-    const provider = getPaymentProvider();
+    const provider = await getPaymentProvider();
     const result = await provider.createSubscription({
       tenantId: ctx.tenantId,
       customerEmail: ctx.userEmail,
@@ -111,7 +111,7 @@ export async function cancelSubscriptionAction(): Promise<{ ok: boolean; error?:
     );
     if (!sub?.providerSubId) return { ok: false, error: "Sem assinatura ativa" };
 
-    const provider = getPaymentProvider();
+    const provider = await getPaymentProvider();
     await provider.cancelSubscription(sub.providerSubId);
 
     await withTenant(ctx.tenantId, async (tx) => {

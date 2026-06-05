@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   });
   if (!link) return NextResponse.json({ error: "Sem loja cadastrada." }, { status: 403 });
 
-  if (!isStorageConfigured()) {
+  if (!(await isStorageConfigured())) {
     return NextResponse.json(
       { error: "Upload de imagens ainda não configurado. Avise o suporte." },
       { status: 503 },

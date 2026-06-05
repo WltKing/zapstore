@@ -2,6 +2,7 @@ import type { Job } from "bullmq";
 import type { Logger } from "pino";
 import { processConversationTurn } from "@zapstore/engine";
 import { createWhatsAppProvider, type WhatsAppProvider } from "@zapstore/whatsapp";
+import { getPlatformSetting } from "@zapstore/db";
 
 export interface InboundJobPayload {
   tenantId: string;
@@ -16,15 +17,17 @@ export interface InboundJobPayload {
   timestampMs: number;
 }
 
-let _whatsapp: WhatsAppProvider | null = null;
-function whatsappProvider(): WhatsAppProvider {
-  if (_whatsapp) return _whatsapp;
-  _whatsapp = createWhatsAppProvider({
+async function whatsappProvider(): Promise<WhatsAppProvider> {
+  // Chaves vêm do painel do dono (PlatformSetting) com fallback pro env.
+  const [apiUrl, apiKey] = await Promise.all([
+    getPlatformSetting("EVOLUTION_API_URL"),
+    getPlatformSetting("EVOLUTION_API_KEY"),
+  ]);
+  return createWhatsAppProvider({
     provider: "evolution",
-    apiUrl: process.env.EVOLUTION_API_URL ?? "http://localhost:8080",
-    apiKey: process.env.EVOLUTION_API_KEY ?? "",
+    apiUrl: apiUrl ?? "http://localhost:8080",
+    apiKey: apiKey ?? "",
   });
-  return _whatsapp;
 }
 
 export async function processInboundJob(job: Job<InboundJobPayload>, logger: Logger): Promise<void> {
@@ -43,7 +46,8 @@ export async function processInboundJob(job: Job<InboundJobPayload>, logger: Log
   });
 
   if (result.blocked === "quota_exceeded") {
-    await whatsappProvider().send(tenantId, { to: from, text: result.replyText });
+    const wa = await whatsappProvider();
+    await wa.send(tenantId, { to: from, text: result.replyText });
     return;
   }
   if (result.blocked === "bot_paused") {
@@ -55,7 +59,7 @@ export async function processInboundJob(job: Job<InboundJobPayload>, logger: Log
     return;
   }
 
-  const wa = whatsappProvider();
+  const wa = await whatsappProvider();
   await wa.setTyping(tenantId, from, Math.min(3000, result.replyText.length * 30));
   await wa.send(tenantId, { to: from, text: result.replyText });
 }

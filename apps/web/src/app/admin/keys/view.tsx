@@ -8,8 +8,19 @@ export interface KeyRow {
   key: string;
   label: string;
   help: string;
+  group: string;
   masked: string;
   source: "banco" | "ambiente" | "nao_definido";
+}
+
+/** Agrupa as chaves por `group`, preservando a ordem de aparição. */
+function groupOrder(keys: KeyRow[]): [string, KeyRow[]][] {
+  const map = new Map<string, KeyRow[]>();
+  for (const k of keys) {
+    if (!map.has(k.group)) map.set(k.group, []);
+    map.get(k.group)!.push(k);
+  }
+  return [...map.entries()];
 }
 
 const SOURCE_LABEL: Record<KeyRow["source"], string> = {
@@ -33,26 +44,31 @@ export function KeysView({ keys }: { keys: KeyRow[] }) {
 
       {msg && <p className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{msg}</p>}
 
-      <div className="mt-6 space-y-4">
-        {keys.map((k) => (
-          <KeyEditor
-            key={k.key}
-            row={k}
-            disabled={isPending}
-            onSave={(value) => {
-              setMsg(null);
-              startTransition(async () => {
-                const r = await savePlatformSettingAction(k.key, value);
-                if (!r.ok) setMsg(r.error ?? "Erro");
-                else {
-                  setMsg(`"${k.label}" atualizada ✅`);
-                  router.refresh();
-                }
-              });
-            }}
-          />
-        ))}
-      </div>
+      {groupOrder(keys).map(([group, rows]) => (
+        <section key={group} className="mt-8">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">{group}</h2>
+          <div className="space-y-3">
+            {rows.map((k) => (
+              <KeyEditor
+                key={k.key}
+                row={k}
+                disabled={isPending}
+                onSave={(value) => {
+                  setMsg(null);
+                  startTransition(async () => {
+                    const r = await savePlatformSettingAction(k.key, value);
+                    if (!r.ok) setMsg(r.error ?? "Erro");
+                    else {
+                      setMsg(`"${k.label}" atualizada ✅`);
+                      router.refresh();
+                    }
+                  });
+                }}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
     </main>
   );
 }

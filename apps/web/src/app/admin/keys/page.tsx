@@ -16,6 +16,7 @@ export default async function AdminKeysPage() {
       key: k.key,
       label: k.label,
       help: k.help,
+      group: k.group,
       masked: maskSecret(effective),
       source: dbVal ? "banco" : envVal ? "ambiente" : "nao_definido",
     };

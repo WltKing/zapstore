@@ -26,7 +26,7 @@ export interface WhatsAppStatus {
 export async function getWhatsAppStatus(): Promise<WhatsAppStatus & { error?: string }> {
   try {
     const tenantId = await requireTenantId();
-    const provider = getWhatsAppProvider();
+    const provider = await getWhatsAppProvider();
     const status = await provider.ensureInstance(tenantId);
 
     // Se conectou, marca no banco.
@@ -61,7 +61,7 @@ export async function getWhatsAppStatus(): Promise<WhatsAppStatus & { error?: st
 export async function refreshQrCodeAction(): Promise<WhatsAppStatus & { error?: string }> {
   try {
     const tenantId = await requireTenantId();
-    const provider = getWhatsAppProvider();
+    const provider = await getWhatsAppProvider();
     const qr = await provider.refreshQrCode(tenantId);
     if (qr) {
       await getRedis().set(RedisKeys.whatsappQr(tenantId), qr, "EX", 60);
@@ -75,7 +75,7 @@ export async function refreshQrCodeAction(): Promise<WhatsAppStatus & { error?: 
 export async function disconnectWhatsAppAction(): Promise<{ ok: boolean; error?: string }> {
   try {
     const tenantId = await requireTenantId();
-    const provider = getWhatsAppProvider();
+    const provider = await getWhatsAppProvider();
     await provider.disconnect(tenantId);
     await withTenant(tenantId, async (tx) => {
       await tx.botConfig.update({
