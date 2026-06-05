@@ -27,6 +27,13 @@ export interface EmitResult {
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const digits = (s: string | null | undefined) => (s ?? "").replace(/\D/g, "");
 
+/** Data/hora atual no fuso de Brasília (-03:00), formato exigido pelo SEFAZ.
+ * Enviar em UTC faz o SEFAZ rejeitar ("emissão posterior ao recebimento"). */
+function nowSaoPaulo(): string {
+  const sp = new Date(Date.now() - 3 * 60 * 60 * 1000); // SP = UTC-3 (fixo)
+  return sp.toISOString().replace(/\.\d{3}Z$/, "-03:00");
+}
+
 /** Forma de pagamento (nossa) -> código SEFAZ. */
 function payCode(method: string | null | undefined): string {
   switch ((method ?? "").toLowerCase()) {
@@ -207,7 +214,7 @@ export async function emitNotaAction(orderId: string, model: "nfce" | "nfe"): Pr
     const payload: Record<string, unknown> = {
       cnpj_emitente: cfg.cnpj,
       natureza_operacao: "VENDA AO CONSUMIDOR",
-      data_emissao: new Date().toISOString(),
+      data_emissao: nowSaoPaulo(),
       presenca_comprador: order.deliveryType === "delivery" ? "4" : "1",
       modalidade_frete: "9",
       local_destino: "1",
