@@ -9,6 +9,7 @@ export interface CepResult {
   neighborhood: string;
   city: string;
   state: string;
+  ibge?: string; // código IBGE do município (p/ fiscal)
 }
 
 async function requireSession() {
@@ -35,6 +36,7 @@ export async function lookupCepAction(
         neighborhood: d.bairro ?? "",
         city: d.localidade ?? "",
         state: d.uf ?? "",
+        ibge: d.ibge ?? "",
       },
     };
   } catch (e) {

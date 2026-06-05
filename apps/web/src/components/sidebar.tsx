@@ -62,6 +62,7 @@ const SECTIONS: NavSection[] = [
     title: "Sistema",
     items: [
       { href: "/billing", label: "Assinatura", icon: "💳" },
+      { href: "/fiscal", label: "Fiscal", icon: "🧾" },
       { href: "/users", label: "Usuários", icon: "🔑" },
       { href: "/settings", label: "Configurações", icon: "⚙️" },
     ],

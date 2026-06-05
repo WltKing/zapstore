@@ -52,6 +52,7 @@ model Tenant {
   expenses      Expense[]
   productKitItems ProductKitItem[]
   marketingSpends MarketingSpend[]
+  fiscalConfig  FiscalConfig?
 
   @@map("tenants")
 }
@@ -500,4 +501,59 @@ model MarketingSpend {
 
   @@index([tenantId, month])
   @@map("marketing_spends")
+}
+
+// ============================================================
+// FISCAL (emissão de nota via Focus NFe — módulo pago)
+// ============================================================
+
+model FiscalConfig {
+  id                String  @id @default(uuid()) @db.Uuid
+  tenantId          String  @unique @db.Uuid
+
+  // Emitente
+  cnpj              String
+  razaoSocial       String
+  nomeFantasia      String?
+  inscricaoEstadual String?
+  regimeTributario  Int     @default(1) // 1=Simples Nacional, 2=Simples excesso, 3=Normal
+  email             String?
+  telefone          String?
+
+  // Endereço do emitente
+  cep               String?
+  logradouro        String?
+  numero            String?
+  complemento       String?
+  bairro            String?
+  municipio         String?
+  codigoMunicipio   String?
+  uf                String?
+
+  // Emissão
+  ambiente          String  @default("homologacao") // "homologacao" | "producao"
+  habilitaNfce      Boolean @default(true)
+  habilitaNfe       Boolean @default(true)
+
+  // CSC da NFC-e (produção) — fornecido pela SEFAZ do estado
+  cscNfceProd       String?
+  idTokenNfceProd   String?
+
+  // Integração Focus (por empresa)
+  focusEmpresaId    Int?
+  focusTokenHomolog String?
+  focusTokenProd    String?
+
+  // Certificado (NUNCA guardamos o .pfx; só metadados retornados pelo Focus)
+  certCnpj          String?
+  certValidoAte     DateTime?
+  certStatus        String?  // "ok" | "erro" | null
+
+  enabled           Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("fiscal_configs")
 }
