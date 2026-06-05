@@ -75,6 +75,7 @@ interface FiscalItem {
   valor_bruto: number;
   icms_origem: string;
   icms_situacao_tributaria: string;
+  codigo_cest?: string;
 }
 
 /**
@@ -87,25 +88,26 @@ async function buildItems(
   orderItems: OrderItemJson[],
   cfop: string,
   csosn: string,
-): Promise<{ items?: FiscalItem[]; error?: string }> {
+): Promise<{ items?: FiscalItem[]; total?: number; error?: string }> {
   const ids = orderItems.map((i) => i.productId).filter((x): x is string => !!x);
   const kitRows = await tx.productKitItem.findMany({
     where: { kitId: { in: ids } },
-    include: { component: { select: { id: true, name: true, fiscalName: true, ncm: true, origem: true, priceBrl: true } } },
+    include: { component: { select: { id: true, name: true, fiscalName: true, ncm: true, cest: true, origem: true, priceBrl: true } } },
   });
   const compIds = kitRows.map((k) => k.componentId);
   const prods = await tx.product.findMany({
     where: { id: { in: [...ids, ...compIds] } },
-    select: { id: true, name: true, fiscalName: true, ncm: true, origem: true, kind: true },
+    select: { id: true, name: true, fiscalName: true, ncm: true, cest: true, origem: true, kind: true },
   });
   const pmap = new Map(prods.map((p) => [p.id, p]));
 
   const items: FiscalItem[] = [];
   const missingNcm: string[] = [];
+  let total = 0;
   let n = 1;
 
   const pushItem = (
-    prod: { id: string; name: string; fiscalName: string | null; ncm: string | null; origem: string | null },
+    prod: { id: string; name: string; fiscalName: string | null; ncm: string | null; cest: string | null; origem: string | null },
     qty: number,
     valorBruto: number,
   ) => {
@@ -115,8 +117,12 @@ async function buildItems(
       return;
     }
     const q = qty > 0 ? qty : 1;
+    // Deriva o bruto do unitário arredondado pra bater com a validação do SEFAZ
+    // (valor_bruto = qtd × valor_unitário).
     const unit = round2(valorBruto / q);
-    items.push({
+    const bruto = round2(unit * q);
+    total = round2(total + bruto);
+    const item: FiscalItem = {
       numero_item: n++,
       codigo_produto: prod.id.slice(0, 12),
       descricao: (prod.fiscalName || prod.name).slice(0, 120),
@@ -128,10 +134,13 @@ async function buildItems(
       quantidade_tributavel: q,
       valor_unitario_comercial: unit,
       valor_unitario_tributavel: unit,
-      valor_bruto: round2(valorBruto),
+      valor_bruto: bruto,
       icms_origem: prod.origem || "0",
       icms_situacao_tributaria: csosn,
-    });
+    };
+    const cest = digits(prod.cest);
+    if (cest) item.codigo_cest = cest;
+    items.push(item);
   };
 
   for (const it of orderItems) {
@@ -139,16 +148,16 @@ async function buildItems(
     const prod = pmap.get(it.productId);
     if (!prod) continue;
     const qty = Number(it.qty) || 1;
-    const total = Number(it.lineTotal) || 0;
+    const lineTotal = Number(it.lineTotal) || 0;
 
     if (prod.kind !== "kit") {
-      pushItem(prod, qty, total);
+      pushItem(prod, qty, lineTotal);
       continue;
     }
     // Kit: rateia o valor entre os componentes pelo peso (preço * qtd).
     const comps = kitRows.filter((k) => k.kitId === it.productId);
     if (comps.length === 0) {
-      pushItem(prod, qty, total); // sem composição -> trata como simples
+      pushItem(prod, qty, lineTotal); // sem composição -> trata como simples
       continue;
     }
     const weights = comps.map((c) => Number(c.component.priceBrl) * c.qty);
@@ -156,7 +165,7 @@ async function buildItems(
     let allocated = 0;
     comps.forEach((c, idx) => {
       const isLast = idx === comps.length - 1;
-      const share = isLast ? round2(total - allocated) : round2((total * weights[idx]) / wsum);
+      const share = isLast ? round2(lineTotal - allocated) : round2((lineTotal * weights[idx]) / wsum);
       allocated = round2(allocated + share);
       pushItem(c.component, c.qty * qty, share);
     });
@@ -166,7 +175,7 @@ async function buildItems(
     return { error: `Defina o NCM (8 dígitos) destes produtos antes de emitir: ${[...new Set(missingNcm)].join(", ")}.` };
   }
   if (items.length === 0) return { error: "Pedido sem itens válidos pra nota." };
-  return { items };
+  return { items, total };
 }
 
 /** Emite uma nota (por enquanto NFC-e) pro pedido e consulta o status. */
@@ -191,36 +200,43 @@ export async function emitNotaAction(orderId: string, model: "nfce" | "nfe"): Pr
       const orderItems = (Array.isArray(order.items) ? order.items : []) as OrderItemJson[];
       const r = await buildItems(tx, orderItems, cfop, csosn);
       if (r.error) return { error: r.error };
-      return { order, items: r.items! };
+      return { order, items: r.items!, itemsTotal: r.total! };
     });
     if ("error" in built) return { ok: false, error: built.error };
-    const { order, items } = built;
+    const { order, items, itemsTotal } = built;
 
-    const total = Number(order.totalBrl);
     const ref = `o${order.orderNumber}-${model}-${Date.now().toString(36)}`;
 
-    // Destinatário: só inclui se houver CPF (11) ou CNPJ (14). Sem documento =
-    // NFC-e anônima (não pode mandar nome sozinho — SEFAZ rejeita).
+    // Comprador (campos _comprador, como no Sistema 2.0 que já funciona).
+    // NFC-e: só inclui se houver CPF/CNPJ (senão anônima). NF-e: sempre inclui.
     const doc = digits(order.customerCpf);
-    const dest: Record<string, unknown> = {};
-    if (doc.length === 11) {
-      dest.cpf_destinatario = doc;
-      if (order.customerName) dest.nome_destinatario = order.customerName;
-    } else if (doc.length === 14) {
-      dest.cnpj_destinatario = doc;
-      if (order.customerName) dest.nome_destinatario = order.customerName;
+    const comprador: Record<string, unknown> = {};
+    if (model === "nfe" || doc) {
+      comprador.nome_comprador = order.customerName || "Consumidor Final";
+      if (doc.length === 14) comprador.cnpj_comprador = doc;
+      else if (doc.length === 11) comprador.cpf_comprador = doc;
+    }
+    if (model === "nfe") {
+      comprador.logradouro_comprador = order.street || "Não informado";
+      comprador.numero_comprador = order.streetNumber || "S/N";
+      comprador.bairro_comprador = order.neighborhood || "Centro";
+      comprador.municipio_comprador = order.city || "Senador Canedo";
+      comprador.uf_comprador = order.state || "GO";
+      comprador.cep_comprador = digits(order.cep) || "75250000";
     }
 
     const payload: Record<string, unknown> = {
-      cnpj_emitente: cfg.cnpj,
-      natureza_operacao: "VENDA AO CONSUMIDOR",
+      natureza_operacao: "Venda de mercadoria",
       data_emissao: nowSaoPaulo(),
-      presenca_comprador: order.deliveryType === "delivery" ? "4" : "1",
-      modalidade_frete: "9",
-      local_destino: "1",
-      ...dest,
-      formas_pagamento: [{ forma_pagamento: payCode(order.paymentMethod), valor_pagamento: round2(total) }],
-      items,
+      tipo_documento: 1,
+      presenca_comprador: model === "nfe" ? 2 : 1,
+      consumidor_final: 1,
+      finalidade_emissao: 1,
+      cnpj_emitente: cfg.cnpj,
+      modalidade_frete: 9,
+      ...comprador,
+      itens: items,
+      formas_pagamento: [{ forma_pagamento: payCode(order.paymentMethod), valor_pagamento: itemsTotal }],
     };
 
     const res = await emitNota(model, cfg.ambiente, token, ref, payload);

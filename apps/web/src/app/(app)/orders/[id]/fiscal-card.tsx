@@ -123,14 +123,14 @@ export function OrderFiscalCard({
                 {isPending ? "Emitindo..." : hasNota ? "Reemitir NFC-e" : "Emitir NFC-e"}
               </button>
             )}
-            {habilitaNfe && (
+            {canEmit && habilitaNfe && (
               <button
                 type="button"
-                disabled
-                title="NF-e (modelo 55) em breve"
-                className="cursor-not-allowed rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-400"
+                onClick={() => run(() => emitNotaAction(orderId, "nfe"))}
+                disabled={isPending}
+                className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
               >
-                Emitir NF-e (em breve)
+                {isPending ? "Emitindo..." : fiscal.model === "nfe" && hasNota ? "Reemitir NF-e" : "Emitir NF-e"}
               </button>
             )}
           </div>
