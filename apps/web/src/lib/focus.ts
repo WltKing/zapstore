@@ -6,11 +6,14 @@
 // - EMISSÃO (NFC-e/NF-e) usa o token DA EMPRESA (retornado no cadastro) na base
 //   do ambiente escolhido (homologação/produção).
 
+import { getPlatformSetting } from "@zapstore/db";
+
 const API_PROD = "https://api.focusnfe.com.br";
 const API_HOMOLOG = "https://homologacao.focusnfe.com.br";
 
-function empresasBase(): string {
-  return process.env.FOCUS_NFE_API_URL?.replace(/\/$/, "") ?? API_PROD;
+async function empresasBase(): Promise<string> {
+  const url = await getPlatformSetting("FOCUS_NFE_API_URL");
+  return url?.replace(/\/$/, "") ?? API_PROD;
 }
 
 export function emissionBase(ambiente: string): string {
@@ -97,25 +100,29 @@ export function focusErrorMessage(data: unknown): string {
   return "Erro na comunicação com o Focus NFe.";
 }
 
-function masterToken(): string {
-  const t = process.env.FOCUS_NFE_MASTER_TOKEN;
-  if (!t) throw new Error("Focus NFe não configurado no servidor (FOCUS_NFE_MASTER_TOKEN ausente).");
+async function masterToken(): Promise<string> {
+  const t = await getPlatformSetting("FOCUS_NFE_MASTER_TOKEN");
+  if (!t) {
+    throw new Error(
+      "Focus NFe não configurado: defina o token da conta em Painel do dono → Chaves (FOCUS_NFE_MASTER_TOKEN).",
+    );
+  }
   return t;
 }
 
 /** Cria uma empresa (emitente) no Focus, enviando o certificado A1. */
-export function createEmpresa(payload: EmpresaPayload): Promise<FocusResult<EmpresaResponse>> {
-  return focusRequest<EmpresaResponse>(`${empresasBase()}/v2/empresas`, masterToken(), "POST", payload);
+export async function createEmpresa(payload: EmpresaPayload): Promise<FocusResult<EmpresaResponse>> {
+  return focusRequest<EmpresaResponse>(`${await empresasBase()}/v2/empresas`, await masterToken(), "POST", payload);
 }
 
 /** Atualiza uma empresa existente (ex.: renovar certificado). */
-export function updateEmpresa(
+export async function updateEmpresa(
   id: number,
   payload: EmpresaPayload,
 ): Promise<FocusResult<EmpresaResponse>> {
   return focusRequest<EmpresaResponse>(
-    `${empresasBase()}/v2/empresas/${id}`,
-    masterToken(),
+    `${await empresasBase()}/v2/empresas/${id}`,
+    await masterToken(),
     "PUT",
     payload,
   );

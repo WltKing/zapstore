@@ -64,6 +64,16 @@ enum TenantStatus {
   CANCELED
 }
 
+// Configurações globais da plataforma (chaves de API editáveis pelo super-admin).
+// Sem tenantId/RLS — é global. Lido por getPlatformSetting() com fallback pro env.
+model PlatformSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_settings")
+}
+
 model User {
   id            String   @id @default(uuid()) @db.Uuid
   email         String   @unique

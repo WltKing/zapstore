@@ -1,4 +1,4 @@
-import { withTenant } from "@zapstore/db";
+import { withTenant, getPlatformSetting } from "@zapstore/db";
 import { createLLMProvider, type LLMMessage } from "@zapstore/llm";
 import { buildSystemPrompt, type ProductInfo, type TenantBotInfo } from "@zapstore/prompts";
 import {
@@ -29,17 +29,16 @@ function nowInSaoPaulo(): string {
   }).format(new Date());
 }
 
-function buildLLMProvider(model: string, providerName: string) {
-  if (providerName === "anthropic" && process.env.ANTHROPIC_API_KEY) {
-    return createLLMProvider({
-      provider: "anthropic",
-      apiKey: process.env.ANTHROPIC_API_KEY,
-      model,
-    });
+async function buildLLMProvider(model: string, providerName: string) {
+  // Chaves vêm do painel super-admin (PlatformSetting) com fallback pro env.
+  const anthropicKey = await getPlatformSetting("ANTHROPIC_API_KEY");
+  if (providerName === "anthropic" && anthropicKey) {
+    return createLLMProvider({ provider: "anthropic", apiKey: anthropicKey, model });
   }
+  const googleKey = (await getPlatformSetting("GOOGLE_API_KEY")) ?? "";
   return createLLMProvider({
     provider: "google",
-    apiKey: process.env.GOOGLE_API_KEY ?? "",
+    apiKey: googleKey,
     model: providerName === "google" ? model : "gemini-2.5-flash",
   });
 }
@@ -167,7 +166,7 @@ export async function processConversationTurn(input: TurnInput): Promise<TurnRes
     .map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }));
 
   // 5. LLM call
-  const llm = buildLLMProvider(tenant.botConfig.llmModel, tenant.botConfig.llmProvider);
+  const llm = await buildLLMProvider(tenant.botConfig.llmModel, tenant.botConfig.llmProvider);
   const response = await llm.complete({
     systemPrompt,
     messages,

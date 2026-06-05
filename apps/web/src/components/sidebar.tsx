@@ -74,11 +74,13 @@ export function Sidebar({
   brandColor,
   logoUrl,
   allowed,
+  isSuperAdmin,
 }: {
   storeName: string;
   brandColor?: string | null;
   logoUrl?: string | null;
   allowed?: string[];
+  isSuperAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -171,6 +173,22 @@ export function Sidebar({
               })}
             </div>
           ))}
+
+          {isSuperAdmin && (
+            <div className="mt-4">
+              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+                Dono do SaaS
+              </div>
+              <a
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className="mt-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-neutral-700 transition hover:bg-neutral-100"
+              >
+                <span className="w-5 text-center text-base leading-none">🛠️</span>
+                Painel do dono
+              </a>
+            </div>
+          )}
 
           <form action="/api/auth/sign-out" method="POST" className="mt-6 px-3">
             <button

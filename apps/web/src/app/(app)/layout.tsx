@@ -4,6 +4,7 @@ import { prisma } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
 import { effectivePermissions, areaForPath } from "@/lib/permissions";
+import { isSuperAdminEmail } from "@/lib/super-admin";
 import { Sidebar } from "@/components/sidebar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -35,6 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         brandColor={tenant.brandColor}
         logoUrl={tenant.logoUrl}
         allowed={allowed}
+        isSuperAdmin={isSuperAdminEmail(session.user.email)}
       />
       <div className="flex-1 overflow-x-hidden">{children}</div>
     </div>
