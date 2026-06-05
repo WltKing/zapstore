@@ -42,23 +42,30 @@ export interface BrandTheme {
   hover: string; // estado hover do botão primário
   soft: string; // fundo suave (itens selecionados, realces)
   softFg: string; // texto sobre o fundo suave
+  overlay: string; // camada p/ item ativo sobre a cor (translúcida)
+  overlaySoft: string; // camada p/ hover sobre a cor
 }
 
 export function brandTheme(hex?: string | null): BrandTheme {
   const base = clampHex(hex);
   const light = luminance(base) > 0.55;
+  const fg = light ? "#171717" : "#ffffff";
+  // Camadas translúcidas pro item ativo/hover na lateral colorida: clareiam se a
+  // cor é escura (texto branco), escurecem se a cor é clara (texto preto).
+  const fgIsWhite = fg === "#ffffff";
   return {
     base,
-    fg: light ? "#171717" : "#ffffff",
-    // cor escura escurece um pouco no hover; cor clara também escurece (fica visível).
+    fg,
     hover: light ? mix(base, "#000000", 0.1) : mix(base, "#000000", 0.18),
     soft: mix(base, "#ffffff", 0.9),
     softFg: mix(base, "#000000", luminance(base) > 0.7 ? 0.55 : 0.25),
+    overlay: fgIsWhite ? "rgba(255,255,255,0.20)" : "rgba(0,0,0,0.12)",
+    overlaySoft: fgIsWhite ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.06)",
   };
 }
 
 /** String CSS pra injetar num <style> (:root) com as variáveis da marca. */
 export function brandCssVars(hex?: string | null): string {
   const t = brandTheme(hex);
-  return `:root{--brand:${t.base};--brand-fg:${t.fg};--brand-hover:${t.hover};--brand-soft:${t.soft};--brand-soft-fg:${t.softFg};}`;
+  return `:root{--brand:${t.base};--brand-fg:${t.fg};--brand-hover:${t.hover};--brand-soft:${t.soft};--brand-soft-fg:${t.softFg};--brand-overlay:${t.overlay};--brand-overlay-soft:${t.overlaySoft};}`;
 }

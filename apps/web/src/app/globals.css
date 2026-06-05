@@ -9,6 +9,8 @@
   --brand-hover: #2a2a2a;
   --brand-soft: #f5f5f5;
   --brand-soft-fg: #404040;
+  --brand-overlay: rgba(255, 255, 255, 0.2);
+  --brand-overlay-soft: rgba(255, 255, 255, 0.1);
 }
 
 /* Utilitários da marca. Em @layer utilities pra vencerem empates (ex.: o text-white

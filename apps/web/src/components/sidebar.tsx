@@ -114,16 +114,13 @@ export function Sidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform overflow-y-auto border-r border-neutral-200 bg-white transition-transform lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 transform overflow-y-auto bg-brand transition-transform lg:static lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2">
-            <div
-              className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg text-sm font-bold text-white"
-              style={{ backgroundColor: brandColor || "#171717" }}
-            >
+            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-[var(--brand-overlay)] text-sm font-bold">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={logoUrl} alt="" className="h-full w-full object-cover" />
@@ -132,14 +129,14 @@ export function Sidebar({
               )}
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-neutral-900">{storeName}</div>
-              <div className="text-[10px] uppercase tracking-wide text-neutral-400">Zapstore</div>
+              <div className="truncate text-sm font-semibold">{storeName}</div>
+              <div className="text-[10px] uppercase tracking-wide opacity-60">Zapstore</div>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="text-neutral-400 lg:hidden"
+            className="opacity-70 hover:opacity-100 lg:hidden"
             aria-label="Fechar menu"
           >
             ✕
@@ -149,7 +146,7 @@ export function Sidebar({
         <nav className="px-3 pb-8">
           {sections.map((section) => (
             <div key={section.title} className="mt-4">
-              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider opacity-60">
                 {section.title}
               </div>
               {section.items.map((item) => {
@@ -159,11 +156,10 @@ export function Sidebar({
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    style={active && brandColor ? { backgroundColor: brandColor } : undefined}
                     className={`mt-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
                       active
-                        ? "bg-brand text-white"
-                        : "text-neutral-700 hover:bg-neutral-100"
+                        ? "bg-[var(--brand-overlay)] font-medium"
+                        : "opacity-90 hover:bg-[var(--brand-overlay-soft)]"
                     }`}
                   >
                     <span className="w-5 text-center text-base leading-none">{item.icon}</span>
@@ -176,13 +172,13 @@ export function Sidebar({
 
           {isSuperAdmin && (
             <div className="mt-4">
-              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider opacity-60">
                 Dono do SaaS
               </div>
               <a
                 href="/admin"
                 onClick={() => setOpen(false)}
-                className="mt-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-neutral-700 transition hover:bg-neutral-100"
+                className="mt-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm opacity-90 transition hover:bg-[var(--brand-overlay-soft)]"
               >
                 <span className="w-5 text-center text-base leading-none">🛠️</span>
                 Painel do dono
@@ -193,7 +189,7 @@ export function Sidebar({
           <form action="/api/auth/sign-out" method="POST" className="mt-6 px-3">
             <button
               type="submit"
-              className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm text-neutral-500 hover:bg-neutral-100"
+              className="w-full rounded-lg px-3 py-2 text-left text-sm opacity-80 transition hover:bg-[var(--brand-overlay-soft)] hover:opacity-100"
             >
               ⏻ Sair
             </button>
