@@ -99,7 +99,7 @@ export function Sidebar({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed left-4 top-4 z-30 rounded-lg border border-neutral-300 bg-white p-2 text-neutral-700 shadow-sm lg:hidden"
+        className="fixed left-4 top-4 z-30 rounded-lg border border-neutral-300 bg-white p-2 text-neutral-700 shadow-card lg:hidden"
         aria-label="Abrir menu"
       >
         ☰

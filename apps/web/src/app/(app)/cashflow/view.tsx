@@ -154,7 +154,7 @@ export function CashflowView({
       )}
 
       {/* Gráfico vendas x despesas */}
-      <section className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
+      <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
             Vendas × Despesas no mês
@@ -172,7 +172,7 @@ export function CashflowView({
       </section>
 
       {/* Movimentos */}
-      <section className="mt-6 rounded-2xl bg-white shadow-sm">
+      <section className="mt-6 rounded-2xl bg-white shadow-card">
         {movements.length === 0 ? (
           <div className="p-12 text-center text-sm text-neutral-500">Nenhum movimento neste mês.</div>
         ) : (
@@ -217,7 +217,7 @@ function MiniCard({
           ? "text-amber-700"
           : "text-neutral-900";
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm">
+    <div className="rounded-2xl bg-white p-5 shadow-card">
       <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
       <div className={`mt-1 text-2xl font-bold ${toneClass}`}>{value}</div>
       {hint && <div className="mt-1 text-xs text-neutral-400">{hint}</div>}

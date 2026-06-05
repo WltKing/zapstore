@@ -74,7 +74,7 @@ export function WhatsAppView({
         </a>
       </header>
 
-      <section className="mt-10 rounded-2xl bg-white p-8 shadow-sm">
+      <section className="mt-10 rounded-2xl bg-white p-8 shadow-card">
         {connected ? (
           <div className="text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl text-emerald-600">

@@ -110,7 +110,7 @@ export function MarketingView({
         <select
           value={monthKey}
           onChange={(e) => router.push(`/marketing?month=${e.target.value}`)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm capitalize shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm capitalize shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         >
           {monthOptions.map((m) => (
             <option key={m} value={m} className="capitalize">
@@ -143,7 +143,7 @@ export function MarketingView({
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {/* Evolução */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-white p-6 shadow-card">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
             Vendas online × Investimento (6 meses)
           </h2>
@@ -159,7 +159,7 @@ export function MarketingView({
         </section>
 
         {/* Por canal */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-white p-6 shadow-card">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
             Investimento por canal
           </h2>
@@ -187,7 +187,7 @@ export function MarketingView({
       </div>
 
       {/* Lançamentos de investimento */}
-      <section className="mt-8 rounded-2xl bg-white shadow-sm">
+      <section className="mt-8 rounded-2xl bg-white shadow-card">
         <div className="flex items-center justify-between px-6 py-4">
           <h2 className="font-semibold">Investimentos do mês</h2>
           <button
@@ -268,7 +268,7 @@ function Kpi({
 }) {
   const c = tone === "green" ? "text-emerald-700" : tone === "red" ? "text-red-700" : "text-neutral-900";
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm">
+    <div className="rounded-2xl bg-white p-5 shadow-card">
       <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
       <div className={`mt-1 text-2xl font-bold ${c}`}>{value}</div>
       <div className="mt-1 text-xs text-neutral-400">{hint}</div>
@@ -341,7 +341,7 @@ function SpendDialog({
   };
 
   const inputClass =
-    "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
+    "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>

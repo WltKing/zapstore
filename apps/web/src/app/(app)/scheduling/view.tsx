@@ -154,7 +154,7 @@ export function SchedulingView({
       {/* AGENDA */}
       <section className="mt-8">
         {appointments.length === 0 ? (
-          <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
+          <div className="rounded-2xl bg-white p-12 text-center shadow-card">
             <h2 className="text-lg font-semibold">Nenhum agendamento ainda</h2>
             <p className="mt-1 text-sm text-neutral-500">
               Cadastre seus serviços e profissionais abaixo e crie o primeiro agendamento.
@@ -165,7 +165,7 @@ export function SchedulingView({
             {groups.map((g) => (
               <div key={g.key}>
                 <h2 className="mb-2 text-sm font-semibold capitalize text-neutral-700">{g.label}</h2>
-                <ul className="divide-y divide-neutral-100 rounded-2xl bg-white shadow-sm">
+                <ul className="divide-y divide-neutral-100 rounded-2xl bg-white shadow-card">
                   {g.items.map((a) => (
                     <li key={a.id} className="flex items-center justify-between gap-4 px-5 py-4">
                       <div className="flex items-center gap-4">
@@ -344,7 +344,7 @@ function ManageCard({
   }[];
 }) {
   return (
-    <section className="rounded-2xl bg-white p-5 shadow-sm">
+    <section className="rounded-2xl bg-white p-5 shadow-card">
       <div className="flex items-center justify-between">
         <h2 className="font-semibold">{title}</h2>
         <button
@@ -390,7 +390,7 @@ function ManageCard({
 }
 
 const inputClass =
-  "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
+  "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
 function DialogShell({
   title,

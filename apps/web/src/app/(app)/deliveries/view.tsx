@@ -105,7 +105,7 @@ export function DeliveriesView({
       {error && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
       {/* Capacidade */}
-      <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
+      <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-card">
         <span className="text-sm font-medium text-neutral-700">Capacidade por dia:</span>
         <input
           type="number"
@@ -113,7 +113,7 @@ export function DeliveriesView({
           step="1"
           value={cap}
           onChange={(e) => setCap(Number(e.target.value))}
-          className="w-24 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="w-24 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
         <span className="text-sm text-neutral-500">entregas</span>
         <button
@@ -129,7 +129,7 @@ export function DeliveriesView({
 
       <section className="mt-6">
         {deliveries.length === 0 ? (
-          <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
+          <div className="rounded-2xl bg-white p-12 text-center shadow-card">
             <h2 className="text-lg font-semibold">Nenhuma entrega pendente</h2>
             <p className="mt-1 text-sm text-neutral-500">
               Pedidos com endereço aparecem aqui pra você organizar a rota.
@@ -150,7 +150,7 @@ export function DeliveriesView({
                       {over ? " · acima da capacidade ⚠️" : ""}
                     </span>
                   </div>
-                  <ul className="divide-y divide-neutral-100 rounded-2xl bg-white shadow-sm">
+                  <ul className="divide-y divide-neutral-100 rounded-2xl bg-white shadow-card">
                     {g.items.map((d) => (
                       <DeliveryItem key={d.id} d={d} />
                     ))}

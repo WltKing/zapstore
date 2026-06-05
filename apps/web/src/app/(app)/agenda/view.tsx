@@ -90,7 +90,7 @@ export function AgendaView({
           type="date"
           value={dayKey}
           onChange={(e) => go(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
         <button
           type="button"
@@ -111,7 +111,7 @@ export function AgendaView({
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         {/* Agendamentos */}
-        <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <section className="rounded-2xl bg-white p-5 shadow-card">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
               Agendamentos
@@ -143,7 +143,7 @@ export function AgendaView({
         </section>
 
         {/* Entregas */}
-        <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <section className="rounded-2xl bg-white p-5 shadow-card">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Entregas</h2>
             <a href="/route" className="text-xs text-neutral-500 hover:text-neutral-900">

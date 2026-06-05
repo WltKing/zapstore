@@ -78,7 +78,7 @@ export function OrderFiscalCard({
   const canEmit = fiscal.status !== "autorizado" && fiscal.status !== "cancelado";
 
   return (
-    <section className="mx-auto mt-6 max-w-3xl rounded-2xl bg-white p-5 shadow-sm">
+    <section className="mx-auto mt-6 max-w-3xl rounded-2xl bg-white p-5 shadow-card">
       <div className="flex items-center justify-between">
         <h2 className="font-semibold">Nota fiscal</h2>
         <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] uppercase tracking-wide text-neutral-500">

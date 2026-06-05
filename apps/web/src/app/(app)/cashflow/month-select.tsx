@@ -22,7 +22,7 @@ export function MonthSelect({ current }: { current: string }) {
     <select
       value={current}
       onChange={(e) => router.push(`/cashflow?month=${e.target.value}`)}
-      className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium capitalize shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+      className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium capitalize shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
     >
       {options.map((m) => (
         <option key={m} value={m} className="capitalize">

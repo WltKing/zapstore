@@ -150,7 +150,7 @@ export function RouteView({
           type="date"
           value={dayKey}
           onChange={(e) => router.push(`/route?day=${e.target.value}`)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
         <span className="text-sm text-neutral-500">
           {pendingCount} a entregar · {doneCount} entregue{doneCount === 1 ? "" : "s"}
@@ -175,7 +175,7 @@ export function RouteView({
       )}
 
       {list.length === 0 ? (
-        <section className="mt-6 rounded-2xl bg-white p-12 text-center shadow-sm">
+        <section className="mt-6 rounded-2xl bg-white p-12 text-center shadow-card">
           <h2 className="text-lg font-semibold">Nenhuma entrega neste dia</h2>
           <p className="mt-1 text-sm text-neutral-500">
             Pedidos com entrega caem aqui no dia marcado (ou no dia do pedido).
@@ -192,7 +192,7 @@ export function RouteView({
             return (
               <li
                 key={s.id}
-                className={`rounded-2xl bg-white p-4 shadow-sm ${terminal ? "opacity-60" : ""}`}
+                className={`rounded-2xl bg-white p-4 shadow-card ${terminal ? "opacity-60" : ""}`}
               >
                 <div className="flex items-start gap-3">
                   {/* Ordem + reordenar */}

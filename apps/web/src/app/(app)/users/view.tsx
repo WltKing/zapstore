@@ -83,7 +83,7 @@ export function UsersView({
       ) : (
         <>
           {/* Convidar */}
-          <section className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
+          <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
             <h2 className="font-semibold">Convidar para a equipe</h2>
             <form onSubmit={invite} className="mt-4 flex flex-wrap items-end gap-3">
               <div className="min-w-56 flex-1">
@@ -94,7 +94,7 @@ export function UsersView({
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="pessoa@email.com"
-                  className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </div>
               <div>
@@ -102,7 +102,7 @@ export function UsersView({
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
-                  className="mt-1 block rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  className="mt-1 block rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 >
                   {ROLES.map((r) => (
                     <option key={r} value={r}>
@@ -127,7 +127,7 @@ export function UsersView({
           </section>
 
           {/* Lista */}
-          <section className="mt-6 rounded-2xl bg-white shadow-sm">
+          <section className="mt-6 rounded-2xl bg-white shadow-card">
             <table className="w-full">
               <thead className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-500">
                 <tr>
@@ -252,7 +252,7 @@ function AccessEditor({
         <select
           value={mode}
           onChange={(e) => setMode(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         >
           {ROLES.map((r) => (
             <option key={r} value={r}>

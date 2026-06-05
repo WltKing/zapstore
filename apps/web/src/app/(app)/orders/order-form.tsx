@@ -15,7 +15,7 @@ export interface ProductOpt {
 const PAYMENTS = PAYMENT_OPTIONS;
 
 const inputClass =
-  "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
+  "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
 function formatBrl(v: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -196,7 +196,7 @@ export function OrderForm({
       {saved && <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Salvo! ✅</p>}
 
       {/* Cliente */}
-      <section className="rounded-2xl bg-white p-5 shadow-sm">
+      <section className="rounded-2xl bg-white p-5 shadow-card">
         <h2 className="font-semibold">Cliente</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div>
@@ -219,7 +219,7 @@ export function OrderForm({
       </section>
 
       {/* Venda */}
-      <section className="rounded-2xl bg-white p-5 shadow-sm">
+      <section className="rounded-2xl bg-white p-5 shadow-card">
         <h2 className="font-semibold">Venda</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <div>
@@ -254,7 +254,7 @@ export function OrderForm({
       </section>
 
       {/* Entrega */}
-      <section className="rounded-2xl bg-white p-5 shadow-sm">
+      <section className="rounded-2xl bg-white p-5 shadow-card">
         <h2 className="font-semibold">Entrega</h2>
         <div className="mt-3 flex gap-4">
           <label className="flex items-center gap-2 text-sm">
@@ -331,7 +331,7 @@ export function OrderForm({
       </section>
 
       {/* Itens */}
-      <section className="rounded-2xl bg-white p-5 shadow-sm">
+      <section className="rounded-2xl bg-white p-5 shadow-card">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Itens</h2>
           <button type="button" onClick={addItem} className="text-sm font-medium text-neutral-700 hover:text-neutral-900">
@@ -344,7 +344,7 @@ export function OrderForm({
         <div className="mt-3 space-y-2">
           {form.items.map((it, i) => (
             <div key={i} className="grid grid-cols-12 items-center gap-2">
-              <select required value={it.productId} onChange={(e) => setItem(i, { productId: e.target.value })} className="col-span-5 min-w-0 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand">
+              <select required value={it.productId} onChange={(e) => setItem(i, { productId: e.target.value })} className="col-span-5 min-w-0 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand">
                 <option value="">Produto...</option>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -352,8 +352,8 @@ export function OrderForm({
                   </option>
                 ))}
               </select>
-              <input type="number" min="1" step="1" value={it.qty} onChange={(e) => setItem(i, { qty: Number(e.target.value) })} title="Qtd" className="col-span-2 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm" />
-              <input type="number" min="0" step="0.01" value={it.discountBrl ?? ""} onChange={(e) => setItem(i, { discountBrl: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="Desc." title="Desconto" className="col-span-2 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm" />
+              <input type="number" min="1" step="1" value={it.qty} onChange={(e) => setItem(i, { qty: Number(e.target.value) })} title="Qtd" className="col-span-2 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-card" />
+              <input type="number" min="0" step="0.01" value={it.discountBrl ?? ""} onChange={(e) => setItem(i, { discountBrl: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="Desc." title="Desconto" className="col-span-2 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-card" />
               <span className="col-span-2 text-right text-sm font-medium">{formatBrl(lineTotal(it))}</span>
               {form.items.length > 1 && (
                 <button type="button" onClick={() => removeItem(i)} className="col-span-1 text-neutral-400 hover:text-red-600" aria-label="Remover">✕</button>
@@ -364,7 +364,7 @@ export function OrderForm({
       </section>
 
       {/* Pagamento + totais */}
-      <section className="rounded-2xl bg-white p-5 shadow-sm">
+      <section className="rounded-2xl bg-white p-5 shadow-card">
         <h2 className="font-semibold">Pagamento</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <div>
@@ -404,7 +404,7 @@ export function OrderForm({
       </section>
 
       {/* Obs */}
-      <section className="rounded-2xl bg-white p-5 shadow-sm">
+      <section className="rounded-2xl bg-white p-5 shadow-card">
         <label className="block text-sm font-medium text-neutral-700">Observações</label>
         <textarea rows={2} value={form.notes} onChange={(e) => set({ notes: e.target.value })} className={inputClass} />
       </section>

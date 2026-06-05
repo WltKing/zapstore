@@ -87,7 +87,7 @@ export function SimulatorView({
         </div>
       </header>
 
-      <section className="mt-4 flex-1 overflow-y-auto rounded-2xl bg-white p-6 shadow-sm">
+      <section className="mt-4 flex-1 overflow-y-auto rounded-2xl bg-white p-6 shadow-card">
         {messages.length === 0 && !isPending ? (
           <div className="flex h-full items-center justify-center text-center text-sm text-neutral-500">
             <div>
@@ -155,7 +155,7 @@ export function SimulatorView({
           onChange={(e) => setInput(e.target.value)}
           placeholder="Manda uma mensagem como se fosse um cliente..."
           disabled={isPending}
-          className="flex-1 rounded-lg border border-neutral-300 px-4 py-2.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-neutral-50"
+          className="flex-1 rounded-lg border border-neutral-300 px-4 py-2.5 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-neutral-50"
         />
         <button
           type="submit"

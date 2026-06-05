@@ -97,19 +97,21 @@ export default async function DashboardPage() {
               Este mês
             </h2>
             <div className="grid gap-4 sm:grid-cols-3">
-              <Card title="Vendas" value={formatBrl(monthSales)} hint="Pedidos do mês (sem cancelados)" />
-              <Card title="Despesas" value={formatBrl(monthExpenses)} hint="Lançadas em Despesas" />
+              <Card title="Vendas" value={formatBrl(monthSales)} hint="Pedidos do mês (sem cancelados)" icon="📈" tint="blue" />
+              <Card title="Despesas" value={formatBrl(monthExpenses)} hint="Lançadas em Despesas" icon="📉" tint="red" />
               <Card
                 title="Resultado"
                 value={formatBrl(monthResult)}
                 hint={monthResult >= 0 ? "No azul 🎉" : "No vermelho"}
                 valueClass={monthResult >= 0 ? "text-emerald-700" : "text-red-700"}
+                icon="💰"
+                tint={monthResult >= 0 ? "green" : "red"}
               />
             </div>
           </section>
 
           {/* Gráfico de vendas */}
-          <section className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
+          <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
               Vendas (últimos 14 dias)
             </h2>
@@ -122,32 +124,44 @@ export default async function DashboardPage() {
               title="Vendas hoje"
               value={formatBrl(stats?.salesTodayBrl ?? 0)}
               hint={`Ticket médio ${stats?.orderCount === 0 ? "—" : formatBrl(stats?.avgTicketBrl ?? 0)}`}
+              icon="🛒"
+              tint="blue"
             />
             <Card
               title="Pedidos abertos"
               value={String(stats?.openOrderCount ?? 0)}
               hint={`${stats?.orderCount ?? 0} pedidos no total`}
+              icon="📦"
+              tint="amber"
             />
             <Card
               title="Agendamentos hoje"
               value={String(stats?.todaysAppointments ?? 0)}
               hint={`${stats?.upcomingAppointments ?? 0} agendados à frente`}
+              icon="🗓️"
+              tint="violet"
             />
             <Card
               title="Clientes"
               value={String(stats?.customerCount ?? 0)}
               hint="Cadastrados na loja"
+              icon="👥"
+              tint="green"
             />
             <Card
               title="Mensagens este mês"
               value={`${used.toLocaleString("pt-BR")} / ${quota.toLocaleString("pt-BR")}`}
               hint={`${pct}% do plano Starter`}
               progress={pct}
+              icon="💬"
+              tint="blue"
             />
             <Card
               title="Produtos ativos"
               value={String(stats?.activeProductCount ?? 0)}
               hint={`${stats?.productCount ?? 0} no catálogo`}
+              icon="🏷️"
+              tint="slate"
             />
           </section>
 
@@ -203,7 +217,7 @@ export default async function DashboardPage() {
               </section>
 
               {extras.topProducts.length > 0 && (
-                <section className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
+                <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
                   <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
                     Top produtos do mês
                   </h2>
@@ -222,7 +236,7 @@ export default async function DashboardPage() {
                 </section>
               )}
 
-              <section className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
+              <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
                   Evolução mensal (6 meses)
                 </h2>
@@ -232,7 +246,7 @@ export default async function DashboardPage() {
           )}
 
           {/* Próximos passos */}
-          <section className="mt-10 rounded-2xl bg-white p-6 shadow-sm">
+          <section className="mt-10 rounded-2xl bg-white p-6 shadow-card">
             <h2 className="text-lg font-semibold">Próximos passos</h2>
             <p className="mt-1 text-sm text-neutral-500">Pra deixar seu bot 100% pronto.</p>
             <ul className="mt-5 space-y-3">
@@ -278,22 +292,44 @@ export default async function DashboardPage() {
   );
 }
 
+const TINTS: Record<string, string> = {
+  blue: "bg-blue-50 text-blue-600",
+  green: "bg-emerald-50 text-emerald-600",
+  red: "bg-red-50 text-red-600",
+  amber: "bg-amber-50 text-amber-600",
+  violet: "bg-violet-50 text-violet-600",
+  slate: "bg-slate-100 text-slate-600",
+};
+
 function Card({
   title,
   value,
   hint,
   progress,
   valueClass,
+  icon,
+  tint = "slate",
 }: {
   title: string;
   value: string;
   hint: string;
   progress?: number;
   valueClass?: string;
+  icon?: string;
+  tint?: keyof typeof TINTS | string;
 }) {
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm">
-      <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
+    <div className="rounded-2xl bg-white p-5 shadow-card">
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
+        {icon && (
+          <span
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base ${TINTS[tint] ?? TINTS.slate}`}
+          >
+            {icon}
+          </span>
+        )}
+      </div>
       <div className={`mt-2 text-2xl font-bold ${valueClass ?? "text-neutral-900"}`}>{value}</div>
       {progress !== undefined && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
@@ -360,7 +396,7 @@ function Breakdown({
   const max = Math.max(...rows.map((r) => r.value), 1);
   const nonZero = rows.filter((r) => r.value > 0);
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm">
+    <div className="rounded-2xl bg-white p-6 shadow-card">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">{title}</h2>
       {nonZero.length === 0 ? (
         <p className="mt-4 text-xs text-neutral-400">Sem dados neste mês.</p>

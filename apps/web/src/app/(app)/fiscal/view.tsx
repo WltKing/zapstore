@@ -90,7 +90,7 @@ function toInput(d: FiscalConfigData): FiscalConfigInput {
 }
 
 const input =
-  "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
+  "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
 export function FiscalView({
   storeName,
@@ -235,7 +235,7 @@ export function FiscalView({
       )}
 
       {/* Status */}
-      <section className="mt-6 rounded-2xl bg-white p-5 shadow-sm">
+      <section className="mt-6 rounded-2xl bg-white p-5 shadow-card">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
           <span>
             Status:{" "}
@@ -260,7 +260,7 @@ export function FiscalView({
       </section>
 
       {/* Dados da empresa */}
-      <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+      <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
         <h2 className="font-semibold">Dados da empresa (emitente)</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
@@ -295,7 +295,7 @@ export function FiscalView({
       </section>
 
       {/* Endereço */}
-      <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+      <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
         <h2 className="font-semibold">Endereço</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div>
@@ -334,7 +334,7 @@ export function FiscalView({
       </section>
 
       {/* Emissão */}
-      <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+      <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
         <h2 className="font-semibold">Emissão</h2>
         <div className="mt-4 flex flex-wrap items-center gap-6">
           <div>
@@ -385,7 +385,7 @@ export function FiscalView({
       </section>
 
       {/* Certificado */}
-      <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+      <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
         <h2 className="font-semibold">Certificado digital A1</h2>
         <p className="mt-1 text-sm text-neutral-500">
           Envie o arquivo <strong>.pfx</strong> (ou .p12) + a senha. Ele vai direto pro Focus NFe — o
@@ -451,7 +451,7 @@ export function FiscalView({
       </section>
 
       {/* Logo no DANFE */}
-      <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+      <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
         <h2 className="font-semibold">Logo no cupom/DANFE</h2>
         <p className="mt-1 text-sm text-neutral-500">
           Usa a <strong>logo da loja</strong> (subida em Configurações → Identidade visual) na nota

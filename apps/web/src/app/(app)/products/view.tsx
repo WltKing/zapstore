@@ -189,12 +189,12 @@ export function ProductsView({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar por nome, categoria, NCM..."
-          className="min-w-56 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="min-w-56 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         >
           <option value="all">Todas as categorias</option>
           {categories.map((c) => (
@@ -206,7 +206,7 @@ export function ProductsView({
         <select
           value={kindFilter}
           onChange={(e) => setKindFilter(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         >
           <option value="all">Todos os tipos</option>
           <option value="simple">Simples</option>
@@ -215,7 +215,7 @@ export function ProductsView({
         <select
           value={stockFilter}
           onChange={(e) => setStockFilter(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         >
           <option value="all">Todo estoque</option>
           <option value="low">Estoque baixo</option>
@@ -224,7 +224,7 @@ export function ProductsView({
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         >
           <option value="all">Ativos e inativos</option>
           <option value="active">Só ativos</option>
@@ -235,7 +235,7 @@ export function ProductsView({
         {filtered.length} de {initial.length} produto{initial.length === 1 ? "" : "s"}
       </p>
 
-      <section className="mt-3 rounded-2xl bg-white shadow-sm">
+      <section className="mt-3 rounded-2xl bg-white shadow-card">
         {filtered.length === 0 ? (
           <div className="p-12 text-center">
             <h2 className="text-lg font-semibold">
@@ -489,7 +489,7 @@ function ProductDialog({
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="Nome que o cliente e o bot veem"
-            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
 
@@ -499,7 +499,7 @@ function ProductDialog({
             value={form.fiscalName}
             onChange={(e) => setForm({ ...form, fiscalName: e.target.value })}
             placeholder="Como o produto sai na nota fiscal"
-            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
 
@@ -509,7 +509,7 @@ function ProductDialog({
             rows={3}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
 
@@ -519,7 +519,7 @@ function ProductDialog({
             value={form.category}
             onChange={(e) => setForm({ ...form, category: e.target.value })}
             placeholder="Ex: Casal, Queen, Solteiro..."
-            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
         </div>
 
@@ -528,7 +528,7 @@ function ProductDialog({
           <select
             value={form.kind}
             onChange={(e) => setForm({ ...form, kind: e.target.value })}
-            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           >
             <option value="simple">Produto simples</option>
             <option value="kit">Kit (conjunto)</option>
@@ -560,7 +560,7 @@ function ProductDialog({
                       <select
                         value={it.componentId}
                         onChange={(e) => setKitItem(i, { componentId: e.target.value })}
-                        className="min-w-0 flex-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                        className="min-w-0 flex-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                       >
                         <option value="">Selecione...</option>
                         {componentOptions.map((p) => (
@@ -575,7 +575,7 @@ function ProductDialog({
                         step="1"
                         value={it.qty}
                         onChange={(e) => setKitItem(i, { qty: Number(e.target.value) })}
-                        className="w-16 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                        className="w-16 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                       />
                       <button
                         type="button"
@@ -603,7 +603,7 @@ function ProductDialog({
               required
               value={form.priceBrl}
               onChange={(e) => setForm({ ...form, priceBrl: Number(e.target.value) })}
-              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
             {suggestedPrice != null && (
               <button
@@ -629,7 +629,7 @@ function ProductDialog({
                 setForm((f) => ({ ...f, costBrl: cost, ...(p != null ? { priceBrl: p } : {}) }));
               }}
               placeholder="pra calcular margem"
-              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
           <div>
@@ -641,7 +641,7 @@ function ProductDialog({
               required
               value={form.stock}
               onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
-              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
           <div>
@@ -653,7 +653,7 @@ function ProductDialog({
               required
               value={form.lowStockThreshold}
               onChange={(e) => setForm({ ...form, lowStockThreshold: Number(e.target.value) })}
-              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
         </div>
@@ -680,7 +680,7 @@ function ProductDialog({
               <input
                 value={form.ncm}
                 onChange={(e) => setForm({ ...form, ncm: e.target.value })}
-                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
             <div>
@@ -688,7 +688,7 @@ function ProductDialog({
               <input
                 value={form.cest}
                 onChange={(e) => setForm({ ...form, cest: e.target.value })}
-                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
             <div>
@@ -696,7 +696,7 @@ function ProductDialog({
               <input
                 value={form.cfopEntrada}
                 onChange={(e) => setForm({ ...form, cfopEntrada: e.target.value })}
-                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
             <div>
@@ -704,7 +704,7 @@ function ProductDialog({
               <input
                 value={form.origem}
                 onChange={(e) => setForm({ ...form, origem: e.target.value })}
-                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
           </div>

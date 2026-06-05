@@ -89,7 +89,7 @@ export function BillingView({
         </a>
       </header>
 
-      <section className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
+      <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">Plano Starter</h2>
@@ -118,7 +118,7 @@ export function BillingView({
                 value={cpfCnpj}
                 onChange={(e) => setCpfCnpj(e.target.value)}
                 placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
               <p className="mt-1 text-xs text-neutral-500">Email da cobrança: <strong>{userEmail}</strong></p>
             </div>

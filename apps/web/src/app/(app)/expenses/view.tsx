@@ -178,12 +178,12 @@ export function ExpensesView({ storeName, expenses }: { storeName: string; expen
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar por categoria, descrição..."
-          className="min-w-52 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="min-w-52 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
         <select
           value={month}
           onChange={(e) => setMonth(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         >
           <option value="all">Todos os meses</option>
           {months.map((m) => (
@@ -195,7 +195,7 @@ export function ExpensesView({ storeName, expenses }: { storeName: string; expen
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         >
           <option value="all">Todas as categorias</option>
           {categories.map((c) => (
@@ -210,7 +210,7 @@ export function ExpensesView({ storeName, expenses }: { storeName: string; expen
         </div>
       </div>
 
-      <section className="mt-4 rounded-2xl bg-white shadow-sm">
+      <section className="mt-4 rounded-2xl bg-white shadow-card">
         {filtered.length === 0 ? (
           <div className="p-12 text-center">
             <h2 className="text-lg font-semibold">Nenhuma despesa{month !== "all" ? " neste mês" : ""}</h2>
@@ -313,7 +313,7 @@ function ExpenseDialog({
   };
 
   const inputClass =
-    "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
+    "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>

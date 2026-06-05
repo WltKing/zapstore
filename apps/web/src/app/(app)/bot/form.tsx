@@ -73,7 +73,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-      <section className="rounded-2xl bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-white p-6 shadow-card">
         <h2 className="text-lg font-semibold">Identidade</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
@@ -82,7 +82,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
               required
               value={form.botName}
               onChange={(e) => setForm({ ...form, botName: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
           <div>
@@ -90,7 +90,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
             <select
               value={form.tone}
               onChange={(e) => setForm({ ...form, tone: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             >
               {TONES.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -105,7 +105,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
           <select
             value={form.template}
             onChange={(e) => setForm({ ...form, template: e.target.value as NicheId })}
-            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           >
             {Object.values(NICHE_TEMPLATES).map((t) => (
               <option key={t.id} value={t.id}>
@@ -116,7 +116,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
         </div>
       </section>
 
-      <section className="rounded-2xl bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-white p-6 shadow-card">
         <h2 className="text-lg font-semibold">Horário de funcionamento</h2>
         <p className="mt-1 text-xs text-neutral-500">
           Cada dia pode ter um horário diferente (ex: sábado e domingo). Desmarque pra fechar o dia.
@@ -142,14 +142,14 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
                       type="time"
                       value={h.open}
                       onChange={(e) => setDayTime(d.id, "open", e.target.value)}
-                      className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm"
+                      className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-card"
                     />
                     <span className="text-sm text-neutral-400">às</span>
                     <input
                       type="time"
                       value={h.close}
                       onChange={(e) => setDayTime(d.id, "close", e.target.value)}
-                      className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-sm"
+                      className="rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-card"
                     />
                   </div>
                 ) : (
@@ -161,7 +161,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
         </div>
       </section>
 
-      <section className="rounded-2xl bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-white p-6 shadow-card">
         <h2 className="text-lg font-semibold">Entrega e pagamento</h2>
         <div className="mt-4">
           <label className="block text-sm font-medium text-neutral-700">
@@ -171,7 +171,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
             value={form.deliveryCities}
             onChange={(e) => setForm({ ...form, deliveryCities: e.target.value })}
             placeholder="Ex: Goiânia, Aparecida de Goiânia"
-            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm"
+            className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card"
           />
         </div>
         <div className="mt-4">
@@ -212,7 +212,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
                 }
               }}
               placeholder="Ex: Pix, Crediário, PicPay..."
-              className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
             <button
               type="button"
@@ -252,7 +252,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
         </div>
       </section>
 
-      <section className="rounded-2xl bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-white p-6 shadow-card">
         <h2 className="text-lg font-semibold">Instruções extras</h2>
         <p className="mt-1 text-xs text-neutral-500">
           Texto livre injetado no prompt do bot. Use pra regras que não cabem nos campos acima.
@@ -262,7 +262,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
           value={form.extraInstructions}
           onChange={(e) => setForm({ ...form, extraInstructions: e.target.value })}
           placeholder="Ex: Frete grátis acima de R$ 500. Sempre oferecer travesseiro como upsell. Nunca prometer entrega no mesmo dia."
-          className="mt-3 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm"
+          className="mt-3 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card"
         />
       </section>
 

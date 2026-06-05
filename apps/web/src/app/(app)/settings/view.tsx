@@ -92,7 +92,7 @@ export function SettingsView({
   };
 
   const inputClass =
-    "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
+    "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -111,7 +111,7 @@ export function SettingsView({
 
       <form onSubmit={submit} className="mt-8 space-y-6">
         {/* Dados da loja */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-white p-6 shadow-card">
           <h2 className="font-semibold">Dados da loja</h2>
           <div className="mt-4 space-y-4">
             <div>
@@ -132,7 +132,7 @@ export function SettingsView({
         </section>
 
         {/* Identidade visual */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-white p-6 shadow-card">
           <h2 className="font-semibold">Identidade visual</h2>
           <p className="mt-1 text-sm text-neutral-500">Sua marca no painel e nos pedidos.</p>
           <div className="mt-4 flex items-start gap-6">
@@ -166,7 +166,7 @@ export function SettingsView({
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
                     placeholder="#16a34a"
-                    className="w-32 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                    className="w-32 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                   />
                 </div>
               </div>
@@ -181,7 +181,7 @@ export function SettingsView({
         </section>
 
         {/* Precificação */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-white p-6 shadow-card">
           <h2 className="font-semibold">Precificação</h2>
           <p className="mt-1 text-sm text-neutral-500">
             Com a margem padrão preenchida, o sistema <strong>sugere o preço de venda</strong>{" "}
@@ -229,7 +229,7 @@ export function SettingsView({
         </section>
 
         {/* Financeiro (caixa) */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-white p-6 shadow-card">
           <h2 className="font-semibold">Financeiro (caixa)</h2>
           <p className="mt-1 text-sm text-neutral-500">
             Usadas no <strong>Caixa</strong> e no <strong>Dashboard</strong> pra calcular o líquido.
@@ -336,7 +336,7 @@ export function SettingsView({
         </section>
 
         {/* Pix */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-white p-6 shadow-card">
           <h2 className="font-semibold">Recebimento Pix</h2>
           <p className="mt-1 text-sm text-neutral-500">
             Com a chave Pix preenchida, o sistema gera o <strong>QR Code Pix</strong> na impressão do
@@ -365,7 +365,7 @@ export function SettingsView({
         </section>
 
         {/* Outras configs (links) */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-white p-6 shadow-card">
           <h2 className="font-semibold">Operação</h2>
           <p className="mt-1 text-sm text-neutral-500">Horário, pagamento, entrega e bot ficam aqui:</p>
           <div className="mt-4 flex flex-wrap gap-2">
