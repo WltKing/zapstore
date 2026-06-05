@@ -336,6 +336,16 @@ model Order {
   // Rota do dia (entrega)
   routeSeq        Int         @default(0) // ordem da parada na rota
   routeStatus     String?     // pending | en_route | at_door | delivered | skipped | absent
+  // Fiscal (emissão via Focus)
+  fiscalModel     String?     // "nfce" | "nfe"
+  fiscalRef       String?     // referência única enviada ao Focus
+  fiscalStatus    String?     // processando | autorizado | erro_autorizacao | cancelado
+  fiscalChave     String?
+  fiscalNumero    String?
+  fiscalDanfeUrl  String?     @db.Text
+  fiscalXmlUrl    String?     @db.Text
+  fiscalMessage   String?     @db.Text
+  fiscalAt        DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -548,6 +558,8 @@ model FiscalConfig {
   // CSC da NFC-e (produção) — fornecido pela SEFAZ do estado
   cscNfceProd       String?
   idTokenNfceProd   String?
+  cfopPadrao        String? // CFOP de venda padrão (ex: 5102)
+  csosnPadrao       String? // CSOSN padrão p/ Simples (ex: 102)
 
   // Integração Focus (por empresa)
   focusEmpresaId    Int?

@@ -100,6 +100,60 @@ export function focusErrorMessage(data: unknown): string {
   return "Erro na comunicação com o Focus NFe.";
 }
 
+// ============================================================
+// EMISSÃO (NFC-e / NF-e) — usa o TOKEN DA EMPRESA + base do ambiente
+// ============================================================
+
+export interface NotaResponse {
+  status?: string; // autorizado | erro_autorizacao | processando_autorizacao | cancelado
+  status_sefaz?: string;
+  mensagem_sefaz?: string;
+  chave_nfe?: string;
+  numero?: string;
+  serie?: string;
+  caminho_danfe?: string;
+  caminho_xml_nota_fiscal?: string;
+  erros?: { mensagem?: string; campo?: string }[];
+  mensagem?: string;
+}
+
+/** Emite uma nota (model = "nfce" | "nfe"). ref é a referência única. */
+export async function emitNota(
+  model: "nfce" | "nfe",
+  ambiente: string,
+  empresaToken: string,
+  ref: string,
+  payload: unknown,
+): Promise<FocusResult<NotaResponse>> {
+  return focusRequest<NotaResponse>(
+    `${emissionBase(ambiente)}/v2/${model}?ref=${encodeURIComponent(ref)}`,
+    empresaToken,
+    "POST",
+    payload,
+  );
+}
+
+/** Consulta o status de uma nota emitida. */
+export async function consultarNota(
+  model: "nfce" | "nfe",
+  ambiente: string,
+  empresaToken: string,
+  ref: string,
+): Promise<FocusResult<NotaResponse>> {
+  return focusRequest<NotaResponse>(
+    `${emissionBase(ambiente)}/v2/${model}/${encodeURIComponent(ref)}`,
+    empresaToken,
+    "GET",
+  );
+}
+
+/** URL absoluta de um caminho retornado pelo Focus (danfe/xml). */
+export function focusFileUrl(ambiente: string, caminho: string | undefined): string | null {
+  if (!caminho) return null;
+  if (/^https?:\/\//.test(caminho)) return caminho;
+  return `${emissionBase(ambiente)}${caminho.startsWith("/") ? "" : "/"}${caminho}`;
+}
+
 async function masterToken(): Promise<string> {
   const t = await getPlatformSetting("FOCUS_NFE_MASTER_TOKEN");
   if (!t) {

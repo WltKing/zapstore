@@ -4,6 +4,7 @@ import { prisma, withTenant } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
 import { OrderForm } from "../order-form";
+import { OrderFiscalCard } from "./fiscal-card";
 import type { OrderInput } from "@/lib/actions/orders";
 
 interface RawItem {
@@ -21,16 +22,17 @@ export default async function EditOrderPage({ params }: { params: Promise<{ id: 
   const tenant = await getPrimaryTenantForUser(session.user.id);
   if (!tenant) redirect("/onboarding");
 
-  const { order, products } = await withTenant(tenant.id, async (tx) => {
-    const [order, products] = await Promise.all([
+  const { order, products, fiscalCfg } = await withTenant(tenant.id, async (tx) => {
+    const [order, products, fiscalCfg] = await Promise.all([
       tx.order.findUnique({ where: { id } }),
       tx.product.findMany({
         where: { active: true },
         orderBy: { name: "asc" },
         select: { id: true, name: true, priceBrl: true },
       }),
+      tx.fiscalConfig.findUnique({ where: { tenantId: tenant.id } }),
     ]);
-    return { order, products };
+    return { order, products, fiscalCfg };
   });
   if (!order || order.tenantId !== tenant.id) notFound();
 
@@ -78,12 +80,30 @@ export default async function EditOrderPage({ params }: { params: Promise<{ id: 
   };
 
   return (
-    <OrderForm
-      products={products.map((p) => ({ id: p.id, name: p.name, priceBrl: Number(p.priceBrl) }))}
-      sellers={sellers}
-      initial={initial}
-      orderId={order.id}
-      orderNumber={order.orderNumber}
-    />
+    <>
+      <OrderForm
+        products={products.map((p) => ({ id: p.id, name: p.name, priceBrl: Number(p.priceBrl) }))}
+        sellers={sellers}
+        initial={initial}
+        orderId={order.id}
+        orderNumber={order.orderNumber}
+      />
+      <OrderFiscalCard
+        orderId={order.id}
+        configured={!!fiscalCfg?.enabled}
+        ambiente={fiscalCfg?.ambiente ?? "homologacao"}
+        habilitaNfce={fiscalCfg?.habilitaNfce ?? false}
+        habilitaNfe={fiscalCfg?.habilitaNfe ?? false}
+        fiscal={{
+          model: order.fiscalModel,
+          status: order.fiscalStatus,
+          chave: order.fiscalChave,
+          numero: order.fiscalNumero,
+          danfeUrl: order.fiscalDanfeUrl,
+          xmlUrl: order.fiscalXmlUrl,
+          message: order.fiscalMessage,
+        }}
+      />
+    </>
   );
 }
