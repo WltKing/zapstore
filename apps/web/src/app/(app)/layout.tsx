@@ -7,6 +7,7 @@ import { effectivePermissions, areaForPath } from "@/lib/permissions";
 import { isSuperAdminEmail } from "@/lib/super-admin";
 import { brandCssVars } from "@/lib/theme";
 import { NICHE_TEMPLATES } from "@/lib/niches";
+import { CircleUser, LogOut } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -51,13 +52,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               {NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Loja"}
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="hidden text-sm text-neutral-500 sm:inline">{session.user.email}</span>
+          <div className="flex items-center gap-3">
+            <span className="hidden items-center gap-2 rounded-full bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-700 sm:inline-flex">
+              <CircleUser className="h-4 w-4 text-brand" strokeWidth={2} />
+              Bem-vindo, {session.user.name?.trim() || session.user.email.split("@")[0]}
+            </span>
             <form action="/api/auth/sign-out" method="POST">
               <button
                 type="submit"
-                className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
               >
+                <LogOut className="h-4 w-4" strokeWidth={2} />
                 Sair
               </button>
             </form>

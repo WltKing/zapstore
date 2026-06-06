@@ -4,6 +4,18 @@ import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras } from "@/lib/tenant";
 import { NICHE_TEMPLATES } from "@/lib/niches";
 import { Donut, withColors } from "@/components/donut";
+import {
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  ShoppingCart,
+  Package,
+  CalendarDays,
+  Users,
+  MessageSquare,
+  Tag,
+  type LucideIcon,
+} from "lucide-react";
 
 const DEFAULT_QUOTA = 2500;
 
@@ -81,14 +93,14 @@ export default async function DashboardPage() {
               Este mês
             </h2>
             <div className="grid gap-4 sm:grid-cols-3">
-              <Card title="Vendas" value={formatBrl(monthSales)} hint="Pedidos do mês (sem cancelados)" icon="📈" tint="blue" />
-              <Card title="Despesas" value={formatBrl(monthExpenses)} hint="Lançadas em Despesas" icon="📉" tint="red" />
+              <Card title="Vendas" value={formatBrl(monthSales)} hint="Pedidos do mês (sem cancelados)" icon={TrendingUp} tint="blue" />
+              <Card title="Despesas" value={formatBrl(monthExpenses)} hint="Lançadas em Despesas" icon={TrendingDown} tint="red" />
               <Card
                 title="Resultado"
                 value={formatBrl(monthResult)}
                 hint={monthResult >= 0 ? "No azul 🎉" : "No vermelho"}
                 valueClass={monthResult >= 0 ? "text-emerald-700" : "text-red-700"}
-                icon="💰"
+                icon={Wallet}
                 tint={monthResult >= 0 ? "green" : "red"}
               />
             </div>
@@ -108,28 +120,28 @@ export default async function DashboardPage() {
               title="Vendas hoje"
               value={formatBrl(stats?.salesTodayBrl ?? 0)}
               hint={`Ticket médio ${stats?.orderCount === 0 ? "—" : formatBrl(stats?.avgTicketBrl ?? 0)}`}
-              icon="🛒"
+              icon={ShoppingCart}
               tint="blue"
             />
             <Card
               title="Pedidos abertos"
               value={String(stats?.openOrderCount ?? 0)}
               hint={`${stats?.orderCount ?? 0} pedidos no total`}
-              icon="📦"
+              icon={Package}
               tint="amber"
             />
             <Card
               title="Agendamentos hoje"
               value={String(stats?.todaysAppointments ?? 0)}
               hint={`${stats?.upcomingAppointments ?? 0} agendados à frente`}
-              icon="🗓️"
+              icon={CalendarDays}
               tint="violet"
             />
             <Card
               title="Clientes"
               value={String(stats?.customerCount ?? 0)}
               hint="Cadastrados na loja"
-              icon="👥"
+              icon={Users}
               tint="green"
             />
             <Card
@@ -137,14 +149,14 @@ export default async function DashboardPage() {
               value={`${used.toLocaleString("pt-BR")} / ${quota.toLocaleString("pt-BR")}`}
               hint={`${pct}% do plano Starter`}
               progress={pct}
-              icon="💬"
+              icon={MessageSquare}
               tint="blue"
             />
             <Card
               title="Produtos ativos"
               value={String(stats?.activeProductCount ?? 0)}
               hint={`${stats?.productCount ?? 0} no catálogo`}
-              icon="🏷️"
+              icon={Tag}
               tint="slate"
             />
           </section>
@@ -299,7 +311,7 @@ function Card({
   hint,
   progress,
   valueClass,
-  icon,
+  icon: Icon,
   tint = "slate",
 }: {
   title: string;
@@ -307,18 +319,18 @@ function Card({
   hint: string;
   progress?: number;
   valueClass?: string;
-  icon?: string;
+  icon?: LucideIcon;
   tint?: keyof typeof TINTS | string;
 }) {
   return (
     <div className="rounded-2xl bg-white p-5 shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
-        {icon && (
+        {Icon && (
           <span
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base ${TINTS[tint] ?? TINTS.slate}`}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${TINTS[tint] ?? TINTS.slate}`}
           >
-            {icon}
+            <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
           </span>
         )}
       </div>

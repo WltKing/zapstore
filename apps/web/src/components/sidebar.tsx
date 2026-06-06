@@ -141,21 +141,21 @@ export function Sidebar({
         }`}
       >
         <div className="flex items-center justify-between px-5 py-5">
-          {logoUrl ? (
-            // Logo do lojista: mostra inteira (sem cortar), tamanho generoso.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt={storeName} className="h-12 w-auto max-w-[170px] object-contain" />
-          ) : (
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-[var(--brand-overlay)] text-lg font-bold">
-                {(storeName.trim()[0] ?? "Z").toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <div className="truncate text-[15px] font-semibold">{storeName}</div>
-                <div className="text-[10px] uppercase tracking-wide opacity-60">Zapstore</div>
-              </div>
+          <div className="flex min-w-0 items-center gap-3">
+            {/* Ícone da loja (logo quadrada do cliente) ou inicial do nome. */}
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--brand-overlay)] text-lg font-bold">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt={storeName} className="h-full w-full object-contain" />
+              ) : (
+                (storeName.trim()[0] ?? "Z").toUpperCase()
+              )}
             </div>
-          )}
+            <div className="min-w-0">
+              <div className="truncate text-[15px] font-semibold">{storeName}</div>
+              <div className="text-[10px] uppercase tracking-wide opacity-60">Zapstore</div>
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => setOpen(false)}
