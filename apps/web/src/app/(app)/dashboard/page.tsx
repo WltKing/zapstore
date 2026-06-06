@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras } from "@/lib/tenant";
 import { NICHE_TEMPLATES } from "@/lib/niches";
+import { Donut, withColors } from "@/components/donut";
 
 const DEFAULT_QUOTA = 2500;
 
@@ -191,17 +192,25 @@ export default async function DashboardPage() {
               )}
 
               <section className="mt-8 grid gap-4 lg:grid-cols-2">
-                <Breakdown
-                  title="Por canal"
-                  rows={[
-                    { label: "Presencial", value: extras.byChannel.presencial },
-                    { label: "Online", value: extras.byChannel.online },
-                  ]}
-                />
-                <Breakdown
-                  title="Formas de pagamento"
-                  rows={extras.byPayment.map((p) => ({ label: p.method, value: p.total }))}
-                />
+                <div className="rounded-2xl bg-white p-6 shadow-card">
+                  <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                    Vendas por canal
+                  </h2>
+                  <Donut
+                    data={withColors(
+                      [
+                        { label: "Presencial", value: extras.byChannel.presencial },
+                        { label: "Online", value: extras.byChannel.online },
+                      ].filter((d) => d.value > 0),
+                    )}
+                  />
+                </div>
+                <div className="rounded-2xl bg-white p-6 shadow-card">
+                  <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                    Formas de pagamento
+                  </h2>
+                  <Donut data={withColors(extras.byPayment.map((p) => ({ label: p.method, value: p.total })))} />
+                </div>
                 <Breakdown
                   title="Por vendedor"
                   rows={extras.bySeller.map((s) => ({ label: s.name, value: s.total }))}
