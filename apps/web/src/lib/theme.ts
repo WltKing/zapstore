@@ -44,6 +44,8 @@ export interface BrandTheme {
   softFg: string; // texto sobre o fundo suave
   overlay: string; // camada p/ item ativo sobre a cor (translúcida)
   overlaySoft: string; // camada p/ hover sobre a cor
+  activeBg: string; // fundo do item ativo na lateral (pílula)
+  activeFg: string; // texto do item ativo
 }
 
 export function brandTheme(hex?: string | null): BrandTheme {
@@ -61,11 +63,15 @@ export function brandTheme(hex?: string | null): BrandTheme {
     softFg: mix(base, "#000000", luminance(base) > 0.7 ? 0.55 : 0.25),
     overlay: fgIsWhite ? "rgba(255,255,255,0.20)" : "rgba(0,0,0,0.12)",
     overlaySoft: fgIsWhite ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.06)",
+    // Item ativo: cor escura → pílula branca c/ texto na cor da marca; cor clara →
+    // pílula escura translúcida c/ texto escuro.
+    activeBg: fgIsWhite ? "#ffffff" : "rgba(0,0,0,0.16)",
+    activeFg: fgIsWhite ? base : "#171717",
   };
 }
 
 /** String CSS pra injetar num <style> (:root) com as variáveis da marca. */
 export function brandCssVars(hex?: string | null): string {
   const t = brandTheme(hex);
-  return `:root{--brand:${t.base};--brand-fg:${t.fg};--brand-hover:${t.hover};--brand-soft:${t.soft};--brand-soft-fg:${t.softFg};--brand-overlay:${t.overlay};--brand-overlay-soft:${t.overlaySoft};}`;
+  return `:root{--brand:${t.base};--brand-fg:${t.fg};--brand-hover:${t.hover};--brand-soft:${t.soft};--brand-soft-fg:${t.softFg};--brand-overlay:${t.overlay};--brand-overlay-soft:${t.overlaySoft};--brand-active-bg:${t.activeBg};--brand-active-fg:${t.activeFg};}`;
 }

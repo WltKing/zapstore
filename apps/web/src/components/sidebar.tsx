@@ -2,76 +2,98 @@
 
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import {
+  LayoutGrid,
+  ShoppingCart,
+  Package,
+  Users,
+  Bot,
+  MessageSquare,
+  Smartphone,
+  CalendarDays,
+  CalendarClock,
+  Wallet,
+  Banknote,
+  Megaphone,
+  Map as MapIcon,
+  Truck,
+  CreditCard,
+  ReceiptText,
+  KeyRound,
+  Settings,
+  Wrench,
+  Menu,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 
 interface NavItem {
   href: string;
   label: string;
-  icon: string;
+  icon: LucideIcon;
 }
 interface NavSection {
   title: string;
   items: NavItem[];
 }
 
-// Navegação do painel — espelha as áreas do sistema (estilo SleepZ).
-// Áreas marcadas como "em construção" abrem páginas placeholder na Camada 1.
 const SECTIONS: NavSection[] = [
   {
     title: "Principal",
     items: [
-      { href: "/dashboard", label: "Visão Geral", icon: "▦" },
-      { href: "/orders", label: "Pedidos", icon: "🛒" },
-      { href: "/products", label: "Produtos", icon: "📦" },
-      { href: "/customers", label: "Clientes", icon: "👥" },
+      { href: "/dashboard", label: "Visão Geral", icon: LayoutGrid },
+      { href: "/orders", label: "Pedidos", icon: ShoppingCart },
+      { href: "/products", label: "Produtos", icon: Package },
+      { href: "/customers", label: "Clientes", icon: Users },
     ],
   },
   {
     title: "Atendimento",
     items: [
-      { href: "/bot", label: "Configurar Bot", icon: "🤖" },
-      { href: "/simulator", label: "Simulador", icon: "💬" },
-      { href: "/whatsapp", label: "WhatsApp", icon: "📱" },
+      { href: "/bot", label: "Configurar Bot", icon: Bot },
+      { href: "/simulator", label: "Simulador", icon: MessageSquare },
+      { href: "/whatsapp", label: "WhatsApp", icon: Smartphone },
     ],
   },
   {
     title: "Serviços",
     items: [
-      { href: "/agenda", label: "Agenda", icon: "🗓️" },
-      { href: "/scheduling", label: "Agendamentos", icon: "📅" },
+      { href: "/agenda", label: "Agenda", icon: CalendarDays },
+      { href: "/scheduling", label: "Agendamentos", icon: CalendarClock },
     ],
   },
   {
     title: "Financeiro",
     items: [
-      { href: "/expenses", label: "Despesas", icon: "💸" },
-      { href: "/cashflow", label: "Caixa", icon: "💰" },
+      { href: "/expenses", label: "Despesas", icon: Wallet },
+      { href: "/cashflow", label: "Caixa", icon: Banknote },
     ],
   },
   {
     title: "Marketing",
-    items: [{ href: "/marketing", label: "Marketing", icon: "📣" }],
+    items: [{ href: "/marketing", label: "Marketing", icon: Megaphone }],
   },
   {
     title: "Logística",
     items: [
-      { href: "/route", label: "Rota do dia", icon: "🗺️" },
-      { href: "/deliveries", label: "Entregas", icon: "🚚" },
+      { href: "/route", label: "Rota do dia", icon: MapIcon },
+      { href: "/deliveries", label: "Entregas", icon: Truck },
     ],
   },
   {
     title: "Sistema",
     items: [
-      { href: "/billing", label: "Assinatura", icon: "💳" },
-      { href: "/fiscal", label: "Fiscal", icon: "🧾" },
-      { href: "/users", label: "Usuários", icon: "🔑" },
-      { href: "/settings", label: "Configurações", icon: "⚙️" },
+      { href: "/billing", label: "Assinatura", icon: CreditCard },
+      { href: "/fiscal", label: "Fiscal", icon: ReceiptText },
+      { href: "/users", label: "Usuários", icon: KeyRound },
+      { href: "/settings", label: "Configurações", icon: Settings },
     ],
   },
 ];
 
 export function Sidebar({
   storeName,
-  brandColor,
+  brandColor: _brandColor,
   logoUrl,
   allowed,
   isSuperAdmin,
@@ -85,13 +107,19 @@ export function Sidebar({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  // Filtra itens por permissão (área = 1º segmento do href). Sem `allowed` = mostra tudo.
   const sections = allowed
     ? SECTIONS.map((s) => ({
         ...s,
         items: s.items.filter((it) => allowed.includes(it.href.split("/").filter(Boolean)[0] ?? "")),
       })).filter((s) => s.items.length > 0)
     : SECTIONS;
+
+  const itemClass = (active: boolean) =>
+    `mt-0.5 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition ${
+      active
+        ? "bg-[var(--brand-active-bg)] font-semibold text-[color:var(--brand-active-fg)] shadow-sm"
+        : "opacity-90 hover:bg-[var(--brand-overlay-soft)]"
+    }`;
 
   return (
     <>
@@ -102,25 +130,19 @@ export function Sidebar({
         className="fixed left-4 top-4 z-30 rounded-lg border border-neutral-300 bg-white p-2 text-neutral-700 shadow-card lg:hidden"
         aria-label="Abrir menu"
       >
-        ☰
+        <Menu className="h-5 w-5" />
       </button>
 
-      {/* Overlay mobile */}
-      {open && (
-        <div
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
+      {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform overflow-y-auto bg-brand transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`no-scrollbar fixed inset-y-0 left-0 z-40 w-64 transform overflow-y-auto bg-brand transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-[var(--brand-overlay)] text-sm font-bold">
+        <div className="flex items-center justify-between px-5 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-[var(--brand-overlay)] text-lg font-bold">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={logoUrl} alt="" className="h-full w-full object-cover" />
@@ -129,7 +151,7 @@ export function Sidebar({
               )}
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold">{storeName}</div>
+              <div className="truncate text-[15px] font-semibold">{storeName}</div>
               <div className="text-[10px] uppercase tracking-wide opacity-60">Zapstore</div>
             </div>
           </div>
@@ -139,30 +161,22 @@ export function Sidebar({
             className="opacity-70 hover:opacity-100 lg:hidden"
             aria-label="Fechar menu"
           >
-            ✕
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         <nav className="px-3 pb-8">
           {sections.map((section) => (
-            <div key={section.title} className="mt-4">
-              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider opacity-60">
+            <div key={section.title} className="mt-5">
+              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider opacity-55">
                 {section.title}
               </div>
               {section.items.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(item.href + "/");
+                const Icon = item.icon;
                 return (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className={`mt-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
-                      active
-                        ? "bg-[var(--brand-overlay)] font-medium"
-                        : "opacity-90 hover:bg-[var(--brand-overlay-soft)]"
-                    }`}
-                  >
-                    <span className="w-5 text-center text-base leading-none">{item.icon}</span>
+                  <a key={item.href} href={item.href} onClick={() => setOpen(false)} className={itemClass(active)}>
+                    <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
                     {item.label}
                   </a>
                 );
@@ -171,29 +185,16 @@ export function Sidebar({
           ))}
 
           {isSuperAdmin && (
-            <div className="mt-4">
-              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider opacity-60">
+            <div className="mt-5">
+              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider opacity-55">
                 Dono do SaaS
               </div>
-              <a
-                href="/admin"
-                onClick={() => setOpen(false)}
-                className="mt-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm opacity-90 transition hover:bg-[var(--brand-overlay-soft)]"
-              >
-                <span className="w-5 text-center text-base leading-none">🛠️</span>
+              <a href="/admin" onClick={() => setOpen(false)} className={itemClass(pathname.startsWith("/admin"))}>
+                <Wrench className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
                 Painel do dono
               </a>
             </div>
           )}
-
-          <form action="/api/auth/sign-out" method="POST" className="mt-6 px-3">
-            <button
-              type="submit"
-              className="w-full rounded-lg px-3 py-2 text-left text-sm opacity-80 transition hover:bg-[var(--brand-overlay-soft)] hover:opacity-100"
-            >
-              ⏻ Sair
-            </button>
-          </form>
         </nav>
       </aside>
     </>

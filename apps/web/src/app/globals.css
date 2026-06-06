@@ -11,6 +11,17 @@
   --brand-soft-fg: #404040;
   --brand-overlay: rgba(255, 255, 255, 0.2);
   --brand-overlay-soft: rgba(255, 255, 255, 0.1);
+  --brand-active-bg: #ffffff;
+  --brand-active-fg: #171717;
+}
+
+/* Esconde a barra de rolagem (ex.: menu lateral fixo) mantendo o scroll. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Utilitários da marca. Em @layer utilities pra vencerem empates (ex.: o text-white
