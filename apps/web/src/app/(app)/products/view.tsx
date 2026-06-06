@@ -139,12 +139,6 @@ export function ProductsView({
           <h1 className="text-3xl font-bold tracking-tight">Produtos</h1>
         </div>
         <div className="flex gap-2">
-          <a
-            href="/dashboard"
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-          >
-            Voltar
-          </a>
           <button
             type="button"
             onClick={() => {

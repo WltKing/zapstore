@@ -219,10 +219,7 @@ export function FiscalView({
             depois mude pra produção.
           </p>
         </div>
-        <a href="/dashboard" className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100">
-          Voltar
-        </a>
-      </header>
+        </header>
 
       {msg && (
         <p

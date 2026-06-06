@@ -66,13 +66,7 @@ export function WhatsAppView({
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Conectar WhatsApp</h1>
         </div>
-        <a
-          href="/dashboard"
-          className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-        >
-          Voltar
-        </a>
-      </header>
+        </header>
 
       <section className="mt-10 rounded-2xl bg-white p-8 shadow-card">
         {connected ? (
