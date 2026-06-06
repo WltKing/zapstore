@@ -12,6 +12,7 @@ export function SettingsView({
   storeName,
   brandColor,
   logoUrl,
+  iconUrl,
   pixKey,
   pixCity,
   defaultMarginPct,
@@ -24,6 +25,7 @@ export function SettingsView({
   storeName: string;
   brandColor: string | null;
   logoUrl: string | null;
+  iconUrl: string | null;
   pixKey: string | null;
   pixCity: string | null;
   defaultMarginPct: number | null;
@@ -37,6 +39,7 @@ export function SettingsView({
   const [name, setName] = useState(storeName);
   const [color, setColor] = useState(brandColor ?? DEFAULT_COLOR);
   const [logo, setLogo] = useState(logoUrl ?? "");
+  const [icon, setIcon] = useState(iconUrl ?? "");
   const [pix, setPix] = useState(pixKey ?? "");
   const [pixCityState, setPixCityState] = useState(pixCity ?? "");
   const [margin, setMargin] = useState(defaultMarginPct != null ? String(defaultMarginPct) : "");
@@ -70,6 +73,7 @@ export function SettingsView({
         name,
         brandColor: color,
         logoUrl: logo,
+        iconUrl: icon,
         pixKey: pix,
         pixCity: pixCityState,
         defaultMarginPct: margin.trim() === "" ? null : Number(margin),
@@ -134,22 +138,25 @@ export function SettingsView({
         {/* Identidade visual */}
         <section className="rounded-2xl bg-white p-6 shadow-card">
           <h2 className="font-semibold">Identidade visual</h2>
-          <p className="mt-1 text-sm text-neutral-500">Sua marca no painel e nos pedidos.</p>
+          <p className="mt-1 text-sm text-neutral-500">
+            Cor da marca + <strong>ícone</strong> (aparece no menu) e <strong>logo</strong> (aparece na
+            nota fiscal e na impressão de pedidos).
+          </p>
           <div className="mt-4 flex items-start gap-6">
-            {/* Preview */}
+            {/* Prévia do ícone, como aparece no menu (sobre a cor da marca) */}
             <div className="flex flex-col items-center gap-2">
               <div
                 className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl text-2xl font-bold text-white"
                 style={{ backgroundColor: color }}
               >
-                {logo ? (
+                {icon ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={logo} alt="logo" className="h-full w-full object-cover" />
+                  <img src={icon} alt="ícone" className="h-full w-full object-contain p-1" />
                 ) : (
                   (name.trim()[0] ?? "Z").toUpperCase()
                 )}
               </div>
-              <span className="text-[10px] uppercase tracking-wide text-neutral-400">Prévia</span>
+              <span className="text-[10px] uppercase tracking-wide text-neutral-400">Ícone (menu)</span>
             </div>
 
             <div className="flex-1 space-y-4">
@@ -171,7 +178,13 @@ export function SettingsView({
                 </div>
               </div>
               <ImageUpload
-                label="Logo da loja (opcional)"
+                label="Ícone da loja (quadrado, p/ o menu) — PNG transparente fica melhor"
+                value={icon}
+                onChange={setIcon}
+                keepTransparency
+              />
+              <ImageUpload
+                label="Logo completa (p/ nota fiscal e impressão)"
                 value={logo}
                 onChange={setLogo}
                 keepTransparency

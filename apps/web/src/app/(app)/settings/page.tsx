@@ -21,6 +21,7 @@ export default async function SettingsPage() {
       storeName={tenant.name}
       brandColor={tenant.brandColor}
       logoUrl={tenant.logoUrl}
+      iconUrl={tenant.iconUrl}
       pixKey={tenant.pixKey}
       pixCity={tenant.pixCity}
       defaultMarginPct={tenant.defaultMarginPct != null ? Number(tenant.defaultMarginPct) : null}

@@ -26,6 +26,7 @@ export interface StoreSettingsInput {
   name: string;
   brandColor?: string;
   logoUrl?: string;
+  iconUrl?: string;
   pixKey?: string;
   pixCity?: string;
   defaultMarginPct?: number | null;
@@ -77,6 +78,7 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
         name: input.name.trim(),
         brandColor: color,
         logoUrl: input.logoUrl?.trim() || null,
+        iconUrl: input.iconUrl?.trim() || null,
         pixKey: input.pixKey?.trim() || null,
         pixCity: input.pixCity?.trim() || null,
         defaultMarginPct: margin,

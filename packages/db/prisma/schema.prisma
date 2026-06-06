@@ -26,7 +26,8 @@ model Tenant {
   name        String
   niche       String?  // colchoes | restaurante | salao | generico
   brandColor  String?  // cor da marca (white-label básico), ex: "#16a34a"
-  logoUrl     String?  // URL do logo da loja
+  logoUrl     String?  // logo completa (vai pro Focus/DANFE e impressão)
+  iconUrl     String?  // ícone quadrado da loja (usado no menu lateral)
   pixKey      String?  // chave Pix do lojista (p/ gerar QR no pedido)
   pixCity     String?  // cidade do recebedor (p/ o código Pix)
   defaultMarginPct Decimal? @db.Decimal(5, 2) // margem padrão (% sobre a venda) p/ auto-preencher preço

@@ -38,8 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <style dangerouslySetInnerHTML={{ __html: brandCssVars(tenant.brandColor) }} />
       <Sidebar
         storeName={tenant.name}
-        brandColor={tenant.brandColor}
-        logoUrl={tenant.logoUrl}
+        iconUrl={tenant.iconUrl}
         allowed={allowed}
         isSuperAdmin={isSuperAdminEmail(session.user.email)}
       />

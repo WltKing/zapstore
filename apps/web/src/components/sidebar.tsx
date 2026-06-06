@@ -93,14 +93,12 @@ const SECTIONS: NavSection[] = [
 
 export function Sidebar({
   storeName,
-  brandColor: _brandColor,
-  logoUrl,
+  iconUrl,
   allowed,
   isSuperAdmin,
 }: {
   storeName: string;
-  brandColor?: string | null;
-  logoUrl?: string | null;
+  iconUrl?: string | null;
   allowed?: string[];
   isSuperAdmin?: boolean;
 }) {
@@ -145,12 +143,12 @@ export function Sidebar({
             {/* Ícone da loja (logo quadrada do cliente) ou inicial do nome. */}
             <div
               className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg font-bold ${
-                logoUrl ? "" : "bg-[var(--brand-overlay)]"
+                iconUrl ? "" : "bg-[var(--brand-overlay)]"
               }`}
             >
-              {logoUrl ? (
+              {iconUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt={storeName} className="h-full w-full object-contain" />
+                <img src={iconUrl} alt={storeName} className="h-full w-full object-contain" />
               ) : (
                 (storeName.trim()[0] ?? "Z").toUpperCase()
               )}
