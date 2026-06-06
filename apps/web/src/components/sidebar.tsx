@@ -143,7 +143,11 @@ export function Sidebar({
         <div className="flex items-center justify-between px-5 py-5">
           <div className="flex min-w-0 items-center gap-3">
             {/* Ícone da loja (logo quadrada do cliente) ou inicial do nome. */}
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--brand-overlay)] text-lg font-bold">
+            <div
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg font-bold ${
+                logoUrl ? "" : "bg-[var(--brand-overlay)]"
+              }`}
+            >
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={logoUrl} alt={storeName} className="h-full w-full object-contain" />
