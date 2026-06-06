@@ -2,6 +2,15 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import {
+  FileDown,
+  Plus,
+  Printer,
+  ArrowRight,
+  Pencil,
+  Ban,
+  Trash2,
+} from "lucide-react";
 import { deleteOrderAction, updateOrderStatusAction } from "@/lib/actions/orders";
 import { printReport, esc, formatBrlReport } from "@/lib/print-report";
 import { paymentLabel } from "@/lib/payments";
@@ -172,15 +181,17 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
           <button
             type="button"
             onClick={exportPdf}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+            className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
           >
+            <FileDown className="h-[18px] w-[18px]" strokeWidth={2} />
             PDF
           </button>
           <a
             href="/orders/new"
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
           >
-            + Novo pedido
+            <Plus className="h-[18px] w-[18px]" strokeWidth={2} />
+            Novo pedido
           </a>
         </div>
       </header>
@@ -275,7 +286,7 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
                         title="Imprimir"
                         className="text-neutral-400 hover:text-neutral-700"
                       >
-                        🖨
+                        <Printer className="h-[18px] w-[18px]" strokeWidth={2} />
                       </button>
                       <a href={`/orders/${o.id}`} className="text-sm text-neutral-600 hover:text-neutral-900">
                         Abrir
@@ -320,15 +331,18 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
                             type="button"
                             onClick={() => advance(o.id, o.status)}
                             disabled={isPending}
-                            className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
                           >
-                            Avançar → {STATUS_LABELS[NEXT_STATUS[o.status]!]}
+                            Avançar
+                            <ArrowRight className="h-4 w-4" strokeWidth={2} />
+                            {STATUS_LABELS[NEXT_STATUS[o.status]!]}
                           </button>
                         )}
                         <a
                           href={`/orders/${o.id}`}
-                          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
                         >
+                          <Pencil className="h-4 w-4" strokeWidth={2} />
                           Editar
                         </a>
                         {o.status !== "CANCELED" && o.status !== "DELIVERED" && (
@@ -336,8 +350,9 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
                             type="button"
                             onClick={() => cancel(o.id, o.orderNumber)}
                             disabled={isPending}
-                            className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
                           >
+                            <Ban className="h-4 w-4" strokeWidth={2} />
                             Cancelar
                           </button>
                         )}
@@ -345,8 +360,9 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
                           type="button"
                           onClick={() => remove(o.id, o.orderNumber)}
                           disabled={isPending}
-                          className="ml-auto text-sm text-neutral-500 hover:text-red-700"
+                          className="ml-auto inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-red-700"
                         >
+                          <Trash2 className="h-4 w-4" strokeWidth={2} />
                           Excluir
                         </button>
                       </div>

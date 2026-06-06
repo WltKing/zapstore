@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight, RotateCw } from "lucide-react";
 import { emitNotaAction, refreshNotaAction, cancelNotaAction } from "@/lib/actions/fiscal-emit";
 
 export interface OrderFiscal {
@@ -89,8 +90,9 @@ export function OrderFiscalCard({
       {!configured ? (
         <p className="mt-3 text-sm text-neutral-500">
           Emissão não configurada.{" "}
-          <a href="/fiscal" className="underline">
-            Configurar Fiscal →
+          <a href="/fiscal" className="inline-flex items-center gap-1 underline">
+            Configurar Fiscal
+            <ArrowRight className="h-4 w-4" strokeWidth={2} />
           </a>
         </p>
       ) : (
@@ -123,9 +125,10 @@ export function OrderFiscalCard({
                   type="button"
                   onClick={() => run(() => refreshNotaAction(orderId))}
                   disabled={isPending}
-                  className="rounded-lg border border-neutral-300 px-3 py-1 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                 >
-                  ↻ Atualizar status
+                  <RotateCw className="h-4 w-4" strokeWidth={2} />
+                  Atualizar status
                 </button>
                 {fiscal.status === "autorizado" && (
                   <button

@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Printer, Plus, CheckCircle2, X } from "lucide-react";
 import { createOrderAction, updateOrderAction, type OrderInput } from "@/lib/actions/orders";
 import { lookupCepAction, searchCepAction } from "@/lib/actions/cep";
 import { PAYMENT_OPTIONS, paymentHasInstallments } from "@/lib/payments";
@@ -160,8 +161,9 @@ export function OrderForm({
     <form onSubmit={submit} className="mx-auto max-w-3xl px-6 py-10 space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <a href="/orders" className="text-sm text-neutral-500 hover:text-neutral-800">
-            ← Pedidos
+          <a href="/orders" className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-800">
+            <ArrowLeft className="h-4 w-4" strokeWidth={2} />
+            Pedidos
           </a>
           <h1 className="text-2xl font-bold tracking-tight">
             {orderId ? `Pedido #${orderNumber}` : "Novo pedido"}
@@ -178,22 +180,29 @@ export function OrderForm({
                   "width=480,height=720,menubar=no,toolbar=no",
                 )
               }
-              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
             >
+              <Printer className="h-[18px] w-[18px]" strokeWidth={2} />
               Imprimir
             </button>
           )}
           <a
             href="/orders/new"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+            className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
           >
-            + Nova venda
+            <Plus className="h-[18px] w-[18px]" strokeWidth={2} />
+            Nova venda
           </a>
         </div>
       </header>
 
       {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
-      {saved && <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Salvo! ✅</p>}
+      {saved && (
+        <p className="inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <CheckCircle2 className="h-4 w-4" strokeWidth={2} />
+          Salvo!
+        </p>
+      )}
 
       {/* Cliente */}
       <section className="rounded-2xl bg-white p-5 shadow-card">
@@ -356,7 +365,7 @@ export function OrderForm({
               <input type="number" min="0" step="0.01" value={it.discountBrl ?? ""} onChange={(e) => setItem(i, { discountBrl: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="Desc." title="Desconto" className="col-span-2 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm shadow-card" />
               <span className="col-span-2 text-right text-sm font-medium">{formatBrl(lineTotal(it))}</span>
               {form.items.length > 1 && (
-                <button type="button" onClick={() => removeItem(i)} className="col-span-1 text-neutral-400 hover:text-red-600" aria-label="Remover">✕</button>
+                <button type="button" onClick={() => removeItem(i)} className="col-span-1 flex justify-center text-neutral-400 hover:text-red-600" aria-label="Remover"><X className="h-4 w-4" strokeWidth={2} /></button>
               )}
             </div>
           ))}
