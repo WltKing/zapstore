@@ -6,6 +6,7 @@ import { getPrimaryTenantForUser } from "@/lib/tenant";
 import { effectivePermissions, areaForPath } from "@/lib/permissions";
 import { isSuperAdminEmail } from "@/lib/super-admin";
 import { brandCssVars } from "@/lib/theme";
+import { NICHE_TEMPLATES } from "@/lib/niches";
 import { Sidebar } from "@/components/sidebar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -41,7 +42,29 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         allowed={allowed}
         isSuperAdmin={isSuperAdminEmail(session.user.email)}
       />
-      <div className="flex-1 overflow-x-hidden">{children}</div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Barra superior fixa */}
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-neutral-200 bg-white/90 px-6 backdrop-blur">
+          <div className="min-w-0 pl-10 lg:pl-0">
+            <div className="truncate text-sm font-semibold text-neutral-900">{tenant.name}</div>
+            <div className="truncate text-xs text-neutral-500">
+              {NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Loja"}
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="hidden text-sm text-neutral-500 sm:inline">{session.user.email}</span>
+            <form action="/api/auth/sign-out" method="POST">
+              <button
+                type="submit"
+                className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+              >
+                Sair
+              </button>
+            </form>
+          </div>
+        </header>
+        <div className="min-w-0 flex-1 overflow-x-hidden">{children}</div>
+      </div>
     </div>
   );
 }

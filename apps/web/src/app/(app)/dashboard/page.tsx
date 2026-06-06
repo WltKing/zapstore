@@ -26,36 +26,19 @@ export default async function DashboardPage() {
   const monthResult = monthSales - monthExpenses;
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {tenant ? tenant.name : "Bem-vindo ao Zapstore"}
-          </h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            {tenant ? (
-              <>
-                Plano: <strong>Trial</strong> · Nicho:{" "}
-                <strong>
-                  {NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ??
-                    "Genérico"}
-                </strong>
-              </>
-            ) : (
-              <>
-                Logado como <strong>{session.user.email}</strong>
-              </>
-            )}
-          </p>
-        </div>
-        <form action="/api/auth/sign-out" method="POST">
-          <button
-            type="submit"
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-          >
-            Sair
-          </button>
-        </form>
+    <main className="mx-auto max-w-6xl px-6 py-8">
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight">Visão geral</h1>
+        <p className="mt-1 text-sm text-neutral-500">
+          {tenant ? (
+            <>
+              Plano <strong>Trial</strong> ·{" "}
+              {NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Genérico"}
+            </>
+          ) : (
+            <>Bem-vindo ao Zapstore</>
+          )}
+        </p>
       </header>
 
       {!tenant ? (
@@ -463,31 +446,43 @@ function MonthlyChart({ data }: { data: { label: string; total: number }[] }) {
 function SalesChart({ data }: { data: { label: string; total: number }[] }) {
   const max = Math.max(...data.map((d) => d.total), 1);
   const hasSales = data.some((d) => d.total > 0);
+  const W = 600;
+  const H = 160;
+  const pad = 12;
+  const n = data.length;
+  const xs = (i: number) => (n <= 1 ? W / 2 : (i / (n - 1)) * (W - 2 * pad) + pad);
+  const ys = (v: number) => H - pad - (v / max) * (H - 2 * pad);
+  const pts = data.map((d, i) => `${xs(i).toFixed(1)},${ys(d.total).toFixed(1)}`);
+  const line = pts.length ? `M ${pts.join(" L ")}` : "";
+  const area = pts.length ? `M ${xs(0)},${H} L ${pts.join(" L ")} L ${xs(n - 1)},${H} Z` : "";
   return (
     <div className="mt-4">
-      <div className="flex h-40 items-end gap-1.5">
-        {data.map((d, i) => (
-          <div
-            key={i}
-            className="flex flex-1 flex-col items-center justify-end"
-            title={`${d.label}: ${formatBrl(d.total)}`}
-          >
-            <div
-              className="w-full rounded-t bg-emerald-400"
-              style={{ height: `${(d.total / max) * 100}%`, minHeight: d.total > 0 ? "4px" : "0px" }}
-            />
-          </div>
-        ))}
-      </div>
-      <div className="mt-1 flex gap-1.5">
-        {data.map((d, i) => (
-          <div key={i} className="flex-1 text-center text-[9px] text-neutral-400">
-            {i % 2 === 0 ? d.label : ""}
-          </div>
-        ))}
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-44 w-full" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="salesfill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#10b981" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {hasSales && <path d={area} fill="url(#salesfill)" />}
+        {hasSales && (
+          <path
+            d={line}
+            fill="none"
+            stroke="#10b981"
+            strokeWidth="2.5"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
+      </svg>
+      <div className="mt-1 flex justify-between text-[10px] text-neutral-400">
+        <span>{data[0]?.label}</span>
+        <span>{data[data.length - 1]?.label}</span>
       </div>
       {!hasSales && (
-        <p className="mt-3 text-center text-xs text-neutral-400">
+        <p className="mt-2 text-center text-xs text-neutral-400">
           Sem vendas nos últimos 14 dias ainda.
         </p>
       )}

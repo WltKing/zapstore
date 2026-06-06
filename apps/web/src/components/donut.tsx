@@ -15,8 +15,8 @@ export function withColors(items: { label: string; value: number }[]): DonutSlic
 
 export function Donut({
   data,
-  size = 168,
-  thickness = 26,
+  size = 190,
+  thickness = 40,
 }: {
   data: DonutSlice[];
   size?: number;
