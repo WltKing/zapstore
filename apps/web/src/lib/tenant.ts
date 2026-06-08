@@ -246,16 +246,18 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
   return withTenant(tenantId, async (tx) => {
     // Custos dos produtos (pra CMV) + quantos produtos ativos estão sem custo.
     const products = await tx.product.findMany({
-      select: { id: true, name: true, costBrl: true, active: true },
+      select: { id: true, name: true, costBrl: true, active: true, stock: true },
     });
     const costById = new Map<string, number>();
     const costByName = new Map<string, number>();
     let productsWithoutCost = 0;
+    let capitalEmEstoque = 0; // dinheiro parado em mercadoria (estoque × custo)
     for (const p of products) {
       const cost = p.costBrl != null ? Number(p.costBrl) : 0;
       if (cost > 0) {
         costById.set(p.id, cost);
         costByName.set(p.name.trim().toLowerCase(), cost);
+        if (p.stock > 0) capitalEmEstoque += p.stock * cost;
       } else if (p.active) {
         productsWithoutCost++;
       }
@@ -323,7 +325,7 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
     let parceladoCount = 0;
     let parceladoTotal = 0;
     const instMap = new Map<number, { count: number; total: number }>();
-    const prodMap = new Map<string, { qty: number; revenue: number }>();
+    const prodMap = new Map<string, { qty: number; revenue: number; profit: number; costKnown: boolean }>();
     const weeklySales = [0, 0, 0, 0, 0]; // semanas 1..5 do mês
 
     for (const o of monthOrders) {
@@ -352,10 +354,17 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
       const items = (Array.isArray(o.items) ? o.items : []) as OrderItemJson[];
       for (const it of items) {
         const name = it.name?.trim() || "Item";
-        const cur = prodMap.get(name) ?? { qty: 0, revenue: 0 };
+        const qty = Number(it.qty) || 0;
+        const revenue = Number(it.lineTotal) || 0;
+        const byId = it.productId ? costById.get(it.productId) : undefined;
+        const byName = it.name ? costByName.get(it.name.trim().toLowerCase()) : undefined;
+        const unitCost = byId ?? byName;
+        const cur = prodMap.get(name) ?? { qty: 0, revenue: 0, profit: 0, costKnown: false };
         prodMap.set(name, {
-          qty: cur.qty + (Number(it.qty) || 0),
-          revenue: cur.revenue + (Number(it.lineTotal) || 0),
+          qty: cur.qty + qty,
+          revenue: cur.revenue + revenue,
+          profit: cur.profit + (unitCost != null ? revenue - qty * unitCost : 0),
+          costKnown: cur.costKnown || unitCost != null,
         });
       }
     }
@@ -373,6 +382,12 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
     const topProducts = [...prodMap.entries()]
       .map(([name, v]) => ({ name, qty: v.qty, revenue: v.revenue }))
       .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+    // Mais lucrativos: por lucro (R$), só com custo conhecido.
+    const topByMargin = [...prodMap.entries()]
+      .filter(([, v]) => v.costKnown && v.revenue > 0)
+      .map(([name, v]) => ({ name, profit: v.profit, marginPct: v.revenue > 0 ? (v.profit / v.revenue) * 100 : 0 }))
+      .sort((a, b) => b.profit - a.profit)
       .slice(0, 5);
 
     // Todas as semanas do mês de referência (inclui as futuras, ainda zeradas).
@@ -409,6 +424,8 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
       lucroLiquido,
       liquidoMes,
       productsWithoutCost,
+      capitalEmEstoque,
+      topByMargin,
       ticketMedio,
       orderCount: monthOrders.length,
       // Comparação mês anterior

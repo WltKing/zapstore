@@ -15,6 +15,7 @@ import {
   MessageSquare,
   AlertTriangle,
   Landmark,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 
@@ -284,6 +285,15 @@ export default async function DashboardPage({
                 tint={stats.lowStockCount > 0 ? "red" : "slate"}
               />
             )}
+            {has("products") && extras.capitalEmEstoque > 0 && (
+              <Card
+                title="Capital em estoque"
+                value={formatBrl(extras.capitalEmEstoque)}
+                hint="Dinheiro parado em mercadoria"
+                icon={Warehouse}
+                tint="slate"
+              />
+            )}
             {has("scheduling") && (
               <Card title="Agendamentos hoje" value={String(stats.todaysAppointments)} hint={`${stats.upcomingAppointments} agendados à frente`} icon={CalendarDays} tint="violet" />
             )}
@@ -337,10 +347,20 @@ export default async function DashboardPage({
             </div>
           </section>
 
-          {has("products") && extras.topProducts.length > 0 && (
-            <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Top produtos do mês</h2>
-              <HBars data={extras.topProducts.map((p) => ({ label: p.name, value: p.revenue, suffix: `${p.qty} un.` }))} />
+          {has("products") && (extras.topProducts.length > 0 || extras.topByMargin.length > 0) && (
+            <section className="mt-8 grid gap-4 lg:grid-cols-2">
+              {extras.topProducts.length > 0 && (
+                <div className="rounded-2xl bg-white p-6 shadow-card">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Top produtos (faturamento)</h2>
+                  <HBars data={extras.topProducts.map((p) => ({ label: p.name, value: p.revenue, suffix: `${p.qty} un.` }))} />
+                </div>
+              )}
+              {extras.topByMargin.length > 0 && (
+                <div className="rounded-2xl bg-white p-6 shadow-card">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Produtos mais lucrativos</h2>
+                  <HBars data={extras.topByMargin.map((p) => ({ label: p.name, value: p.profit, suffix: `${p.marginPct.toFixed(0)}% margem` }))} />
+                </div>
+              )}
             </section>
           )}
 
