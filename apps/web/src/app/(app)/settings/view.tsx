@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { updateStoreSettingsAction, updateModulesAction } from "@/lib/actions/settings";
 import { ImageUpload } from "@/components/image-upload";
 import type { CardFees } from "@/lib/fees";
+import { CREDIT_MODE_LABELS, type CreditMode, type SettlementConfig } from "@/lib/settlement";
 import {
   configurableModules,
   isCoreModule,
@@ -24,6 +25,7 @@ export function SettingsView({
   defaultMarginPct,
   roundTo90,
   cardFees,
+  settlement,
   taxEstimatePct,
   nicheLabel,
   niche,
@@ -39,6 +41,7 @@ export function SettingsView({
   defaultMarginPct: number | null;
   roundTo90: boolean;
   cardFees: CardFees;
+  settlement: SettlementConfig;
   taxEstimatePct: number | null;
   nicheLabel: string;
   niche: string;
@@ -55,6 +58,15 @@ export function SettingsView({
   const [margin, setMargin] = useState(defaultMarginPct != null ? String(defaultMarginPct) : "");
   const [round90, setRound90] = useState(roundTo90);
   const [taxEst, setTaxEst] = useState(taxEstimatePct != null ? String(taxEstimatePct) : "");
+  // Repasse da maquininha (quando o dinheiro cai) + antecipação.
+  const [pixDays, setPixDays] = useState(String(settlement.pixDays));
+  const [debitDays, setDebitDays] = useState(String(settlement.debitDays));
+  const [creditMode, setCreditMode] = useState<CreditMode>(settlement.creditMode);
+  const [creditAdvanceDays, setCreditAdvanceDays] = useState(String(settlement.creditAdvanceDays));
+  const [boletoDays, setBoletoDays] = useState(String(settlement.boletoDays));
+  const [anticipationFee, setAnticipationFee] = useState(
+    settlement.anticipationFeePct ? String(settlement.anticipationFeePct) : "",
+  );
   // Taxas: pix/débito como string; crédito como lista editável de {n, fee}.
   const [pixFee, setPixFee] = useState(cardFees.pix ? String(cardFees.pix) : "");
   const [debitFee, setDebitFee] = useState(cardFees.debit ? String(cardFees.debit) : "");
@@ -96,6 +108,14 @@ export function SettingsView({
             .map((r) => ({ n: Number(r.n), fee: Number(r.fee) })),
         },
         taxEstimatePct: taxEst.trim() === "" ? null : Number(taxEst),
+        settlement: {
+          pixDays: Number(pixDays) || 0,
+          debitDays: Number(debitDays) || 0,
+          creditMode,
+          creditAdvanceDays: Number(creditAdvanceDays) || 0,
+          boletoDays: Number(boletoDays) || 0,
+          anticipationFeePct: anticipationFee.trim() === "" ? 0 : Number(anticipationFee),
+        },
       });
       if (!res.ok) setError(res.error ?? "Erro");
       else {
@@ -349,6 +369,67 @@ export function SettingsView({
               className={inputClass}
             />
             <p className="mt-1 text-xs text-neutral-400">Sobre vendas com nota (NFC-e/NF-e).</p>
+          </div>
+        </section>
+
+        {/* Recebimento (maquininha) */}
+        <section className="rounded-2xl bg-white p-6 shadow-card">
+          <h2 className="font-semibold">Recebimento (maquininha)</h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            Quando o dinheiro de cada forma cai na sua conta. O sistema usa isso pra calcular o{" "}
+            <strong>valor a receber</strong> (líquido) no painel.
+          </p>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700">Pix cai em (dias)</label>
+              <input type="number" min="0" step="1" value={pixDays} onChange={(e) => setPixDays(e.target.value)} className={inputClass} />
+              <p className="mt-1 text-xs text-neutral-400">0 = na hora</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700">Débito cai em (dias)</label>
+              <input type="number" min="0" step="1" value={debitDays} onChange={(e) => setDebitDays(e.target.value)} className={inputClass} />
+              <p className="mt-1 text-xs text-neutral-400">ex: 1 = D+1</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700">Boleto cai em (dias)</label>
+              <input type="number" min="0" step="1" value={boletoDays} onChange={(e) => setBoletoDays(e.target.value)} className={inputClass} />
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-neutral-200 p-4">
+            <label className="block text-sm font-medium text-neutral-700">Crédito — como sua maquininha repassa</label>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <select
+                value={creditMode}
+                onChange={(e) => setCreditMode(e.target.value as CreditMode)}
+                className={inputClass}
+              >
+                {(Object.keys(CREDIT_MODE_LABELS) as CreditMode[]).map((m) => (
+                  <option key={m} value={m}>
+                    {CREDIT_MODE_LABELS[m]}
+                  </option>
+                ))}
+              </select>
+              {creditMode === "advance" && (
+                <div>
+                  <label className="block text-xs text-neutral-500">Cai em (dias) — D+x</label>
+                  <input type="number" min="0" step="1" value={creditAdvanceDays} onChange={(e) => setCreditAdvanceDays(e.target.value)} className={inputClass} />
+                </div>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-neutral-400">
+              <strong>Por parcela</strong>: cada parcela cai a cada 30 dias. <strong>Antecipado</strong>: tudo de uma vez em
+              D+x. <strong>Na hora</strong>: D+0.
+            </p>
+          </div>
+
+          <div className="mt-4 max-w-xs">
+            <label className="block text-sm font-medium text-neutral-700">Taxa de antecipação (%)</label>
+            <input type="number" min="0" max="100" step="0.01" value={anticipationFee} onChange={(e) => setAnticipationFee(e.target.value)} placeholder="ex: 2" className={inputClass} />
+            <p className="mt-1 text-xs text-neutral-400">
+              Custo pra antecipar o que está a receber. O painel mostra quanto cairia se antecipar.
+            </p>
           </div>
         </section>
 

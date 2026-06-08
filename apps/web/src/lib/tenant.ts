@@ -1,5 +1,6 @@
 import { prisma, withTenant } from "@zapstore/db";
 import { parseCardFees, feePctForOrder, hasAnyFee } from "@/lib/fees";
+import { parseSettlement, summarizeReceivables } from "@/lib/settlement";
 
 /** Retorna a primeira loja do usuario (com botConfig+subscription), ou null. */
 export async function getPrimaryTenantForUser(userId: string) {
@@ -138,6 +139,38 @@ export async function getTenantStats(tenantId: string) {
     messagesUsedThisMonth: usage._sum.messageCount ?? 0,
     costBrlThisMonth: Number(usage._sum.costBrl ?? 0),
   };
+}
+
+/** "A receber" (líquido) com base no repasse da maquininha + antecipação. */
+export async function getReceivables(tenantId: string) {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { cardFees: true, settlement: true },
+  });
+  const cardFees = parseCardFees(tenant?.cardFees);
+  const cfg = parseSettlement(tenant?.settlement);
+
+  // Vendas dos últimos 13 meses cobrem parcelas de crédito ainda a cair (até 12x).
+  const since = new Date();
+  since.setMonth(since.getMonth() - 13);
+
+  const sales = await withTenant(tenantId, (tx) =>
+    tx.order.findMany({
+      where: { status: { not: "CANCELED" }, createdAt: { gte: since } },
+      select: { totalBrl: true, paymentMethod: true, installments: true, createdAt: true },
+    }),
+  );
+
+  return summarizeReceivables(
+    sales.map((s) => ({
+      totalBrl: Number(s.totalBrl),
+      paymentMethod: s.paymentMethod,
+      installments: s.installments,
+      createdAt: s.createdAt,
+    })),
+    cfg,
+    cardFees,
+  );
 }
 
 interface OrderItemJson {

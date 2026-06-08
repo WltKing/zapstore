@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { prisma } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { parseCardFees, type CardFees } from "@/lib/fees";
+import { parseSettlement, type SettlementConfig } from "@/lib/settlement";
 import { sanitizeModules } from "@/lib/modules";
 
 async function requireTenantId(): Promise<string> {
@@ -33,6 +34,7 @@ export interface StoreSettingsInput {
   defaultMarginPct?: number | null;
   roundTo90?: boolean;
   cardFees?: CardFees | null;
+  settlement?: SettlementConfig | null;
   taxEstimatePct?: number | null;
 }
 
@@ -72,6 +74,9 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
       }
     }
 
+    // Repasse da maquininha (quando o dinheiro cai) — normalizado.
+    const settlement = input.settlement ? parseSettlement(input.settlement) : null;
+
     // tenants é tabela global (sem RLS); atualizamos só a loja do próprio usuário.
     await prisma.tenant.update({
       where: { id: tenantId },
@@ -85,6 +90,7 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
         defaultMarginPct: margin,
         roundTo90: input.roundTo90 ?? false,
         cardFees: fees ? (JSON.parse(JSON.stringify(fees)) as object) : undefined,
+        settlement: settlement ? (JSON.parse(JSON.stringify(settlement)) as object) : undefined,
         taxEstimatePct: taxEst,
       },
     });

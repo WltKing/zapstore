@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras } from "@/lib/tenant";
+import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras, getReceivables } from "@/lib/tenant";
 import { NICHE_TEMPLATES } from "@/lib/niches";
 import { Donut, withColors } from "@/components/donut";
 import {
@@ -13,6 +13,7 @@ import {
   CalendarDays,
   MessageSquare,
   AlertTriangle,
+  Landmark,
   type LucideIcon,
 } from "lucide-react";
 
@@ -66,8 +67,11 @@ export default async function DashboardPage() {
     );
   }
 
-  const stats = await getTenantStats(tenant.id);
-  const extras = await getDashboardExtras(tenant.id);
+  const [stats, extras, receivables] = await Promise.all([
+    getTenantStats(tenant.id),
+    getDashboardExtras(tenant.id),
+    getReceivables(tenant.id),
+  ]);
 
   const modules = tenant.enabledModules ?? [];
   const has = (m: string) => modules.includes(m);
@@ -189,6 +193,45 @@ export default async function DashboardPage() {
         )}
         <Card title="Mensagens este mês" value={`${used.toLocaleString("pt-BR")} / ${quota.toLocaleString("pt-BR")}`} hint={`${pct}% do plano`} progress={pct} icon={MessageSquare} tint="blue" />
       </section>
+
+      {/* A receber (maquininha) */}
+      {receivables.total > 0 && (
+        <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">A receber (maquininha)</h2>
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+              <Landmark className="h-[18px] w-[18px]" strokeWidth={2} />
+            </span>
+          </div>
+          <div className="mt-3 grid gap-4 sm:grid-cols-3">
+            <div>
+              <div className="text-2xl font-bold text-neutral-900">{formatBrl(receivables.total)}</div>
+              <div className="text-xs text-neutral-500">líquido, ainda a cair</div>
+            </div>
+            <div>
+              <div className="text-lg font-semibold">{formatBrl(receivables.next7)}</div>
+              <div className="text-xs text-neutral-500">próximos 7 dias</div>
+            </div>
+            <div>
+              <div className="text-lg font-semibold">{formatBrl(receivables.next30)}</div>
+              <div className="text-xs text-neutral-500">próximos 30 dias</div>
+            </div>
+          </div>
+          {receivables.anticipationFeePct > 0 && (
+            <div className="mt-4 rounded-xl bg-neutral-50 p-3 text-sm">
+              Se antecipar tudo hoje:{" "}
+              <strong className="text-emerald-700">{formatBrl(receivables.anticipatedNet)}</strong>{" "}
+              <span className="text-neutral-500">
+                (custo {formatBrl(receivables.anticipationCost)} · {receivables.anticipationFeePct.toFixed(2).replace(/\.?0+$/, "")}%)
+              </span>
+            </div>
+          )}
+          <p className="mt-2 text-xs text-neutral-400">
+            Calculado pelo repasse configurado em{" "}
+            <a href="/settings" className="underline">Configurações → Recebimento</a>.
+          </p>
+        </section>
+      )}
 
       {/* Tendência: vendas 14 dias + semanas do mês */}
       <section className="mt-8 grid gap-4 lg:grid-cols-2">

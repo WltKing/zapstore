@@ -35,6 +35,7 @@ model Tenant {
   roundTo90   Boolean  @default(false) // arredondar preço sugerido p/ terminar em ,90
   cardFeePct  Decimal? @db.Decimal(5, 2) // DEPRECADO (substituído por cardFees); mantido p/ compat
   cardFees    Json?    // taxas: { pix, debit, credit: [{n, fee}] } — % por forma/parcela
+  settlement  Json?    // repasse da maquininha: { pixDays, debitDays, creditMode, creditAdvanceDays, boletoDays, anticipationFeePct }
   taxEstimatePct Decimal? @db.Decimal(5, 2) // imposto estimado sobre vendas com nota (% p/ caixa)
   status      TenantStatus @default(TRIAL)
   createdAt   DateTime @default(now())

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
 import { NICHE_TEMPLATES } from "@/lib/niches";
 import { parseCardFees, emptyCardFees } from "@/lib/fees";
+import { parseSettlement } from "@/lib/settlement";
 import { SettingsView } from "./view";
 
 export default async function SettingsPage() {
@@ -27,6 +28,7 @@ export default async function SettingsPage() {
       defaultMarginPct={tenant.defaultMarginPct != null ? Number(tenant.defaultMarginPct) : null}
       roundTo90={tenant.roundTo90}
       cardFees={parseCardFees(tenant.cardFees) ?? emptyCardFees()}
+      settlement={parseSettlement(tenant.settlement)}
       taxEstimatePct={tenant.taxEstimatePct != null ? Number(tenant.taxEstimatePct) : null}
       nicheLabel={nicheLabel}
       niche={tenant.niche ?? "generico"}
