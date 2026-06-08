@@ -76,14 +76,18 @@ export interface SaleForSettlement {
   paymentMethod: string | null;
   installments: number;
   createdAt: Date;
+  cardAnticipatedAt?: Date | null; // se antecipada, eventos futuros caem nesta data
+  cardAnticipationFeePct?: number | null; // taxa aplicada na antecipação
 }
 
-/** Eventos de recebimento (data + líquido após taxa) de uma venda. */
-export function settlementEvents(
-  sale: SaleForSettlement,
-  cfg: SettlementConfig,
-  fees: CardFees | null,
-): { date: Date; net: number }[] {
+export interface SettlementEvent {
+  date: Date;
+  net: number;
+  anticipated?: boolean;
+}
+
+/** Eventos "naturais" (sem antecipação): data + líquido após taxa de cartão. */
+function naturalEvents(sale: SaleForSettlement, cfg: SettlementConfig, fees: CardFees | null): SettlementEvent[] {
   const total = sale.totalBrl;
   const sale0 = sale.createdAt;
   const kind = kindOf(sale.paymentMethod);
@@ -102,6 +106,26 @@ export function settlementEvents(
   const n = sale.installments > 0 ? sale.installments : 1;
   const per = net / n;
   return Array.from({ length: n }, (_, i) => ({ date: addMonths(sale0, i + 1), net: per }));
+}
+
+/** Eventos de recebimento. Se a venda foi antecipada, os eventos posteriores à data
+ * da antecipação viram UM evento nessa data, já com a taxa de antecipação descontada. */
+export function settlementEvents(
+  sale: SaleForSettlement,
+  cfg: SettlementConfig,
+  fees: CardFees | null,
+): SettlementEvent[] {
+  const evs = naturalEvents(sale, cfg, fees);
+  const at = sale.cardAnticipatedAt;
+  if (!at) return evs;
+  const fee = sale.cardAnticipationFeePct ?? 0;
+  const past = evs.filter((e) => e.date <= at);
+  const future = evs.filter((e) => e.date > at);
+  if (future.length > 0) {
+    const net = future.reduce((s, e) => s + e.net, 0) * (1 - fee / 100);
+    past.push({ date: at, net, anticipated: true });
+  }
+  return past;
 }
 
 export interface ReceivablesSummary {

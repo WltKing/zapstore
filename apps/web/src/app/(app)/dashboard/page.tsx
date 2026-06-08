@@ -192,7 +192,7 @@ export default async function DashboardPage() {
               <div className="text-xs text-neutral-500">próximos 30 dias</div>
             </div>
           </div>
-          <AnticipationCalc total={receivables.total} next30={receivables.next30} />
+          <AnticipationCalc total={receivables.total} />
           <p className="mt-2 text-xs text-neutral-400">
             Calculado pelo repasse configurado em{" "}
             <a href="/settings" className="underline">Configurações → Recebimento</a>.

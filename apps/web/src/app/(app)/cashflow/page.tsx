@@ -70,6 +70,8 @@ export default async function CashflowPage({
           installments: true,
           paymentMethod: true,
           invoiceType: true,
+          cardAnticipatedAt: true,
+          cardAnticipationFeePct: true,
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -101,6 +103,8 @@ export default async function CashflowPage({
       paymentMethod: o.paymentMethod,
       installments: o.installments,
       createdAt: o.createdAt,
+      cardAnticipatedAt: o.cardAnticipatedAt,
+      cardAnticipationFeePct: o.cardAnticipationFeePct != null ? Number(o.cardAnticipationFeePct) : null,
     };
     const events = settlementEvents(sale, cfg, cardFees);
     events.forEach((ev, idx) => {
@@ -113,10 +117,12 @@ export default async function CashflowPage({
         recebidoMes += ev.net;
         const i = Math.floor((ev.date.getTime() - start.getTime()) / dayMs);
         if (i >= 0 && i < days) chart[i].entradas += ev.net;
-        const parc = events.length > 1 ? ` (parc. ${idx + 1}/${events.length})` : "";
+        const parc = !ev.anticipated && events.length > 1 ? ` (parc. ${idx + 1}/${events.length})` : "";
         inMovements.push({
           date: ev.date.toISOString(),
-          label: `Pedido #${o.orderNumber} — ${o.customerName}${parc}`,
+          label: ev.anticipated
+            ? `Antecipação — Pedido #${o.orderNumber} — ${o.customerName}`
+            : `Pedido #${o.orderNumber} — ${o.customerName}${parc}`,
           amountBrl: ev.net,
           kind: "in",
         });

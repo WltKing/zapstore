@@ -157,7 +157,14 @@ export async function getReceivables(tenantId: string) {
   const sales = await withTenant(tenantId, (tx) =>
     tx.order.findMany({
       where: { status: { not: "CANCELED" }, createdAt: { gte: since } },
-      select: { totalBrl: true, paymentMethod: true, installments: true, createdAt: true },
+      select: {
+        totalBrl: true,
+        paymentMethod: true,
+        installments: true,
+        createdAt: true,
+        cardAnticipatedAt: true,
+        cardAnticipationFeePct: true,
+      },
     }),
   );
 
@@ -167,6 +174,8 @@ export async function getReceivables(tenantId: string) {
       paymentMethod: s.paymentMethod,
       installments: s.installments,
       createdAt: s.createdAt,
+      cardAnticipatedAt: s.cardAnticipatedAt,
+      cardAnticipationFeePct: s.cardAnticipationFeePct != null ? Number(s.cardAnticipationFeePct) : null,
     })),
     cfg,
     cardFees,
