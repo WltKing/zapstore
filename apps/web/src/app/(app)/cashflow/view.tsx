@@ -10,7 +10,7 @@ export interface Movement {
 
 export interface DayPoint {
   label: string; // dia do mês ("01".."31")
-  vendas: number;
+  entradas: number;
   despesas: number;
 }
 
@@ -30,17 +30,12 @@ export function CashflowView({
   monthKey,
   prevMonth,
   nextMonth,
-  vendidoHoje,
   recebidoHoje,
-  aReceberAberto,
-  vendidoMes,
-  aReceberMes,
+  aReceberFuturo,
+  recebidoMes,
   despesasMes,
-  taxaMaquininha,
-  impostoEstimado,
-  entradaLiquida,
   resultado,
-  hasCardFee,
+  impostoProvisao,
   hasTax,
   chart,
   movements,
@@ -49,17 +44,12 @@ export function CashflowView({
   monthKey: string;
   prevMonth: string;
   nextMonth: string;
-  vendidoHoje: number;
   recebidoHoje: number;
-  aReceberAberto: number;
-  vendidoMes: number;
-  aReceberMes: number;
+  aReceberFuturo: number;
+  recebidoMes: number;
   despesasMes: number;
-  taxaMaquininha: number;
-  impostoEstimado: number;
-  entradaLiquida: number;
   resultado: number;
-  hasCardFee: boolean;
+  impostoProvisao: number;
   hasTax: boolean;
   chart: DayPoint[];
   movements: Movement[];
@@ -70,32 +60,29 @@ export function CashflowView({
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Caixa</h1>
+          <p className="mt-1 text-xs text-neutral-400">Dinheiro de verdade — conta quando ele cai na conta (já sem a taxa do cartão).</p>
         </div>
         <div className="flex gap-2">
           <CaixaPdfButton
             storeName={storeName}
             periodLabel={monthLabel(monthKey)}
-            vendidoMes={vendidoMes}
+            recebidoMes={recebidoMes}
             despesasMes={despesasMes}
-            taxaMaquininha={taxaMaquininha}
-            impostoEstimado={impostoEstimado}
-            entradaLiquida={entradaLiquida}
             resultado={resultado}
-            aReceberMes={aReceberMes}
+            aReceberFuturo={aReceberFuturo}
             movements={movements}
           />
         </div>
       </header>
 
-      {/* Hoje + a receber em aberto */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        <MiniCard title="Vendido hoje" value={formatBrl(vendidoHoje)} tone="neutral" />
-        <MiniCard title="Recebido hoje" value={formatBrl(recebidoHoje)} tone="green" />
+      {/* Hoje + a receber */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <MiniCard title="Caiu hoje" value={formatBrl(recebidoHoje)} tone="green" hint="Dinheiro que entrou hoje" />
         <MiniCard
-          title="A receber (em aberto)"
-          value={formatBrl(aReceberAberto)}
+          title="A receber (futuro)"
+          value={formatBrl(aReceberFuturo)}
           tone="amber"
-          hint="Todos os pedidos marcados como a receber"
+          hint="Líquido que ainda vai cair pelo repasse da maquininha"
         />
       </div>
 
@@ -106,63 +93,38 @@ export function CashflowView({
       </div>
 
       {/* Resumo do mês */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MiniCard title="Vendido no mês" value={formatBrl(vendidoMes)} tone="neutral" />
-        <MiniCard title="Despesas" value={formatBrl(despesasMes)} tone="red" />
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <MiniCard title="Entrou no mês" value={formatBrl(recebidoMes)} tone="green" hint="Recebimentos que caíram no mês" />
+        <MiniCard title="Saiu no mês" value={formatBrl(despesasMes)} tone="red" hint="Despesas pagas" />
         <MiniCard
-          title="Entrada líquida"
-          value={formatBrl(entradaLiquida)}
-          tone="neutral"
-          hint="Vendas − taxas − imposto"
-        />
-        <MiniCard
-          title="Resultado"
+          title="Resultado de caixa"
           value={formatBrl(resultado)}
           tone={resultado >= 0 ? "green" : "red"}
-          hint="Entrada líquida − despesas"
+          hint="Entrou − saiu"
         />
       </div>
 
-      {/* Deduções */}
-      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 rounded-xl bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
-        <span>
-          A receber no mês: <strong>{formatBrl(aReceberMes)}</strong>
-        </span>
-        <span>
-          Taxa maquininha:{" "}
-          <strong>{hasCardFee ? `− ${formatBrl(taxaMaquininha)}` : "não configurada"}</strong>
-        </span>
-        <span>
-          Imposto estimado:{" "}
-          <strong>{hasTax ? `− ${formatBrl(impostoEstimado)}` : "não configurado"}</strong>
-        </span>
-      </div>
-      {(!hasCardFee || !hasTax) && (
-        <p className="mt-2 text-xs text-neutral-400">
-          Configure a taxa da maquininha e o imposto estimado em{" "}
-          <a href="/settings" className="underline">
-            Configurações → Financeiro
-          </a>{" "}
-          pro líquido ficar completo.
+      {hasTax && impostoProvisao > 0 && (
+        <p className="mt-3 rounded-xl bg-neutral-50 px-4 py-3 text-xs text-neutral-500">
+          Provisão de imposto sobre o que foi vendido com nota neste mês:{" "}
+          <strong>{formatBrl(impostoProvisao)}</strong> — não entra no caixa agora; lance como despesa quando pagar o DAS.
         </p>
       )}
 
-      {/* Gráfico vendas x despesas */}
+      {/* Gráfico entradas x despesas */}
       <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-            Vendas × Despesas no mês
-          </h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Entrou × Saiu no mês</h2>
           <div className="flex gap-4 text-xs text-neutral-500">
             <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" /> Vendas
+              <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" /> Entrou
             </span>
             <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-full bg-red-400" /> Despesas
+              <span className="inline-block h-2 w-2 rounded-full bg-red-400" /> Saiu
             </span>
           </div>
         </div>
-        <VendasDespesasChart data={chart} />
+        <EntrouSaiuChart data={chart} />
       </section>
 
       {/* Movimentos */}
@@ -177,9 +139,7 @@ export function CashflowView({
                   <span className="font-mono text-xs text-neutral-500">{fmtDate(m.date)}</span>
                   <span className="text-sm">{m.label}</span>
                 </div>
-                <span
-                  className={`text-sm font-medium ${m.kind === "in" ? "text-emerald-700" : "text-red-700"}`}
-                >
+                <span className={`text-sm font-medium ${m.kind === "in" ? "text-emerald-700" : "text-red-700"}`}>
                   {m.kind === "in" ? "+" : "−"} {formatBrl(Math.abs(m.amountBrl))}
                 </span>
               </li>
@@ -219,9 +179,9 @@ function MiniCard({
   );
 }
 
-function VendasDespesasChart({ data }: { data: DayPoint[] }) {
-  const max = Math.max(...data.map((d) => Math.max(d.vendas, d.despesas)), 1);
-  const hasData = data.some((d) => d.vendas > 0 || d.despesas > 0);
+function EntrouSaiuChart({ data }: { data: DayPoint[] }) {
+  const max = Math.max(...data.map((d) => Math.max(d.entradas, d.despesas)), 1);
+  const hasData = data.some((d) => d.entradas > 0 || d.despesas > 0);
   return (
     <div className="mt-4">
       <div className="flex h-40 items-end gap-1">
@@ -229,11 +189,11 @@ function VendasDespesasChart({ data }: { data: DayPoint[] }) {
           <div
             key={i}
             className="flex flex-1 items-end justify-center gap-0.5"
-            title={`Dia ${d.label} — Vendas ${formatBrl(d.vendas)} · Despesas ${formatBrl(d.despesas)}`}
+            title={`Dia ${d.label} — Entrou ${formatBrl(d.entradas)} · Saiu ${formatBrl(d.despesas)}`}
           >
             <div
               className="w-1/2 rounded-t bg-emerald-400"
-              style={{ height: `${(d.vendas / max) * 100}%`, minHeight: d.vendas > 0 ? "3px" : "0px" }}
+              style={{ height: `${(d.entradas / max) * 100}%`, minHeight: d.entradas > 0 ? "3px" : "0px" }}
             />
             <div
               className="w-1/2 rounded-t bg-red-400"
@@ -249,9 +209,7 @@ function VendasDespesasChart({ data }: { data: DayPoint[] }) {
           </div>
         ))}
       </div>
-      {!hasData && (
-        <p className="mt-3 text-center text-xs text-neutral-400">Sem movimento neste mês ainda.</p>
-      )}
+      {!hasData && <p className="mt-3 text-center text-xs text-neutral-400">Sem movimento neste mês ainda.</p>}
     </div>
   );
 }

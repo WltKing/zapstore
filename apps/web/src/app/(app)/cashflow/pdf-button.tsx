@@ -6,24 +6,18 @@ import type { Movement } from "./view";
 export function CaixaPdfButton({
   storeName,
   periodLabel,
-  vendidoMes,
+  recebidoMes,
   despesasMes,
-  taxaMaquininha,
-  impostoEstimado,
-  entradaLiquida,
   resultado,
-  aReceberMes,
+  aReceberFuturo,
   movements,
 }: {
   storeName: string;
   periodLabel: string;
-  vendidoMes: number;
+  recebidoMes: number;
   despesasMes: number;
-  taxaMaquininha: number;
-  impostoEstimado: number;
-  entradaLiquida: number;
   resultado: number;
-  aReceberMes: number;
+  aReceberFuturo: number;
   movements: Movement[];
 }) {
   const exportPdf = () => {
@@ -38,13 +32,10 @@ export function CaixaPdfButton({
       .join("");
     const body = `
       <div class="cards">
-        ${card("Vendido no mês", vendidoMes)}
-        ${card("Despesas", despesasMes)}
-        ${card("Taxa maquininha", taxaMaquininha)}
-        ${card("Imposto estimado", impostoEstimado)}
-        ${card("Entrada líquida", entradaLiquida)}
-        ${card("Resultado", resultado)}
-        ${card("A receber no mês", aReceberMes)}
+        ${card("Entrou no mês", recebidoMes)}
+        ${card("Saiu no mês", despesasMes)}
+        ${card("Resultado de caixa", resultado)}
+        ${card("A receber (futuro)", aReceberFuturo)}
       </div>
       <h2 style="font-size:13px;margin:18px 0 0">Movimentos</h2>
       <table>
