@@ -368,10 +368,11 @@ export async function getDashboardExtras(tenantId: string) {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
 
-    // Só mostra as semanas que já começaram (esconde as futuras, que ficariam zeradas).
-    const currentWeekIdx = Math.min(Math.floor((now.getDate() - 1) / 7), 4);
+    // Todas as semanas do mês (inclui as futuras, ainda zeradas).
+    const daysInMonthW = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const weeksInMonth = Math.ceil(daysInMonthW / 7);
     const weekly = weeklySales
-      .slice(0, currentWeekIdx + 1)
+      .slice(0, weeksInMonth)
       .map((total, i) => ({ label: `Sem ${i + 1}`, total }));
 
     // Evolução de 6 meses

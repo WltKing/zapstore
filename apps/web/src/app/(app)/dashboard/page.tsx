@@ -5,6 +5,7 @@ import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras, getReceiva
 import { NICHE_TEMPLATES } from "@/lib/niches";
 import { Donut, withColors } from "@/components/donut";
 import { AnticipationCalc } from "./anticipation-calc";
+import { AreaTrend, Bars, ProfitWaterfall, type WaterfallStep } from "./charts";
 import {
   TrendingUp,
   TrendingDown,
@@ -24,20 +25,11 @@ function formatBrl(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
-/** Versão curta pra rótulos de gráfico (R$ 2,7 mil). */
-function compactBrl(value: number): string {
-  const a = Math.abs(value);
-  if (a >= 1000) return `R$ ${(value / 1000).toFixed(1).replace(".", ",")} mil`;
-  return formatBrl(value);
-}
-
 /** Variação % vs período anterior. null quando não há base de comparação. */
 function pctChange(cur: number, prev: number): number | null {
   if (prev <= 0) return null;
   return ((cur - prev) / prev) * 100;
 }
-
-type WaterfallStep = { label: string; value: number; kind: "start" | "minus" | "total" };
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -165,7 +157,7 @@ export default async function DashboardPage() {
         {faturamento <= 0 ? (
           <p className="mt-4 text-sm text-neutral-400">Sem vendas neste mês ainda.</p>
         ) : (
-          <WaterfallChart steps={cascadeSteps} />
+          <ProfitWaterfall steps={cascadeSteps} />
         )}
         {has("products") && extras.productsWithoutCost > 0 && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-amber-700">
@@ -230,11 +222,11 @@ export default async function DashboardPage() {
       <section className="mt-8 grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl bg-white p-6 shadow-card">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Vendas (últimos 14 dias)</h2>
-          <SalesChart data={stats.salesByDay} />
+          <AreaTrend data={stats.salesByDay} />
         </div>
         <div className="rounded-2xl bg-white p-6 shadow-card">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Vendas por semana (mês atual)</h2>
-          <WeeklyChart data={extras.weekly} />
+          <Bars data={extras.weekly} />
         </div>
       </section>
 
@@ -287,7 +279,7 @@ export default async function DashboardPage() {
 
           <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Evolução mensal (6 meses)</h2>
-            <MonthlyChart data={extras.evolution} />
+            <Bars data={extras.evolution} color="#10b981" />
           </section>
         </>
       )}
@@ -384,74 +376,6 @@ function Delta({ value, inverted }: { value: number; inverted?: boolean }) {
   );
 }
 
-/** Gráfico de cascata (waterfall): faturamento desce pelas deduções até o lucro. */
-function WaterfallChart({ steps }: { steps: WaterfallStep[] }) {
-  const start = steps[0]?.value ?? 0;
-  const scaleMax = Math.max(start, ...steps.map((s) => Math.abs(s.value)), 1);
-
-  // Calcula topo/base de cada barra (em valor), acompanhando o acumulado.
-  let running = 0;
-  const bars = steps.map((s) => {
-    let top: number;
-    let bottom: number;
-    let color: string;
-    if (s.kind === "start") {
-      bottom = 0;
-      top = s.value;
-      running = s.value;
-      color = "#3b82f6"; // azul
-    } else if (s.kind === "total") {
-      bottom = 0;
-      top = s.value;
-      color = s.value >= 0 ? "#10b981" : "#ef4444"; // verde / vermelho
-    } else {
-      const amt = Math.abs(s.value);
-      top = running;
-      bottom = running - amt;
-      running = bottom;
-      color = "#fb7185"; // rosa/vermelho claro (dedução)
-    }
-    const hi = Math.max(top, bottom);
-    const lo = Math.min(top, bottom);
-    return {
-      label: s.label,
-      color,
-      valueLabel: (s.kind === "minus" ? "− " : "") + compactBrl(Math.abs(s.value)),
-      bottomPct: (lo / scaleMax) * 100,
-      heightPct: (Math.max(hi - lo, 0) / scaleMax) * 100,
-      topPct: (hi / scaleMax) * 100,
-    };
-  });
-
-  return (
-    <div className="mt-5">
-      <div className="flex h-56 items-end gap-2 sm:gap-4">
-        {bars.map((b, i) => (
-          <div key={i} className="relative h-full flex-1">
-            <div
-              className="absolute left-1/2 w-3/5 -translate-x-1/2 rounded-t"
-              style={{ bottom: `${b.bottomPct}%`, height: `${Math.max(b.heightPct, 0.8)}%`, backgroundColor: b.color }}
-            />
-            <div
-              className="absolute left-0 right-0 text-center text-[10px] font-medium text-neutral-600"
-              style={{ bottom: `calc(${b.topPct}% + 4px)` }}
-            >
-              {b.valueLabel}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-2 flex gap-2 sm:gap-4">
-        {bars.map((b, i) => (
-          <div key={i} className="flex-1 text-center text-[11px] text-neutral-500">
-            {b.label}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function Step({ done, href, title, desc }: { done: boolean; href: string; title: string; desc: string }) {
   return (
     <li>
@@ -510,75 +434,3 @@ function Breakdown({ title, rows }: { title: string; rows: { label: string; valu
   );
 }
 
-function MonthlyChart({ data }: { data: { label: string; total: number }[] }) {
-  const max = Math.max(...data.map((d) => d.total), 1);
-  const hasData = data.some((d) => d.total > 0);
-  return (
-    <div className="mt-4">
-      <div className="flex h-44 items-end gap-3">
-        {data.map((d, i) => (
-          <div key={i} className="flex flex-1 flex-col items-center justify-end" title={formatBrl(d.total)}>
-            <span className="mb-1 text-[10px] text-neutral-500">{d.total > 0 ? compactBrl(d.total) : ""}</span>
-            <div className="w-full rounded-t bg-emerald-400" style={{ height: `${(d.total / max) * 100}%`, minHeight: d.total > 0 ? "4px" : "0px" }} />
-            <span className="mt-1 text-[10px] text-neutral-400">{d.label}</span>
-          </div>
-        ))}
-      </div>
-      {!hasData && <p className="mt-3 text-center text-xs text-neutral-400">Sem vendas nos últimos meses ainda.</p>}
-    </div>
-  );
-}
-
-function WeeklyChart({ data }: { data: { label: string; total: number }[] }) {
-  const max = Math.max(...data.map((d) => d.total), 1);
-  const hasData = data.some((d) => d.total > 0);
-  return (
-    <div className="mt-4">
-      <div className="flex h-44 items-end gap-3">
-        {data.map((d, i) => (
-          <div key={i} className="flex flex-1 flex-col items-center justify-end" title={formatBrl(d.total)}>
-            <span className="mb-1 text-[10px] text-neutral-500">{d.total > 0 ? compactBrl(d.total) : ""}</span>
-            <div className="w-full rounded-t bg-brand" style={{ height: `${(d.total / max) * 100}%`, minHeight: d.total > 0 ? "4px" : "0px" }} />
-            <span className="mt-1 text-[10px] text-neutral-400">{d.label}</span>
-          </div>
-        ))}
-      </div>
-      {!hasData && <p className="mt-3 text-center text-xs text-neutral-400">Sem vendas neste mês ainda.</p>}
-    </div>
-  );
-}
-
-function SalesChart({ data }: { data: { label: string; total: number }[] }) {
-  const max = Math.max(...data.map((d) => d.total), 1);
-  const hasSales = data.some((d) => d.total > 0);
-  const W = 600;
-  const H = 160;
-  const pad = 12;
-  const n = data.length;
-  const xs = (i: number) => (n <= 1 ? W / 2 : (i / (n - 1)) * (W - 2 * pad) + pad);
-  const ys = (v: number) => H - pad - (v / max) * (H - 2 * pad);
-  const pts = data.map((d, i) => `${xs(i).toFixed(1)},${ys(d.total).toFixed(1)}`);
-  const line = pts.length ? `M ${pts.join(" L ")}` : "";
-  const area = pts.length ? `M ${xs(0)},${H} L ${pts.join(" L ")} L ${xs(n - 1)},${H} Z` : "";
-  return (
-    <div className="mt-4">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-44 w-full" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="salesfill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0.22" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {hasSales && <path d={area} fill="url(#salesfill)" />}
-        {hasSales && (
-          <path d={line} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-        )}
-      </svg>
-      <div className="mt-1 flex justify-between text-[10px] text-neutral-400">
-        <span>{data[0]?.label}</span>
-        <span>{data[data.length - 1]?.label}</span>
-      </div>
-      {!hasSales && <p className="mt-2 text-center text-xs text-neutral-400">Sem vendas nos últimos 14 dias ainda.</p>}
-    </div>
-  );
-}
