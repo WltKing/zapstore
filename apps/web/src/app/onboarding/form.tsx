@@ -6,19 +6,10 @@ import { NICHE_TEMPLATES, PAYMENT_METHOD_LABELS, type NicheId } from "@/lib/nich
 import {
   askModules,
   resolveEnabledModules,
+  defaultModuleAnswers,
   MODULE_QUESTIONS,
   type ModuleId,
 } from "@/lib/modules";
-
-function defaultModuleAnswers(nicheId: NicheId): Record<ModuleId, boolean> {
-  const tpl = NICHE_TEMPLATES[nicheId];
-  return {
-    products: true,
-    delivery: tpl.suggestsDelivery,
-    scheduling: tpl.acceptsScheduling,
-    fiscal: false,
-  };
-}
 
 const WEEKDAYS = [
   { id: "mon", label: "Seg" },

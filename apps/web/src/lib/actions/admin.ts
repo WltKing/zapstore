@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma, setPlatformSetting } from "@zapstore/db";
 import { getSuperAdminSession } from "@/lib/super-admin";
 import { PLATFORM_KEYS } from "@/lib/platform-keys";
-import { NICHE_TEMPLATES, type NicheId } from "@/lib/niches";
-import { sanitizeModules } from "@/lib/modules";
+import { NICHE_TEMPLATES } from "@/lib/niches";
+import { defaultEnabledModules } from "@/lib/modules";
 
 export interface ActionResult {
   ok: boolean;
@@ -44,14 +44,14 @@ export async function setTenantNicheAction(tenantId: string, niche: string): Pro
 
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { enabledModules: true },
+      select: { id: true },
     });
     if (!tenant) return { ok: false, error: "Loja não encontrada." };
 
-    const modules = sanitizeModules(niche as NicheId, tenant.enabledModules ?? []);
+    // Reseta pro layout padrão do nicho (não arrasta o estado anterior).
     await prisma.tenant.update({
       where: { id: tenantId },
-      data: { niche, enabledModules: modules },
+      data: { niche, enabledModules: defaultEnabledModules(niche) },
     });
 
     revalidatePath("/admin");

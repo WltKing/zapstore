@@ -10,7 +10,7 @@
 // Configurações (exceto o nicho, que é travado).
 
 import type { Area } from "@/lib/permissions";
-import type { NicheId } from "@/lib/niches";
+import { NICHE_TEMPLATES, type NicheId } from "@/lib/niches";
 
 export type ModuleId = "products" | "delivery" | "scheduling" | "fiscal";
 
@@ -103,6 +103,25 @@ export function isCoreModule(niche: string | null | undefined, m: ModuleId): boo
 export function resolveEnabledModules(niche: string | null | undefined, answeredYes: ModuleId[]): ModuleId[] {
   const cfg = nicheConfig(niche);
   return MODULE_IDS.filter((m) => cfg[m] === "core" || (cfg[m] === "ask" && answeredYes.includes(m)));
+}
+
+/** Resposta padrão de cada módulo "ask" pra um nicho (usado no cadastro e na troca de nicho). */
+export function defaultModuleAnswers(niche: string | null | undefined): Record<ModuleId, boolean> {
+  const tpl = NICHE_TEMPLATES[(niche as NicheId)] ?? NICHE_TEMPLATES.generico;
+  return {
+    products: true,
+    delivery: tpl.suggestsDelivery,
+    scheduling: tpl.acceptsScheduling,
+    fiscal: false,
+  };
+}
+
+/** Layout padrão do nicho: core + módulos "ask" com resposta padrão "sim".
+ * Usado quando o super-admin troca o nicho (reseta pro layout limpo daquele nicho). */
+export function defaultEnabledModules(niche: string | null | undefined): ModuleId[] {
+  const cfg = nicheConfig(niche);
+  const defaults = defaultModuleAnswers(niche);
+  return MODULE_IDS.filter((m) => cfg[m] === "core" || (cfg[m] === "ask" && defaults[m]));
 }
 
 /**
