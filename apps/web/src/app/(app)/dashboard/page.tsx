@@ -11,10 +11,8 @@ import {
   ShoppingCart,
   Package,
   CalendarDays,
-  Users,
   MessageSquare,
-  Tag,
-  Receipt,
+  AlertTriangle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,11 +22,20 @@ function formatBrl(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+/** Versão curta pra rótulos de gráfico (R$ 2,7 mil). */
+function compactBrl(value: number): string {
+  const a = Math.abs(value);
+  if (a >= 1000) return `R$ ${(value / 1000).toFixed(1).replace(".", ",")} mil`;
+  return formatBrl(value);
+}
+
 /** Variação % vs período anterior. null quando não há base de comparação. */
 function pctChange(cur: number, prev: number): number | null {
   if (prev <= 0) return null;
   return ((cur - prev) / prev) * 100;
 }
+
+type WaterfallStep = { label: string; value: number; kind: "start" | "minus" | "total" };
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -73,6 +80,16 @@ export default async function DashboardPage() {
   const lucro = extras.lucroLiquido;
   const faturamentoDelta = pctChange(faturamento, extras.prevBruto);
   const lucroDelta = pctChange(lucro, extras.prevLucro);
+  const despesasDelta = pctChange(extras.despesasMes, extras.prevDespesas);
+
+  const cascadeSteps: WaterfallStep[] = [
+    { label: "Faturamento", value: faturamento, kind: "start" },
+    ...(has("products") ? [{ label: "Custo (CMV)", value: -extras.cmvMes, kind: "minus" as const }] : []),
+    ...(extras.taxaMaquininha > 0 ? [{ label: "Taxa cartão", value: -extras.taxaMaquininha, kind: "minus" as const }] : []),
+    ...(extras.impostoEstimado > 0 ? [{ label: "Imposto", value: -extras.impostoEstimado, kind: "minus" as const }] : []),
+    ...(extras.despesasMes > 0 ? [{ label: "Despesas", value: -extras.despesasMes, kind: "minus" as const }] : []),
+    { label: "Lucro", value: lucro, kind: "total" },
+  ];
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
@@ -123,49 +140,32 @@ export default async function DashboardPage() {
             delta={lucroDelta}
           />
           <Card title="Ticket médio" value={formatBrl(extras.ticketMedio)} hint={`${extras.orderCount} venda(s) no mês`} icon={ShoppingCart} tint="violet" />
-          <Card title="Vendas no mês" value={String(extras.orderCount)} hint="Pedidos (sem cancelados)" icon={Receipt} tint="slate" />
+          <Card title="Despesas" value={formatBrl(extras.despesasMes)} hint="Gastos do mês" icon={TrendingDown} tint="red" delta={despesasDelta} deltaInverted />
         </div>
       </section>
 
-      {/* Cascata de lucro — pra onde foi o dinheiro */}
+      {/* Cascata de lucro — agora em gráfico */}
       <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-          Do faturamento ao lucro
-        </h2>
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Do faturamento ao lucro</h2>
+          {faturamento > 0 && (
+            <span className={`text-sm font-bold ${lucro >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+              {formatBrl(lucro)}
+              {has("products") && (
+                <span className="ml-1 text-xs font-normal text-neutral-400">margem {extras.margemPct.toFixed(0)}%</span>
+              )}
+            </span>
+          )}
+        </div>
         {faturamento <= 0 ? (
           <p className="mt-4 text-sm text-neutral-400">Sem vendas neste mês ainda.</p>
         ) : (
-          <div className="mt-4 space-y-1.5 text-sm">
-            <CascadeRow label="Faturamento bruto" value={faturamento} sign="+" strong />
-            {has("products") && (
-              <>
-                <CascadeRow
-                  label="Custo das mercadorias (CMV)"
-                  value={extras.cmvMes}
-                  sign="-"
-                  tag={extras.productsWithoutCost > 0 ? "estimado" : undefined}
-                />
-                <CascadeRow label="Lucro bruto" value={extras.lucroBruto} sign="=" strong note={`margem ${extras.margemPct.toFixed(0)}%`} />
-              </>
-            )}
-            {extras.taxaMaquininha > 0 && (
-              <CascadeRow label="Taxa de maquininha" value={extras.taxaMaquininha} sign="-" />
-            )}
-            {extras.impostoEstimado > 0 && (
-              <CascadeRow label="Imposto" value={extras.impostoEstimado} sign="-" tag="estimado" />
-            )}
-            {extras.despesasMes > 0 && (
-              <CascadeRow label="Despesas do mês" value={extras.despesasMes} sign="-" />
-            )}
-            <div className="!mt-3 border-t border-neutral-200 pt-3">
-              <CascadeRow label="Lucro líquido" value={lucro} sign="=" strong highlight />
-            </div>
-          </div>
+          <WaterfallChart steps={cascadeSteps} />
         )}
         {has("products") && extras.productsWithoutCost > 0 && (
-          <p className="mt-3 text-xs text-amber-700">
-            ⚠ {extras.productsWithoutCost} produto(s) sem custo cadastrado — o lucro pode estar
-            superestimado.{" "}
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-amber-700">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+            {extras.productsWithoutCost} produto(s) sem custo cadastrado — o lucro pode estar superestimado.{" "}
             <a href="/products" className="underline">Cadastrar custos →</a>
           </p>
         )}
@@ -174,15 +174,20 @@ export default async function DashboardPage() {
       {/* Cards operacionais (respeitam o nicho) */}
       <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card title="Vendas hoje" value={formatBrl(stats.salesTodayBrl)} hint={`Ticket médio ${stats.orderCount === 0 ? "—" : formatBrl(stats.avgTicketBrl)}`} icon={ShoppingCart} tint="blue" />
-        <Card title="Pedidos abertos" value={String(stats.openOrderCount)} hint={`${stats.orderCount} pedidos no total`} icon={Package} tint="amber" />
+        <Card title="Pedidos abertos" value={String(stats.openOrderCount)} hint="A confirmar / entregar" icon={Package} tint="amber" />
+        {has("products") && (
+          <Card
+            title="Estoque baixo"
+            value={String(stats.lowStockCount)}
+            hint="Produtos abaixo do limite"
+            icon={AlertTriangle}
+            tint={stats.lowStockCount > 0 ? "red" : "slate"}
+          />
+        )}
         {has("scheduling") && (
           <Card title="Agendamentos hoje" value={String(stats.todaysAppointments)} hint={`${stats.upcomingAppointments} agendados à frente`} icon={CalendarDays} tint="violet" />
         )}
-        <Card title="Clientes" value={String(stats.customerCount)} hint="Cadastrados na loja" icon={Users} tint="green" />
         <Card title="Mensagens este mês" value={`${used.toLocaleString("pt-BR")} / ${quota.toLocaleString("pt-BR")}`} hint={`${pct}% do plano`} progress={pct} icon={MessageSquare} tint="blue" />
-        {has("products") && (
-          <Card title="Produtos ativos" value={String(stats.activeProductCount)} hint={`${stats.productCount} no catálogo`} icon={Tag} tint="slate" />
-        )}
       </section>
 
       {/* Tendência: vendas 14 dias + semanas do mês */}
@@ -292,6 +297,7 @@ function Card({
   icon: Icon,
   tint = "slate",
   delta,
+  deltaInverted,
 }: {
   title: string;
   value: string;
@@ -301,6 +307,7 @@ function Card({
   icon?: LucideIcon;
   tint?: keyof typeof TINTS | string;
   delta?: number | null;
+  deltaInverted?: boolean;
 }) {
   return (
     <div className="rounded-2xl bg-white p-5 shadow-card">
@@ -322,67 +329,89 @@ function Card({
         </div>
       )}
       <div className="mt-1 flex items-center gap-2 text-xs text-neutral-500">
-        {delta != null && <Delta value={delta} />}
+        {delta != null && <Delta value={delta} inverted={deltaInverted} />}
         <span>{hint}</span>
       </div>
     </div>
   );
 }
 
-/** Badge de variação vs mês anterior. */
-function Delta({ value }: { value: number }) {
+/** Badge de variação vs mês anterior. inverted = subir é ruim (ex: despesas). */
+function Delta({ value, inverted }: { value: number; inverted?: boolean }) {
   const up = value >= 0;
+  const good = inverted ? !up : up;
   return (
-    <span className={`inline-flex items-center gap-0.5 font-medium ${up ? "text-emerald-600" : "text-red-600"}`}>
+    <span className={`inline-flex items-center gap-0.5 font-medium ${good ? "text-emerald-600" : "text-red-600"}`}>
       {up ? <TrendingUp className="h-3 w-3" strokeWidth={2.5} /> : <TrendingDown className="h-3 w-3" strokeWidth={2.5} />}
       {Math.abs(value).toFixed(0)}%
     </span>
   );
 }
 
-/** Uma linha da cascata de lucro. */
-function CascadeRow({
-  label,
-  value,
-  sign,
-  strong,
-  highlight,
-  note,
-  tag,
-}: {
-  label: string;
-  value: number;
-  sign: "+" | "-" | "=";
-  strong?: boolean;
-  highlight?: boolean;
-  note?: string;
-  tag?: string;
-}) {
-  const valueStr = `${sign === "-" ? "− " : ""}${formatBrl(value)}`;
+/** Gráfico de cascata (waterfall): faturamento desce pelas deduções até o lucro. */
+function WaterfallChart({ steps }: { steps: WaterfallStep[] }) {
+  const start = steps[0]?.value ?? 0;
+  const scaleMax = Math.max(start, ...steps.map((s) => Math.abs(s.value)), 1);
+
+  // Calcula topo/base de cada barra (em valor), acompanhando o acumulado.
+  let running = 0;
+  const bars = steps.map((s) => {
+    let top: number;
+    let bottom: number;
+    let color: string;
+    if (s.kind === "start") {
+      bottom = 0;
+      top = s.value;
+      running = s.value;
+      color = "#3b82f6"; // azul
+    } else if (s.kind === "total") {
+      bottom = 0;
+      top = s.value;
+      color = s.value >= 0 ? "#10b981" : "#ef4444"; // verde / vermelho
+    } else {
+      const amt = Math.abs(s.value);
+      top = running;
+      bottom = running - amt;
+      running = bottom;
+      color = "#fb7185"; // rosa/vermelho claro (dedução)
+    }
+    const hi = Math.max(top, bottom);
+    const lo = Math.min(top, bottom);
+    return {
+      label: s.label,
+      color,
+      valueLabel: (s.kind === "minus" ? "− " : "") + compactBrl(Math.abs(s.value)),
+      bottomPct: (lo / scaleMax) * 100,
+      heightPct: (Math.max(hi - lo, 0) / scaleMax) * 100,
+      topPct: (hi / scaleMax) * 100,
+    };
+  });
+
   return (
-    <div className={`flex items-center justify-between ${highlight ? "text-base" : ""}`}>
-      <span className={`flex items-center gap-2 ${strong ? "font-semibold text-neutral-900" : "text-neutral-600"}`}>
-        {label}
-        {note && <span className="text-xs font-normal text-neutral-400">{note}</span>}
-        {tag && (
-          <span className="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
-            {tag}
-          </span>
-        )}
-      </span>
-      <span
-        className={`tabular-nums ${
-          highlight
-            ? value >= 0
-              ? "font-bold text-emerald-700"
-              : "font-bold text-red-700"
-            : strong
-              ? "font-semibold"
-              : "text-neutral-600"
-        }`}
-      >
-        {valueStr}
-      </span>
+    <div className="mt-5">
+      <div className="flex h-56 items-end gap-2 sm:gap-4">
+        {bars.map((b, i) => (
+          <div key={i} className="relative h-full flex-1">
+            <div
+              className="absolute left-1/2 w-3/5 -translate-x-1/2 rounded-t"
+              style={{ bottom: `${b.bottomPct}%`, height: `${Math.max(b.heightPct, 0.8)}%`, backgroundColor: b.color }}
+            />
+            <div
+              className="absolute left-0 right-0 text-center text-[10px] font-medium text-neutral-600"
+              style={{ bottom: `calc(${b.topPct}% + 4px)` }}
+            >
+              {b.valueLabel}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex gap-2 sm:gap-4">
+        {bars.map((b, i) => (
+          <div key={i} className="flex-1 text-center text-[11px] text-neutral-500">
+            {b.label}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -453,7 +482,7 @@ function MonthlyChart({ data }: { data: { label: string; total: number }[] }) {
       <div className="flex h-44 items-end gap-3">
         {data.map((d, i) => (
           <div key={i} className="flex flex-1 flex-col items-center justify-end" title={formatBrl(d.total)}>
-            <span className="mb-1 text-[10px] text-neutral-500">{d.total > 0 ? formatBrl(d.total) : ""}</span>
+            <span className="mb-1 text-[10px] text-neutral-500">{d.total > 0 ? compactBrl(d.total) : ""}</span>
             <div className="w-full rounded-t bg-emerald-400" style={{ height: `${(d.total / max) * 100}%`, minHeight: d.total > 0 ? "4px" : "0px" }} />
             <span className="mt-1 text-[10px] text-neutral-400">{d.label}</span>
           </div>
@@ -472,7 +501,7 @@ function WeeklyChart({ data }: { data: { label: string; total: number }[] }) {
       <div className="flex h-44 items-end gap-3">
         {data.map((d, i) => (
           <div key={i} className="flex flex-1 flex-col items-center justify-end" title={formatBrl(d.total)}>
-            <span className="mb-1 text-[10px] text-neutral-500">{d.total > 0 ? formatBrl(d.total) : ""}</span>
+            <span className="mb-1 text-[10px] text-neutral-500">{d.total > 0 ? compactBrl(d.total) : ""}</span>
             <div className="w-full rounded-t bg-brand" style={{ height: `${(d.total / max) * 100}%`, minHeight: d.total > 0 ? "4px" : "0px" }} />
             <span className="mt-1 text-[10px] text-neutral-400">{d.label}</span>
           </div>

@@ -335,7 +335,11 @@ export async function getDashboardExtras(tenantId: string) {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
 
-    const weekly = weeklySales.map((total, i) => ({ label: `Sem ${i + 1}`, total }));
+    // Só mostra as semanas que já começaram (esconde as futuras, que ficariam zeradas).
+    const currentWeekIdx = Math.min(Math.floor((now.getDate() - 1) / 7), 4);
+    const weekly = weeklySales
+      .slice(0, currentWeekIdx + 1)
+      .map((total, i) => ({ label: `Sem ${i + 1}`, total }));
 
     // Evolução de 6 meses
     const evolution = Array.from({ length: 6 }, (_, i) => {
@@ -370,6 +374,7 @@ export async function getDashboardExtras(tenantId: string) {
       // Comparação mês anterior
       prevBruto,
       prevLucro,
+      prevDespesas,
       // Projeção / semanas
       projectedSales,
       weekly,
