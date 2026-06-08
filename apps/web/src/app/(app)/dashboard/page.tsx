@@ -163,6 +163,7 @@ export default async function DashboardPage({
             tint={lucro >= 0 ? "green" : "red"}
             valueClass={lucro >= 0 ? "text-emerald-700" : "text-red-700"}
             delta={lucroDelta}
+            highlight
           />
           <Card title="Ticket médio" value={formatBrl(extras.ticketMedio)} hint={`${extras.orderCount} venda(s) no mês`} icon={ShoppingCart} tint="violet" />
           <Card title="Despesas" value={formatBrl(extras.despesasMes)} hint="Gastos do mês" icon={TrendingDown} tint="red" delta={despesasDelta} deltaInverted />
@@ -331,8 +332,9 @@ export default async function DashboardPage({
         </section>
       )}
 
-      {/* Tendência: vendas 14 dias (corrente) + semanas do mês */}
-      <section className={`mt-8 grid gap-4 ${isCurrentMonth ? "lg:grid-cols-2" : ""}`}>
+      {/* ===== Análise de vendas ===== */}
+      <SectionDivider>Análise de vendas</SectionDivider>
+      <section className={`mt-4 grid gap-4 ${isCurrentMonth ? "lg:grid-cols-2" : ""}`}>
         {isCurrentMonth && (
           <div className="rounded-2xl bg-white p-6 shadow-card">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Vendas (últimos 14 dias)</h2>
@@ -347,7 +349,7 @@ export default async function DashboardPage({
 
       {faturamento > 0 && (
         <>
-          <section className="mt-8 grid gap-4 lg:grid-cols-2">
+          <section className="mt-4 grid gap-4 lg:grid-cols-2">
             <div className="rounded-2xl bg-white p-6 shadow-card">
               <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">Vendas por canal</h2>
               <DonutChart
@@ -361,6 +363,37 @@ export default async function DashboardPage({
               <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">Formas de pagamento</h2>
               <DonutChart data={extras.byPayment.map((p) => ({ label: p.method, value: p.total }))} />
             </div>
+          </section>
+
+          <section className="mt-4 rounded-2xl bg-white p-6 shadow-card">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Evolução mensal (6 meses)</h2>
+            <Bars data={extras.evolution} color="#10b981" />
+          </section>
+
+          {/* ===== Produtos ===== */}
+          {has("products") && (extras.topProducts.length > 0 || extras.topByMargin.length > 0) && (
+            <>
+              <SectionDivider>Produtos</SectionDivider>
+              <section className="mt-4 grid gap-4 lg:grid-cols-2">
+                {extras.topProducts.length > 0 && (
+                  <div className="rounded-2xl bg-white p-6 shadow-card">
+                    <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Top produtos (faturamento)</h2>
+                    <HBars data={extras.topProducts.map((p) => ({ label: p.name, value: p.revenue, suffix: `${p.qty} un.` }))} />
+                  </div>
+                )}
+                {extras.topByMargin.length > 0 && (
+                  <div className="rounded-2xl bg-white p-6 shadow-card">
+                    <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Produtos mais lucrativos</h2>
+                    <HBars data={extras.topByMargin.map((p) => ({ label: p.name, value: p.profit, suffix: `${p.marginPct.toFixed(0)}% margem` }))} />
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+
+          {/* ===== Vendedores e parcelamento ===== */}
+          <SectionDivider>Vendedores e parcelamento</SectionDivider>
+          <section className="mt-4 grid gap-4 lg:grid-cols-2">
             <div className="rounded-2xl bg-white p-6 shadow-card">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Por vendedor</h2>
               <HBars data={extras.bySeller.map((s) => ({ label: /^bot$/i.test(s.name) ? `🤖 ${s.name}` : s.name, value: s.total }))} />
@@ -375,28 +408,6 @@ export default async function DashboardPage({
                 }))}
               />
             </div>
-          </section>
-
-          {has("products") && (extras.topProducts.length > 0 || extras.topByMargin.length > 0) && (
-            <section className="mt-8 grid gap-4 lg:grid-cols-2">
-              {extras.topProducts.length > 0 && (
-                <div className="rounded-2xl bg-white p-6 shadow-card">
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Top produtos (faturamento)</h2>
-                  <HBars data={extras.topProducts.map((p) => ({ label: p.name, value: p.revenue, suffix: `${p.qty} un.` }))} />
-                </div>
-              )}
-              {extras.topByMargin.length > 0 && (
-                <div className="rounded-2xl bg-white p-6 shadow-card">
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Produtos mais lucrativos</h2>
-                  <HBars data={extras.topByMargin.map((p) => ({ label: p.name, value: p.profit, suffix: `${p.marginPct.toFixed(0)}% margem` }))} />
-                </div>
-              )}
-            </section>
-          )}
-
-          <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Evolução mensal (6 meses)</h2>
-            <Bars data={extras.evolution} color="#10b981" />
           </section>
         </>
       )}
@@ -471,6 +482,7 @@ function Card({
   tint = "slate",
   delta,
   deltaInverted,
+  highlight,
 }: {
   title: string;
   value: string;
@@ -481,9 +493,10 @@ function Card({
   tint?: keyof typeof TINTS | string;
   delta?: number | null;
   deltaInverted?: boolean;
+  highlight?: boolean;
 }) {
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-card">
+    <div className={`rounded-2xl bg-white p-5 shadow-card ${highlight ? "ring-2 ring-emerald-200" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
         {Icon && (
@@ -492,7 +505,7 @@ function Card({
           </span>
         )}
       </div>
-      <div className={`mt-2 text-2xl font-bold ${valueClass ?? "text-neutral-900"}`}>{value}</div>
+      <div className={`mt-2 font-bold ${highlight ? "text-3xl" : "text-2xl"} ${valueClass ?? "text-neutral-900"}`}>{value}</div>
       {progress !== undefined && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
           <div
@@ -558,6 +571,15 @@ function RevenueBars({
         );
       })}
     </div>
+  );
+}
+
+/** Cabeçalho de grupo de seções (divisor). */
+function SectionDivider({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="mb-2 mt-10 border-b border-neutral-200 pb-2 text-xs font-bold uppercase tracking-wider text-neutral-400">
+      {children}
+    </h2>
   );
 }
 

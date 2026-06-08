@@ -25,6 +25,12 @@ function compactBrl(value: number): string {
   if (a >= 1000) return `R$ ${(value / 1000).toFixed(1).replace(".", ",")} mil`;
   return `R$ ${value.toFixed(0)}`;
 }
+/** Rótulo curto pro eixo (1 linha): 2,8k / 700. */
+function axisBrl(value: number): string {
+  const a = Math.abs(value);
+  if (a >= 1000) return `${(value / 1000).toFixed(1).replace(".", ",")}k`;
+  return `${value.toFixed(0)}`;
+}
 
 const AXIS = { fontSize: 11, fill: "#9ca3af" };
 
@@ -49,10 +55,10 @@ export function DonutChart({ data }: { data: Slice[] }) {
   if (d.length === 0) return <div className="h-44"><Empty>Sem dados neste mês.</Empty></div>;
   return (
     <div className="mt-2 flex flex-col items-center gap-5 sm:flex-row">
-      <div className="h-44 w-44 shrink-0">
+      <div className="relative h-44 w-44 shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie data={d} dataKey="value" nameKey="label" innerRadius="60%" outerRadius="92%" paddingAngle={2} stroke="none">
+            <Pie data={d} dataKey="value" nameKey="label" innerRadius="60%" outerRadius="92%" paddingAngle={d.length > 1 ? 2 : 0} stroke="none">
               {d.map((_, i) => (
                 <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
               ))}
@@ -66,6 +72,20 @@ export function DonutChart({ data }: { data: Slice[] }) {
             />
           </PieChart>
         </ResponsiveContainer>
+        {/* Rótulo central */}
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+          {d.length === 1 ? (
+            <>
+              <span className="text-lg font-bold text-neutral-900">100%</span>
+              <span className="px-2 text-[10px] capitalize leading-tight text-neutral-500">{d[0].label}</span>
+            </>
+          ) : (
+            <>
+              <span className="text-sm font-bold text-neutral-900">{compactBrl(total)}</span>
+              <span className="text-[10px] text-neutral-500">total</span>
+            </>
+          )}
+        </div>
       </div>
       <ul className="w-full flex-1 space-y-2 text-sm">
         {d.map((x, i) => (
@@ -144,7 +164,7 @@ export function AreaTrend({ data }: { data: Point[] }) {
               </linearGradient>
             </defs>
             <XAxis dataKey="label" tick={AXIS} tickLine={false} axisLine={false} minTickGap={24} />
-            <YAxis tick={AXIS} tickLine={false} axisLine={false} width={48} tickFormatter={compactBrl} />
+            <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} tickFormatter={axisBrl} />
             <Tooltip
               cursor={{ stroke: "#10b981", strokeWidth: 1, strokeDasharray: "4 4" }}
               content={({ active, payload }) =>
@@ -170,7 +190,7 @@ export function Bars({ data, color = "var(--brand, #2563eb)" }: { data: Point[];
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <XAxis dataKey="label" tick={AXIS} tickLine={false} axisLine={false} />
-            <YAxis tick={AXIS} tickLine={false} axisLine={false} width={48} tickFormatter={compactBrl} />
+            <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} tickFormatter={axisBrl} />
             <Tooltip
               cursor={{ fill: "rgba(0,0,0,0.04)" }}
               content={({ active, payload }) =>
@@ -218,7 +238,7 @@ export function ProfitWaterfall({ steps }: { steps: WaterfallStep[] }) {
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
           <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} tickLine={false} axisLine={false} interval={0} />
-          <YAxis tick={AXIS} tickLine={false} axisLine={false} width={48} tickFormatter={compactBrl} />
+          <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} tickFormatter={axisBrl} />
           <Tooltip
             cursor={{ fill: "rgba(0,0,0,0.04)" }}
             content={({ active, payload }) =>
