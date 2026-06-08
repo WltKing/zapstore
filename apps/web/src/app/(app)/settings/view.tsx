@@ -64,9 +64,6 @@ export function SettingsView({
   const [creditMode, setCreditMode] = useState<CreditMode>(settlement.creditMode);
   const [creditAdvanceDays, setCreditAdvanceDays] = useState(String(settlement.creditAdvanceDays));
   const [boletoDays, setBoletoDays] = useState(String(settlement.boletoDays));
-  const [anticipationFee, setAnticipationFee] = useState(
-    settlement.anticipationFeePct ? String(settlement.anticipationFeePct) : "",
-  );
   // Taxas: pix/débito como string; crédito como lista editável de {n, fee}.
   const [pixFee, setPixFee] = useState(cardFees.pix ? String(cardFees.pix) : "");
   const [debitFee, setDebitFee] = useState(cardFees.debit ? String(cardFees.debit) : "");
@@ -114,7 +111,6 @@ export function SettingsView({
           creditMode,
           creditAdvanceDays: Number(creditAdvanceDays) || 0,
           boletoDays: Number(boletoDays) || 0,
-          anticipationFeePct: anticipationFee.trim() === "" ? 0 : Number(anticipationFee),
         },
       });
       if (!res.ok) setError(res.error ?? "Erro");
@@ -424,13 +420,10 @@ export function SettingsView({
             </p>
           </div>
 
-          <div className="mt-4 max-w-xs">
-            <label className="block text-sm font-medium text-neutral-700">Taxa de antecipação (%)</label>
-            <input type="number" min="0" max="100" step="0.01" value={anticipationFee} onChange={(e) => setAnticipationFee(e.target.value)} placeholder="ex: 2" className={inputClass} />
-            <p className="mt-1 text-xs text-neutral-400">
-              Custo pra antecipar o que está a receber. O painel mostra quanto cairia se antecipar.
-            </p>
-          </div>
+          <p className="mt-3 text-xs text-neutral-400">
+            Quer antecipar? A taxa de antecipação varia, então você calcula na hora — no card{" "}
+            <strong>&quot;A receber&quot;</strong> do painel.
+          </p>
         </section>
 
         {/* Pix */}

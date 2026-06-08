@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras, getReceivables } from "@/lib/tenant";
 import { NICHE_TEMPLATES } from "@/lib/niches";
 import { Donut, withColors } from "@/components/donut";
+import { AnticipationCalc } from "./anticipation-calc";
 import {
   TrendingUp,
   TrendingDown,
@@ -217,15 +218,7 @@ export default async function DashboardPage() {
               <div className="text-xs text-neutral-500">próximos 30 dias</div>
             </div>
           </div>
-          {receivables.anticipationFeePct > 0 && (
-            <div className="mt-4 rounded-xl bg-neutral-50 p-3 text-sm">
-              Se antecipar tudo hoje:{" "}
-              <strong className="text-emerald-700">{formatBrl(receivables.anticipatedNet)}</strong>{" "}
-              <span className="text-neutral-500">
-                (custo {formatBrl(receivables.anticipationCost)} · {receivables.anticipationFeePct.toFixed(2).replace(/\.?0+$/, "")}%)
-              </span>
-            </div>
-          )}
+          <AnticipationCalc total={receivables.total} next30={receivables.next30} />
           <p className="mt-2 text-xs text-neutral-400">
             Calculado pelo repasse configurado em{" "}
             <a href="/settings" className="underline">Configurações → Recebimento</a>.

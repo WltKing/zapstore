@@ -14,7 +14,6 @@ export interface SettlementConfig {
   creditMode: CreditMode; // como o crédito é repassado
   creditAdvanceDays: number; // D+x quando creditMode = "advance"
   boletoDays: number; // D+x do boleto
-  anticipationFeePct: number; // custo (%) pra antecipar o que está a receber
 }
 
 export function defaultSettlement(): SettlementConfig {
@@ -24,7 +23,6 @@ export function defaultSettlement(): SettlementConfig {
     creditMode: "installments",
     creditAdvanceDays: 1,
     boletoDays: 1,
-    anticipationFeePct: 0,
   };
 }
 
@@ -40,7 +38,6 @@ export function parseSettlement(raw: unknown): SettlementConfig {
   if (!raw || typeof raw !== "object") return d;
   const o = raw as Record<string, unknown>;
   const int = (v: unknown, fb: number) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.round(v)) : fb);
-  const num = (v: unknown, fb: number) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, v) : fb);
   const mode = o.creditMode === "now" || o.creditMode === "advance" || o.creditMode === "installments" ? o.creditMode : d.creditMode;
   return {
     pixDays: int(o.pixDays, d.pixDays),
@@ -48,7 +45,6 @@ export function parseSettlement(raw: unknown): SettlementConfig {
     creditMode: mode,
     creditAdvanceDays: int(o.creditAdvanceDays, d.creditAdvanceDays),
     boletoDays: int(o.boletoDays, d.boletoDays),
-    anticipationFeePct: num(o.anticipationFeePct, d.anticipationFeePct),
   };
 }
 
@@ -112,12 +108,10 @@ export interface ReceivablesSummary {
   total: number; // líquido a receber (eventos no futuro)
   next7: number; // a receber nos próximos 7 dias
   next30: number; // a receber nos próximos 30 dias
-  anticipationFeePct: number;
-  anticipatedNet: number; // quanto cairia se antecipar tudo hoje
-  anticipationCost: number; // custo da antecipação
 }
 
-/** Resume o "a receber" a partir das vendas + config + taxas. */
+/** Resume o "a receber" a partir das vendas + config + taxas.
+ * A antecipação NÃO entra aqui: a taxa varia e é calculada na hora (na UI). */
 export function summarizeReceivables(
   sales: SaleForSettlement[],
   cfg: SettlementConfig,
@@ -137,13 +131,5 @@ export function summarizeReceivables(
       if (ev.date <= in30) next30 += ev.net;
     }
   }
-  const anticipationCost = (total * cfg.anticipationFeePct) / 100;
-  return {
-    total,
-    next7,
-    next30,
-    anticipationFeePct: cfg.anticipationFeePct,
-    anticipatedNet: total - anticipationCost,
-    anticipationCost,
-  };
+  return { total, next7, next30 };
 }
