@@ -4,6 +4,7 @@ import { prisma } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
 import { effectivePermissions, areaForPath } from "@/lib/permissions";
+import { allowedAreasForModules } from "@/lib/modules";
 import { isSuperAdminEmail } from "@/lib/super-admin";
 import { brandCssVars } from "@/lib/theme";
 import { NICHE_TEMPLATES } from "@/lib/niches";
@@ -24,10 +25,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     where: { userId: session.user.id, tenantId: tenant.id },
     select: { role: true, permissions: true },
   });
-  const allowed = effectivePermissions(link?.role ?? "OPERATOR", link?.permissions);
+  const permAllowed = effectivePermissions(link?.role ?? "OPERATOR", link?.permissions);
 
-  // Trava de acesso por área: se a rota atual mapeia pra uma área não permitida,
-  // volta pro dashboard (que todo mundo tem).
+  // Eixo NICHO: áreas liberadas pelos módulos ativos da loja (universais + módulos).
+  const nicheAreas = allowedAreasForModules(tenant.enabledModules ?? []);
+
+  // Acesso efetivo = (permissão do usuário) E (módulo do nicho ligado).
+  const allowed = permAllowed.filter((a) => nicheAreas.has(a));
+
+  // Trava de acesso por área: se a rota atual mapeia pra uma área não permitida
+  // (por permissão OU por nicho), volta pro dashboard (que todo mundo tem).
   const pathname = h.get("x-pathname") ?? "";
   const area = areaForPath(pathname);
   if (area && !allowed.includes(area)) redirect("/dashboard");

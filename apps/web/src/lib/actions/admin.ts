@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma, setPlatformSetting } from "@zapstore/db";
 import { getSuperAdminSession } from "@/lib/super-admin";
 import { PLATFORM_KEYS } from "@/lib/platform-keys";
+import { NICHE_TEMPLATES, type NicheId } from "@/lib/niches";
+import { sanitizeModules } from "@/lib/modules";
 
 export interface ActionResult {
   ok: boolean;
@@ -26,6 +28,33 @@ export async function savePlatformSettingAction(key: string, value: string): Pro
     }
 
     revalidatePath("/admin/keys");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
+/** Troca o nicho de uma loja (manutenção/teste). Só super-admin — pro lojista é travado.
+ * Re-resolve os módulos pro novo nicho (mantém os válidos, força os "core", tira os "off"). */
+export async function setTenantNicheAction(tenantId: string, niche: string): Promise<ActionResult> {
+  try {
+    const session = await getSuperAdminSession();
+    if (!session) return { ok: false, error: "Acesso negado." };
+    if (!(niche in NICHE_TEMPLATES)) return { ok: false, error: "Nicho inválido." };
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { enabledModules: true },
+    });
+    if (!tenant) return { ok: false, error: "Loja não encontrada." };
+
+    const modules = sanitizeModules(niche as NicheId, tenant.enabledModules ?? []);
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { niche, enabledModules: modules },
+    });
+
+    revalidatePath("/admin");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };

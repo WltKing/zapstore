@@ -1,4 +1,5 @@
 import { prisma, withTenant } from "@zapstore/db";
+import { NicheSwitcher } from "./niche-switcher";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ interface ClientRow {
   id: string;
   name: string;
   slug: string;
+  niche: string | null;
   status: string;
   createdAt: Date;
   plan: string | null;
@@ -59,6 +61,7 @@ export default async function AdminClientsPage() {
       id: t.id,
       name: t.name,
       slug: t.slug,
+      niche: t.niche,
       status: t.status,
       createdAt: t.createdAt,
       plan: data.sub?.plan ?? null,
@@ -101,6 +104,7 @@ export default async function AdminClientsPage() {
           <thead className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-500">
             <tr>
               <th className="px-4 py-3 text-left">Loja</th>
+              <th className="px-4 py-3 text-left">Ramo</th>
               <th className="px-4 py-3 text-left">Status</th>
               <th className="px-4 py-3 text-left">Assinatura</th>
               <th className="px-4 py-3 text-right">Msgs/mês</th>
@@ -112,7 +116,7 @@ export default async function AdminClientsPage() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-neutral-500">
+                <td colSpan={8} className="px-4 py-10 text-center text-neutral-500">
                   Nenhuma loja cadastrada ainda.
                 </td>
               </tr>
@@ -125,6 +129,9 @@ export default async function AdminClientsPage() {
                     <td className="px-4 py-3">
                       <div className="font-medium">{r.name}</div>
                       <div className="text-xs text-neutral-400">{r.slug}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <NicheSwitcher tenantId={r.id} niche={r.niche} />
                     </td>
                     <td className="px-4 py-3">{r.status}</td>
                     <td className="px-4 py-3">

@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { prisma } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { parseCardFees, type CardFees } from "@/lib/fees";
+import { sanitizeModules } from "@/lib/modules";
 
 async function requireTenantId(): Promise<string> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -88,6 +89,28 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
       },
     });
 
+    revalidatePath("/settings");
+    revalidatePath("/dashboard");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
+/** Liga/desliga módulos do nicho (Produtos, Entrega, Fiscal...). O nicho é travado;
+ * sanitizeModules mantém só módulos válidos pro nicho e força os "core" ligados. */
+export async function updateModulesAction(modules: string[]): Promise<ActionResult> {
+  try {
+    const tenantId = await requireTenantId();
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { niche: true },
+    });
+    const clean = sanitizeModules(tenant?.niche ?? null, modules);
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { enabledModules: clean },
+    });
     revalidatePath("/settings");
     revalidatePath("/dashboard");
     return { ok: true };

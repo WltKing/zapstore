@@ -3,6 +3,22 @@
 import { useState, useTransition } from "react";
 import { createTenantAction } from "@/lib/actions/onboarding";
 import { NICHE_TEMPLATES, PAYMENT_METHOD_LABELS, type NicheId } from "@/lib/niches";
+import {
+  askModules,
+  resolveEnabledModules,
+  MODULE_QUESTIONS,
+  type ModuleId,
+} from "@/lib/modules";
+
+function defaultModuleAnswers(nicheId: NicheId): Record<ModuleId, boolean> {
+  const tpl = NICHE_TEMPLATES[nicheId];
+  return {
+    products: true,
+    delivery: tpl.suggestsDelivery,
+    scheduling: tpl.acceptsScheduling,
+    fiscal: false,
+  };
+}
 
 const WEEKDAYS = [
   { id: "mon", label: "Seg" },
@@ -31,13 +47,21 @@ export function OnboardingForm() {
     NICHE_TEMPLATES.colchoes_moveis.defaultPaymentMethods,
   );
   const [extraInstructions, setExtraInstructions] = useState("");
+  const [moduleAnswers, setModuleAnswers] = useState<Record<ModuleId, boolean>>(
+    defaultModuleAnswers("colchoes_moveis"),
+  );
 
   const handleNicheChange = (id: NicheId) => {
     setNiche(id);
     const tpl = NICHE_TEMPLATES[id];
     setPaymentMethods(tpl.defaultPaymentMethods);
+    setModuleAnswers(defaultModuleAnswers(id));
     if (!botName) setBotName(tpl.defaultBotName);
   };
+
+  const questions = askModules(niche);
+  const setAnswer = (m: ModuleId, value: boolean) =>
+    setModuleAnswers((prev) => ({ ...prev, [m]: value }));
 
   const togglePayment = (method: string) => {
     setPaymentMethods((prev) =>
@@ -52,6 +76,8 @@ export function OnboardingForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const answeredYes = questions.filter((m) => moduleAnswers[m]);
+    const enabledModules = resolveEnabledModules(niche, answeredYes);
     startTransition(async () => {
       const result = await createTenantAction({
         storeName,
@@ -63,6 +89,7 @@ export function OnboardingForm() {
         deliveryCities,
         paymentMethods,
         extraInstructions,
+        enabledModules,
       });
       if (!result.ok) setError(result.error ?? "Erro ao criar loja");
     });
@@ -97,6 +124,49 @@ export function OnboardingForm() {
           ))}
         </div>
       </section>
+
+      {/* Perguntas que ligam módulos do nicho */}
+      {questions.length > 0 && (
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Como seu negócio funciona?</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Isso liga só as funções que você usa. Dá pra mudar depois nas Configurações.
+          </p>
+          <div className="mt-4 space-y-3">
+            {questions.map((m) => (
+              <div
+                key={m}
+                className="flex items-center justify-between gap-4 rounded-xl border border-neutral-200 p-4"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-neutral-900">{MODULE_QUESTIONS[m].question}</div>
+                  <div className="text-xs text-neutral-500">{MODULE_QUESTIONS[m].hint}</div>
+                </div>
+                <div className="flex shrink-0 overflow-hidden rounded-lg border border-neutral-300">
+                  <button
+                    type="button"
+                    onClick={() => setAnswer(m, true)}
+                    className={`px-4 py-1.5 text-sm font-medium transition ${
+                      moduleAnswers[m] ? "bg-neutral-900 text-white" : "bg-white text-neutral-600 hover:bg-neutral-100"
+                    }`}
+                  >
+                    Sim
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnswer(m, false)}
+                    className={`px-4 py-1.5 text-sm font-medium transition ${
+                      !moduleAnswers[m] ? "bg-neutral-900 text-white" : "bg-white text-neutral-600 hover:bg-neutral-100"
+                    }`}
+                  >
+                    Não
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Loja */}
       <section className="rounded-2xl bg-white p-6 shadow-sm">
@@ -171,8 +241,8 @@ export function OnboardingForm() {
         </div>
       </section>
 
-      {/* Entrega */}
-      {selectedNiche.suggestsDelivery && (
+      {/* Entrega — só se o lojista respondeu que faz entrega */}
+      {moduleAnswers.delivery && (
         <section className="rounded-2xl bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Cidades de entrega</h2>
           <label className="mt-1 block text-xs text-neutral-500">

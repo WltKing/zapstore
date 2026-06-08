@@ -2,9 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateStoreSettingsAction } from "@/lib/actions/settings";
+import { updateStoreSettingsAction, updateModulesAction } from "@/lib/actions/settings";
 import { ImageUpload } from "@/components/image-upload";
 import type { CardFees } from "@/lib/fees";
+import {
+  configurableModules,
+  isCoreModule,
+  MODULE_LABELS,
+  type ModuleId,
+} from "@/lib/modules";
 
 const DEFAULT_COLOR = "#171717";
 
@@ -20,6 +26,8 @@ export function SettingsView({
   cardFees,
   taxEstimatePct,
   nicheLabel,
+  niche,
+  enabledModules,
   email,
 }: {
   storeName: string;
@@ -33,6 +41,8 @@ export function SettingsView({
   cardFees: CardFees;
   taxEstimatePct: number | null;
   nicheLabel: string;
+  niche: string;
+  enabledModules: string[];
   email: string;
 }) {
   const router = useRouter();
@@ -401,6 +411,111 @@ export function SettingsView({
           </button>
         </div>
       </form>
+
+      <ModulesSection niche={niche} enabledModules={enabledModules} nicheLabel={nicheLabel} />
     </main>
+  );
+}
+
+/** Liga/desliga as funções do sistema conforme o nicho (que é travado). */
+function ModulesSection({
+  niche,
+  enabledModules,
+  nicheLabel,
+}: {
+  niche: string;
+  enabledModules: string[];
+  nicheLabel: string;
+}) {
+  const router = useRouter();
+  const configurable = configurableModules(niche);
+  const [active, setActive] = useState<Set<ModuleId>>(
+    () => new Set(enabledModules.filter((m): m is ModuleId => configurable.includes(m as ModuleId))),
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const toggle = (m: ModuleId) => {
+    if (isCoreModule(niche, m)) return; // core não desliga
+    setActive((prev) => {
+      const next = new Set(prev);
+      if (next.has(m)) next.delete(m);
+      else next.add(m);
+      return next;
+    });
+  };
+
+  const save = () => {
+    setError(null);
+    setSaved(false);
+    startTransition(async () => {
+      const res = await updateModulesAction([...active]);
+      if (!res.ok) setError(res.error ?? "Erro");
+      else {
+        setSaved(true);
+        router.refresh();
+      }
+    });
+  };
+
+  if (configurable.length === 0) return null;
+
+  return (
+    <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
+      <h2 className="font-semibold">Funções do sistema</h2>
+      <p className="mt-1 text-sm text-neutral-500">
+        Ligue só o que sua loja usa. O ramo do negócio (<strong>{nicheLabel}</strong>) é definido no
+        cadastro e não muda — mas as funções abaixo você ajusta quando quiser.
+      </p>
+
+      <div className="mt-4 space-y-3">
+        {configurable.map((m) => {
+          const core = isCoreModule(niche, m);
+          const on = active.has(m) || core;
+          return (
+            <div key={m} className="flex items-center justify-between gap-4 rounded-xl border border-neutral-200 p-4">
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-neutral-900">{MODULE_LABELS[m]}</div>
+                {core && (
+                  <div className="text-xs text-neutral-400">Essencial pro seu ramo — sempre ligado.</div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => toggle(m)}
+                disabled={core}
+                aria-pressed={on}
+                className={`inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${
+                  on ? "bg-emerald-500" : "bg-neutral-300"
+                } ${core ? "cursor-not-allowed opacity-60" : ""}`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                    on ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {error && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+      {saved && (
+        <p className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Funções atualizadas!</p>
+      )}
+
+      <div className="mt-5 flex justify-end">
+        <button
+          type="button"
+          onClick={save}
+          disabled={isPending}
+          className="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
+        >
+          {isPending ? "Salvando..." : "Salvar funções"}
+        </button>
+      </div>
+    </section>
   );
 }

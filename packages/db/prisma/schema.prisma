@@ -24,7 +24,8 @@ model Tenant {
   id          String   @id @default(uuid()) @db.Uuid
   slug        String   @unique
   name        String
-  niche       String?  // colchoes | restaurante | salao | generico
+  niche       String?  // colchoes_moveis | estetica | generico (TRAVADO após cadastro; só super-admin troca)
+  enabledModules String[] @default([]) // módulos ativos: products|delivery|scheduling|fiscal (nicho define base + perguntas no cadastro)
   brandColor  String?  // cor da marca (white-label básico), ex: "#16a34a"
   logoUrl     String?  // logo completa (vai pro Focus/DANFE e impressão)
   iconUrl     String?  // ícone quadrado da loja (usado no menu lateral)

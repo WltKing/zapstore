@@ -29,6 +29,8 @@ export default async function SettingsPage() {
       cardFees={parseCardFees(tenant.cardFees) ?? emptyCardFees()}
       taxEstimatePct={tenant.taxEstimatePct != null ? Number(tenant.taxEstimatePct) : null}
       nicheLabel={nicheLabel}
+      niche={tenant.niche ?? "generico"}
+      enabledModules={tenant.enabledModules ?? []}
       email={session.user.email}
     />
   );

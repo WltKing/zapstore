@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { NICHE_TEMPLATES, type NicheId } from "@/lib/niches";
+import { sanitizeModules } from "@/lib/modules";
 
 export interface OnboardingInput {
   storeName: string;
@@ -16,6 +17,7 @@ export interface OnboardingInput {
   deliveryCities: string;
   paymentMethods: string[];
   extraInstructions: string;
+  enabledModules: string[]; // módulos ligados (resolvidos pelo nicho + perguntas)
 }
 
 export interface OnboardingResult {
@@ -80,6 +82,7 @@ export async function createTenantAction(input: OnboardingInput): Promise<Onboar
         slug,
         name: input.storeName.trim(),
         niche: input.niche,
+        enabledModules: sanitizeModules(input.niche, input.enabledModules ?? []),
         status: "TRIAL",
         users: {
           create: { userId: session.user.id, role: "ADMIN" },
