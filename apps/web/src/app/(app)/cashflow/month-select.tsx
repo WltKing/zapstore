@@ -8,7 +8,7 @@ function label(key: string): string {
 }
 
 /** Dropdown simples de mês (últimos 12 + atual) que navega via ?month=. */
-export function MonthSelect({ current }: { current: string }) {
+export function MonthSelect({ current, basePath = "/cashflow" }: { current: string; basePath?: string }) {
   const router = useRouter();
   const now = new Date();
   const options: string[] = [];
@@ -21,7 +21,7 @@ export function MonthSelect({ current }: { current: string }) {
   return (
     <select
       value={current}
-      onChange={(e) => router.push(`/cashflow?month=${e.target.value}`)}
+      onChange={(e) => router.push(`${basePath}?month=${e.target.value}`)}
       className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium capitalize shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
     >
       {options.map((m) => (

@@ -5,6 +5,7 @@ import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras, getReceiva
 import { NICHE_TEMPLATES } from "@/lib/niches";
 import { Donut, withColors } from "@/components/donut";
 import { AreaTrend, Bars } from "./charts";
+import { MonthSelect } from "../cashflow/month-select";
 import {
   TrendingUp,
   TrendingDown,
@@ -30,7 +31,11 @@ function pctChange(cur: number, prev: number): number | null {
   return ((cur - prev) / prev) * 100;
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/login");
 
@@ -59,9 +64,21 @@ export default async function DashboardPage() {
     );
   }
 
+  // Mês de referência (seletor). Padrão = mês atual.
+  const { month } = await searchParams;
+  const now = new Date();
+  let ref = now;
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    const [y, m] = month.split("-").map(Number);
+    ref = new Date(y, m - 1, 1);
+  }
+  const monthKey = `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, "0")}`;
+  const isCurrentMonth = ref.getFullYear() === now.getFullYear() && ref.getMonth() === now.getMonth();
+  const monthName = ref.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
   const [stats, extras, receivables] = await Promise.all([
     getTenantStats(tenant.id),
-    getDashboardExtras(tenant.id),
+    getDashboardExtras(tenant.id, ref),
     getReceivables(tenant.id),
   ]);
 
@@ -97,31 +114,40 @@ export default async function DashboardPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight">Visão geral</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          Plano <strong>Trial</strong> ·{" "}
-          {NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Genérico"}
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Visão geral</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            Plano <strong>Trial</strong> ·{" "}
+            {NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Genérico"}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-neutral-500">Mês:</span>
+          <MonthSelect current={monthKey} basePath="/dashboard" />
+        </div>
       </header>
 
-      {/* Zona de atenção */}
-      {pct >= 100 ? (
-        <div className="mt-6 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
-          <strong>Limite mensal atingido.</strong> Seu bot está respondendo com a mensagem de
-          indisponibilidade até o próximo ciclo ou upgrade.{" "}
-          <a href="/billing" className="underline">Fazer upgrade →</a>
-        </div>
-      ) : pct >= 80 ? (
-        <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-          <strong>Você usou {pct}% do seu plano.</strong> Considere comprar pacote extra ou fazer
-          upgrade antes de atingir o limite. <a href="/billing" className="underline">Ver opções →</a>
-        </div>
-      ) : null}
+      {/* Zona de atenção (só no mês corrente) */}
+      {isCurrentMonth &&
+        (pct >= 100 ? (
+          <div className="mt-6 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+            <strong>Limite mensal atingido.</strong> Seu bot está respondendo com a mensagem de
+            indisponibilidade até o próximo ciclo ou upgrade.{" "}
+            <a href="/billing" className="underline">Fazer upgrade →</a>
+          </div>
+        ) : pct >= 80 ? (
+          <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+            <strong>Você usou {pct}% do seu plano.</strong> Considere comprar pacote extra ou fazer
+            upgrade antes de atingir o limite. <a href="/billing" className="underline">Ver opções →</a>
+          </div>
+        ) : null)}
 
       {/* Núcleo de KPIs do mês */}
       <section className="mt-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Este mês</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          <span className="capitalize">{isCurrentMonth ? "Este mês" : monthName}</span>
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card title="Faturamento" value={formatBrl(faturamento)} hint="Vendas do mês" icon={TrendingUp} tint="blue" delta={faturamentoDelta} />
           <Card
@@ -168,8 +194,8 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* A receber (maquininha) — informação financeira, fica logo após o lucro */}
-      {receivables.total > 0 && (
+      {/* A receber (maquininha) — estado atual, só no mês corrente */}
+      {isCurrentMonth && receivables.total > 0 && (
         <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">A receber (maquininha)</h2>
@@ -203,35 +229,39 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {/* Hoje / precisa de você */}
-      <section className="mt-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Hoje</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card title="Vendas hoje" value={formatBrl(stats.salesTodayBrl)} hint="Total vendido hoje" icon={ShoppingCart} tint="blue" />
-          <Card title="Pedidos abertos" value={String(stats.openOrderCount)} hint="A confirmar / entregar" icon={Package} tint="amber" />
-          {has("products") && (
-            <Card
-              title="Estoque baixo"
-              value={String(stats.lowStockCount)}
-              hint={stats.lowStockCount > 0 ? "Repor em breve" : "Tudo certo"}
-              icon={AlertTriangle}
-              tint={stats.lowStockCount > 0 ? "red" : "slate"}
-            />
-          )}
-          {has("scheduling") && (
-            <Card title="Agendamentos hoje" value={String(stats.todaysAppointments)} hint={`${stats.upcomingAppointments} agendados à frente`} icon={CalendarDays} tint="violet" />
-          )}
-        </div>
-      </section>
+      {/* Hoje / precisa de você (só no mês corrente) */}
+      {isCurrentMonth && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Hoje</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card title="Vendas hoje" value={formatBrl(stats.salesTodayBrl)} hint="Total vendido hoje" icon={ShoppingCart} tint="blue" />
+            <Card title="Pedidos abertos" value={String(stats.openOrderCount)} hint="A confirmar / entregar" icon={Package} tint="amber" />
+            {has("products") && (
+              <Card
+                title="Estoque baixo"
+                value={String(stats.lowStockCount)}
+                hint={stats.lowStockCount > 0 ? "Repor em breve" : "Tudo certo"}
+                icon={AlertTriangle}
+                tint={stats.lowStockCount > 0 ? "red" : "slate"}
+              />
+            )}
+            {has("scheduling") && (
+              <Card title="Agendamentos hoje" value={String(stats.todaysAppointments)} hint={`${stats.upcomingAppointments} agendados à frente`} icon={CalendarDays} tint="violet" />
+            )}
+          </div>
+        </section>
+      )}
 
-      {/* Tendência: vendas 14 dias + semanas do mês */}
-      <section className="mt-8 grid gap-4 lg:grid-cols-2">
+      {/* Tendência: vendas 14 dias (corrente) + semanas do mês */}
+      <section className={`mt-8 grid gap-4 ${isCurrentMonth ? "lg:grid-cols-2" : ""}`}>
+        {isCurrentMonth && (
+          <div className="rounded-2xl bg-white p-6 shadow-card">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Vendas (últimos 14 dias)</h2>
+            <AreaTrend data={stats.salesByDay} />
+          </div>
+        )}
         <div className="rounded-2xl bg-white p-6 shadow-card">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Vendas (últimos 14 dias)</h2>
-          <AreaTrend data={stats.salesByDay} />
-        </div>
-        <div className="rounded-2xl bg-white p-6 shadow-card">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Vendas por semana (mês atual)</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Vendas por semana</h2>
           <Bars data={extras.weekly} />
         </div>
       </section>
@@ -290,7 +320,8 @@ export default async function DashboardPage() {
         </>
       )}
 
-      {/* Plano (uso de mensagens) — assunto de assinatura, discreto no fim */}
+      {/* Plano (uso de mensagens) — só no mês corrente */}
+      {isCurrentMonth && (
       <section className="mt-8 rounded-2xl bg-white p-5 shadow-card">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -313,9 +344,10 @@ export default async function DashboardPage() {
           />
         </div>
       </section>
+      )}
 
-      {/* Próximos passos — some quando a loja já está configurada */}
-      {!setupComplete && (
+      {/* Próximos passos — só no mês corrente, some quando a loja já está configurada */}
+      {isCurrentMonth && !setupComplete && (
       <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
         <h2 className="text-lg font-semibold">Próximos passos</h2>
         <p className="mt-1 text-sm text-neutral-500">Pra deixar seu bot 100% pronto.</p>

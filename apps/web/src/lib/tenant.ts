@@ -228,11 +228,13 @@ function computeFinancials(
 /** Quebra rica do mês pro dashboard: cascata de lucro (faturamento → CMV → taxa →
  * imposto → despesas → lucro líquido), comparação com o mês anterior, semanas do
  * mês, por canal/vendedor/pagamento/parcelas, top produtos e evolução de 6 meses. */
-export async function getDashboardExtras(tenantId: string) {
+export async function getDashboardExtras(tenantId: string, ref: Date = new Date()) {
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const sixStart = new Date(now.getFullYear(), now.getMonth() - 5, 1); // 6 meses incluindo o atual
+  const monthStart = new Date(ref.getFullYear(), ref.getMonth(), 1);
+  const monthEnd = new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
+  const prevStart = new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
+  const sixStart = new Date(ref.getFullYear(), ref.getMonth() - 5, 1); // 6 meses incluindo o de referência
+  const isCurrentMonth = now.getFullYear() === ref.getFullYear() && now.getMonth() === ref.getMonth();
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
@@ -272,7 +274,7 @@ export async function getDashboardExtras(tenantId: string) {
 
     const [monthOrders, prevOrders, evoOrders, expAgg, prevExpAgg] = await Promise.all([
       tx.order.findMany({
-        where: { status: { not: "CANCELED" }, createdAt: { gte: monthStart } },
+        where: { status: { not: "CANCELED" }, createdAt: { gte: monthStart, lt: monthEnd } },
         select: orderSelect,
       }),
       tx.order.findMany({
@@ -280,10 +282,10 @@ export async function getDashboardExtras(tenantId: string) {
         select: orderSelect,
       }),
       tx.order.findMany({
-        where: { status: { not: "CANCELED" }, createdAt: { gte: sixStart } },
+        where: { status: { not: "CANCELED" }, createdAt: { gte: sixStart, lt: monthEnd } },
         select: { totalBrl: true, createdAt: true },
       }),
-      tx.expense.aggregate({ _sum: { amountBrl: true }, where: { paidAt: { gte: monthStart } } }),
+      tx.expense.aggregate({ _sum: { amountBrl: true }, where: { paidAt: { gte: monthStart, lt: monthEnd } } }),
       tx.expense.aggregate({
         _sum: { amountBrl: true },
         where: { paidAt: { gte: prevStart, lt: monthStart } },
@@ -309,10 +311,10 @@ export async function getDashboardExtras(tenantId: string) {
 
     const ticketMedio = monthOrders.length > 0 ? brutoMes / monthOrders.length : 0;
 
-    // Projeção de fechamento (run-rate) pro mês atual.
+    // Projeção de fechamento (run-rate) — só faz sentido no mês corrente; mês fechado = bruto.
+    const daysInMonth = new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate();
     const dayOfMonth = now.getDate();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const projectedSales = dayOfMonth > 0 ? (brutoMes / dayOfMonth) * daysInMonth : brutoMes;
+    const projectedSales = isCurrentMonth && dayOfMonth > 0 ? (brutoMes / dayOfMonth) * daysInMonth : brutoMes;
 
     // ===== Quebras do mês atual =====
     const byChannel = { online: 0, presencial: 0 };
@@ -373,16 +375,15 @@ export async function getDashboardExtras(tenantId: string) {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
 
-    // Todas as semanas do mês (inclui as futuras, ainda zeradas).
-    const daysInMonthW = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const weeksInMonth = Math.ceil(daysInMonthW / 7);
+    // Todas as semanas do mês de referência (inclui as futuras, ainda zeradas).
+    const weeksInMonth = Math.ceil(daysInMonth / 7);
     const weekly = weeklySales
       .slice(0, weeksInMonth)
       .map((total, i) => ({ label: `Sem ${i + 1}`, total }));
 
-    // Evolução de 6 meses
+    // Evolução de 6 meses (terminando no mês de referência)
     const evolution = Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+      const d = new Date(ref.getFullYear(), ref.getMonth() - 5 + i, 1);
       return {
         label: `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(2)}`,
         total: 0,
