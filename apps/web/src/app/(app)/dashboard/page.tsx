@@ -14,6 +14,7 @@ import {
   Users,
   MessageSquare,
   Tag,
+  Receipt,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,41 +24,29 @@ function formatBrl(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+/** Variação % vs período anterior. null quando não há base de comparação. */
+function pctChange(cur: number, prev: number): number | null {
+  if (prev <= 0) return null;
+  return ((cur - prev) / prev) * 100;
+}
+
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/login");
 
   const tenant = await getPrimaryTenantForUser(session.user.id);
-  const stats = tenant ? await getTenantStats(tenant.id) : null;
-  const extras = tenant ? await getDashboardExtras(tenant.id) : null;
-  const quota = tenant?.subscription?.messageQuota ?? DEFAULT_QUOTA;
-  const used = stats?.messagesUsedThisMonth ?? 0;
-  const pct = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
-  const monthSales = stats?.monthSalesBrl ?? 0;
-  const monthExpenses = stats?.monthExpensesBrl ?? 0;
-  const monthResult = monthSales - monthExpenses;
 
-  return (
-    <main className="mx-auto max-w-6xl px-6 py-8">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight">Visão geral</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          {tenant ? (
-            <>
-              Plano <strong>Trial</strong> ·{" "}
-              {NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Genérico"}
-            </>
-          ) : (
-            <>Bem-vindo ao Zapstore</>
-          )}
-        </p>
-      </header>
-
-      {!tenant ? (
+  if (!tenant) {
+    return (
+      <main className="mx-auto max-w-6xl px-6 py-8">
+        <header>
+          <h1 className="text-2xl font-bold tracking-tight">Visão geral</h1>
+          <p className="mt-1 text-sm text-neutral-500">Bem-vindo ao Zapstore</p>
+        </header>
         <section className="mt-10 rounded-2xl border border-dashed border-neutral-300 bg-white p-8 text-center">
-          <h2 className="text-lg font-semibold">Voce ainda nao tem uma loja</h2>
+          <h2 className="text-lg font-semibold">Você ainda não tem uma loja</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            Crie sua loja pra comecar a configurar o bot de atendimento.
+            Crie sua loja pra começar a configurar o bot de atendimento.
           </p>
           <a
             href="/onboarding"
@@ -66,232 +55,221 @@ export default async function DashboardPage() {
             Criar minha loja
           </a>
         </section>
-      ) : (
+      </main>
+    );
+  }
+
+  const stats = await getTenantStats(tenant.id);
+  const extras = await getDashboardExtras(tenant.id);
+
+  const modules = tenant.enabledModules ?? [];
+  const has = (m: string) => modules.includes(m);
+
+  const quota = tenant.subscription?.messageQuota ?? DEFAULT_QUOTA;
+  const used = stats.messagesUsedThisMonth ?? 0;
+  const pct = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
+
+  const faturamento = extras.brutoMes;
+  const lucro = extras.lucroLiquido;
+  const faturamentoDelta = pctChange(faturamento, extras.prevBruto);
+  const lucroDelta = pctChange(lucro, extras.prevLucro);
+
+  return (
+    <main className="mx-auto max-w-6xl px-6 py-8">
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight">Visão geral</h1>
+        <p className="mt-1 text-sm text-neutral-500">
+          Plano <strong>Trial</strong> ·{" "}
+          {NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Genérico"}
+        </p>
+      </header>
+
+      {/* Zona de atenção */}
+      {pct >= 100 ? (
+        <div className="mt-6 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+          <strong>Limite mensal atingido.</strong> Seu bot está respondendo com a mensagem de
+          indisponibilidade até o próximo ciclo ou upgrade.{" "}
+          <a href="/billing" className="underline">Fazer upgrade →</a>
+        </div>
+      ) : pct >= 80 ? (
+        <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>Você usou {pct}% do seu plano.</strong> Considere comprar pacote extra ou fazer
+          upgrade antes de atingir o limite. <a href="/billing" className="underline">Ver opções →</a>
+        </div>
+      ) : null}
+
+      {has("products") && stats.lowStockCount > 0 && (
+        <div className="mt-6 flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <Package className="h-4 w-4 shrink-0" strokeWidth={2} />
+          <span>
+            <strong>{stats.lowStockCount}</strong> produto(s) com estoque baixo.{" "}
+            <a href="/products" className="underline">Ver produtos →</a>
+          </span>
+        </div>
+      )}
+
+      {/* Núcleo de KPIs do mês */}
+      <section className="mt-8">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Este mês</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card title="Faturamento" value={formatBrl(faturamento)} hint="Vendas do mês" icon={TrendingUp} tint="blue" delta={faturamentoDelta} />
+          <Card
+            title="Lucro líquido"
+            value={formatBrl(lucro)}
+            hint="Depois de custos, taxas, imposto e despesas"
+            icon={Wallet}
+            tint={lucro >= 0 ? "green" : "red"}
+            valueClass={lucro >= 0 ? "text-emerald-700" : "text-red-700"}
+            delta={lucroDelta}
+          />
+          <Card title="Ticket médio" value={formatBrl(extras.ticketMedio)} hint={`${extras.orderCount} venda(s) no mês`} icon={ShoppingCart} tint="violet" />
+          <Card title="Vendas no mês" value={String(extras.orderCount)} hint="Pedidos (sem cancelados)" icon={Receipt} tint="slate" />
+        </div>
+      </section>
+
+      {/* Cascata de lucro — pra onde foi o dinheiro */}
+      <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          Do faturamento ao lucro
+        </h2>
+        {faturamento <= 0 ? (
+          <p className="mt-4 text-sm text-neutral-400">Sem vendas neste mês ainda.</p>
+        ) : (
+          <div className="mt-4 space-y-1.5 text-sm">
+            <CascadeRow label="Faturamento bruto" value={faturamento} sign="+" strong />
+            {has("products") && (
+              <>
+                <CascadeRow
+                  label="Custo das mercadorias (CMV)"
+                  value={extras.cmvMes}
+                  sign="-"
+                  tag={extras.productsWithoutCost > 0 ? "estimado" : undefined}
+                />
+                <CascadeRow label="Lucro bruto" value={extras.lucroBruto} sign="=" strong note={`margem ${extras.margemPct.toFixed(0)}%`} />
+              </>
+            )}
+            {extras.taxaMaquininha > 0 && (
+              <CascadeRow label="Taxa de maquininha" value={extras.taxaMaquininha} sign="-" />
+            )}
+            {extras.impostoEstimado > 0 && (
+              <CascadeRow label="Imposto" value={extras.impostoEstimado} sign="-" tag="estimado" />
+            )}
+            {extras.despesasMes > 0 && (
+              <CascadeRow label="Despesas do mês" value={extras.despesasMes} sign="-" />
+            )}
+            <div className="!mt-3 border-t border-neutral-200 pt-3">
+              <CascadeRow label="Lucro líquido" value={lucro} sign="=" strong highlight />
+            </div>
+          </div>
+        )}
+        {has("products") && extras.productsWithoutCost > 0 && (
+          <p className="mt-3 text-xs text-amber-700">
+            ⚠ {extras.productsWithoutCost} produto(s) sem custo cadastrado — o lucro pode estar
+            superestimado.{" "}
+            <a href="/products" className="underline">Cadastrar custos →</a>
+          </p>
+        )}
+      </section>
+
+      {/* Cards operacionais (respeitam o nicho) */}
+      <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card title="Vendas hoje" value={formatBrl(stats.salesTodayBrl)} hint={`Ticket médio ${stats.orderCount === 0 ? "—" : formatBrl(stats.avgTicketBrl)}`} icon={ShoppingCart} tint="blue" />
+        <Card title="Pedidos abertos" value={String(stats.openOrderCount)} hint={`${stats.orderCount} pedidos no total`} icon={Package} tint="amber" />
+        {has("scheduling") && (
+          <Card title="Agendamentos hoje" value={String(stats.todaysAppointments)} hint={`${stats.upcomingAppointments} agendados à frente`} icon={CalendarDays} tint="violet" />
+        )}
+        <Card title="Clientes" value={String(stats.customerCount)} hint="Cadastrados na loja" icon={Users} tint="green" />
+        <Card title="Mensagens este mês" value={`${used.toLocaleString("pt-BR")} / ${quota.toLocaleString("pt-BR")}`} hint={`${pct}% do plano`} progress={pct} icon={MessageSquare} tint="blue" />
+        {has("products") && (
+          <Card title="Produtos ativos" value={String(stats.activeProductCount)} hint={`${stats.productCount} no catálogo`} icon={Tag} tint="slate" />
+        )}
+      </section>
+
+      {/* Tendência: vendas 14 dias + semanas do mês */}
+      <section className="mt-8 grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl bg-white p-6 shadow-card">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Vendas (últimos 14 dias)</h2>
+          <SalesChart data={stats.salesByDay} />
+        </div>
+        <div className="rounded-2xl bg-white p-6 shadow-card">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Vendas por semana (mês atual)</h2>
+          <WeeklyChart data={extras.weekly} />
+        </div>
+      </section>
+
+      {faturamento > 0 && (
         <>
-          {pct >= 100 ? (
-            <div className="mt-6 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
-              <strong>Limite mensal atingido.</strong> Seu bot está respondendo com a mensagem de
-              indisponibilidade até o próximo ciclo ou upgrade. <a href="/billing" className="underline">Fazer upgrade →</a>
-            </div>
-          ) : pct >= 80 ? (
-            <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-              <strong>Você usou {pct}% do seu plano.</strong> Considere comprar pacote extra ou fazer upgrade antes de
-              atingir o limite. <a href="/billing" className="underline">Ver opções →</a>
-            </div>
-          ) : null}
-
-          {(stats?.lowStockCount ?? 0) > 0 && (
-            <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-              ⚠️ <strong>{stats?.lowStockCount}</strong> produto(s) com estoque baixo.{" "}
-              <a href="/products" className="underline">Ver produtos →</a>
-            </div>
-          )}
-
-          {/* Resumo do mês */}
-          <section className="mt-8">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-              Este mês
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Card title="Vendas" value={formatBrl(monthSales)} hint="Pedidos do mês (sem cancelados)" icon={TrendingUp} tint="blue" />
-              <Card title="Despesas" value={formatBrl(monthExpenses)} hint="Lançadas em Despesas" icon={TrendingDown} tint="red" />
-              <Card
-                title="Resultado"
-                value={formatBrl(monthResult)}
-                hint={monthResult >= 0 ? "No azul 🎉" : "No vermelho"}
-                valueClass={monthResult >= 0 ? "text-emerald-700" : "text-red-700"}
-                icon={Wallet}
-                tint={monthResult >= 0 ? "green" : "red"}
+          <section className="mt-8 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl bg-white p-6 shadow-card">
+              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500">Vendas por canal</h2>
+              <Donut
+                data={withColors(
+                  [
+                    { label: "Presencial", value: extras.byChannel.presencial },
+                    { label: "Online", value: extras.byChannel.online },
+                  ].filter((d) => d.value > 0),
+                )}
               />
             </div>
+            <div className="rounded-2xl bg-white p-6 shadow-card">
+              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500">Formas de pagamento</h2>
+              <Donut data={withColors(extras.byPayment.map((p) => ({ label: p.method, value: p.total })))} />
+            </div>
+            <Breakdown title="Por vendedor" rows={extras.bySeller.map((s) => ({ label: s.name, value: s.total }))} />
+            <Breakdown
+              title="Parcelamento"
+              rows={extras.byInstallments.map((i) => ({
+                label: i.n === 1 ? "À vista (1x)" : `${i.n}x`,
+                value: i.total,
+                suffix: `${i.count} venda${i.count > 1 ? "s" : ""}`,
+              }))}
+            />
           </section>
 
-          {/* Gráfico de vendas */}
+          {has("products") && extras.topProducts.length > 0 && (
+            <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Top produtos do mês</h2>
+              <ul className="mt-4 divide-y divide-neutral-100">
+                {extras.topProducts.map((p, i) => (
+                  <li key={i} className="flex items-center justify-between py-2.5">
+                    <span className="text-sm">
+                      <span className="mr-2 text-neutral-400">{i + 1}.</span>
+                      {p.name}
+                      <span className="ml-2 text-xs text-neutral-400">{p.qty} un.</span>
+                    </span>
+                    <span className="text-sm font-medium">{formatBrl(p.revenue)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-              Vendas (últimos 14 dias)
-            </h2>
-            <SalesChart data={stats?.salesByDay ?? []} />
-          </section>
-
-          {/* Cards operacionais */}
-          <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card
-              title="Vendas hoje"
-              value={formatBrl(stats?.salesTodayBrl ?? 0)}
-              hint={`Ticket médio ${stats?.orderCount === 0 ? "—" : formatBrl(stats?.avgTicketBrl ?? 0)}`}
-              icon={ShoppingCart}
-              tint="blue"
-            />
-            <Card
-              title="Pedidos abertos"
-              value={String(stats?.openOrderCount ?? 0)}
-              hint={`${stats?.orderCount ?? 0} pedidos no total`}
-              icon={Package}
-              tint="amber"
-            />
-            <Card
-              title="Agendamentos hoje"
-              value={String(stats?.todaysAppointments ?? 0)}
-              hint={`${stats?.upcomingAppointments ?? 0} agendados à frente`}
-              icon={CalendarDays}
-              tint="violet"
-            />
-            <Card
-              title="Clientes"
-              value={String(stats?.customerCount ?? 0)}
-              hint="Cadastrados na loja"
-              icon={Users}
-              tint="green"
-            />
-            <Card
-              title="Mensagens este mês"
-              value={`${used.toLocaleString("pt-BR")} / ${quota.toLocaleString("pt-BR")}`}
-              hint={`${pct}% do plano Starter`}
-              progress={pct}
-              icon={MessageSquare}
-              tint="blue"
-            />
-            <Card
-              title="Produtos ativos"
-              value={String(stats?.activeProductCount ?? 0)}
-              hint={`${stats?.productCount ?? 0} no catálogo`}
-              icon={Tag}
-              tint="slate"
-            />
-          </section>
-
-          {/* Desempenho do mês (quebras) */}
-          {extras && extras.brutoMes > 0 && (
-            <>
-              {(extras.hasCardFee || extras.hasTax) && (
-                <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <Card title="Vendas brutas" value={formatBrl(extras.brutoMes)} hint="Mês atual" />
-                  <Card
-                    title="Taxa maquininha"
-                    value={extras.hasCardFee ? `− ${formatBrl(extras.taxaMaquininha)}` : "—"}
-                    hint="Cartão parcelado"
-                  />
-                  <Card
-                    title="Imposto estimado"
-                    value={extras.hasTax ? `− ${formatBrl(extras.impostoEstimado)}` : "—"}
-                    hint="Vendas com nota"
-                  />
-                  <Card
-                    title="Líquido"
-                    value={formatBrl(extras.liquidoMes)}
-                    hint="Bruto − taxas − imposto"
-                    valueClass="text-emerald-700"
-                  />
-                </section>
-              )}
-
-              <section className="mt-8 grid gap-4 lg:grid-cols-2">
-                <div className="rounded-2xl bg-white p-6 shadow-card">
-                  <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-                    Vendas por canal
-                  </h2>
-                  <Donut
-                    data={withColors(
-                      [
-                        { label: "Presencial", value: extras.byChannel.presencial },
-                        { label: "Online", value: extras.byChannel.online },
-                      ].filter((d) => d.value > 0),
-                    )}
-                  />
-                </div>
-                <div className="rounded-2xl bg-white p-6 shadow-card">
-                  <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-                    Formas de pagamento
-                  </h2>
-                  <Donut data={withColors(extras.byPayment.map((p) => ({ label: p.method, value: p.total })))} />
-                </div>
-                <Breakdown
-                  title="Por vendedor"
-                  rows={extras.bySeller.map((s) => ({ label: s.name, value: s.total }))}
-                />
-                <Breakdown
-                  title="Parcelamento"
-                  rows={extras.byInstallments.map((i) => ({
-                    label: i.n === 1 ? "À vista (1x)" : `${i.n}x`,
-                    value: i.total,
-                    suffix: `${i.count} venda${i.count > 1 ? "s" : ""}`,
-                  }))}
-                />
-              </section>
-
-              {extras.topProducts.length > 0 && (
-                <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-                    Top produtos do mês
-                  </h2>
-                  <ul className="mt-4 divide-y divide-neutral-100">
-                    {extras.topProducts.map((p, i) => (
-                      <li key={i} className="flex items-center justify-between py-2.5">
-                        <span className="text-sm">
-                          <span className="mr-2 text-neutral-400">{i + 1}.</span>
-                          {p.name}
-                          <span className="ml-2 text-xs text-neutral-400">{p.qty} un.</span>
-                        </span>
-                        <span className="text-sm font-medium">{formatBrl(p.revenue)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-
-              <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-                  Evolução mensal (6 meses)
-                </h2>
-                <MonthlyChart data={extras.evolution} />
-              </section>
-            </>
-          )}
-
-          {/* Próximos passos */}
-          <section className="mt-10 rounded-2xl bg-white p-6 shadow-card">
-            <h2 className="text-lg font-semibold">Próximos passos</h2>
-            <p className="mt-1 text-sm text-neutral-500">Pra deixar seu bot 100% pronto.</p>
-            <ul className="mt-5 space-y-3">
-              <Step
-                done={!!tenant.botConfig}
-                href="/bot"
-                title="Configurar o bot"
-                desc="Define horário, formas de pagamento, instruções de venda"
-              />
-              <Step
-                done={(stats?.productCount ?? 0) > 0}
-                href="/products"
-                title="Cadastrar produtos"
-                desc={
-                  stats && stats.productCount > 0
-                    ? `${stats.activeProductCount} produto(s) ativo(s)`
-                    : "Catálogo que o bot vai oferecer aos clientes"
-                }
-              />
-              <Step
-                done={false}
-                href="/simulator"
-                title="Testar o bot no simulador"
-                desc="Converse com seu bot pelo painel — sem WhatsApp real"
-              />
-              <Step
-                done={tenant.botConfig?.whatsappConnected ?? false}
-                href="/whatsapp"
-                title="Conectar o WhatsApp"
-                desc="Aponte a câmera do celular pro QR code (apenas em deploy Linux)"
-              />
-              <Step
-                done={tenant.subscription?.status === "active"}
-                href="/billing"
-                title="Ativar assinatura"
-                desc="R$ 299,90/mês · 2.500 mensagens · Trial 7 dias grátis"
-              />
-            </ul>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Evolução mensal (6 meses)</h2>
+            <MonthlyChart data={extras.evolution} />
           </section>
         </>
       )}
+
+      {/* Próximos passos */}
+      <section className="mt-10 rounded-2xl bg-white p-6 shadow-card">
+        <h2 className="text-lg font-semibold">Próximos passos</h2>
+        <p className="mt-1 text-sm text-neutral-500">Pra deixar seu bot 100% pronto.</p>
+        <ul className="mt-5 space-y-3">
+          <Step done={!!tenant.botConfig} href="/bot" title="Configurar o bot" desc="Define horário, formas de pagamento, instruções de venda" />
+          {has("products") && (
+            <Step
+              done={stats.productCount > 0}
+              href="/products"
+              title="Cadastrar produtos"
+              desc={stats.productCount > 0 ? `${stats.activeProductCount} produto(s) ativo(s)` : "Catálogo que o bot vai oferecer aos clientes"}
+            />
+          )}
+          <Step done={false} href="/simulator" title="Testar o bot no simulador" desc="Converse com seu bot pelo painel — sem WhatsApp real" />
+          <Step done={tenant.botConfig?.whatsappConnected ?? false} href="/whatsapp" title="Conectar o WhatsApp" desc="Aponte a câmera do celular pro QR code (apenas em deploy Linux)" />
+          <Step done={tenant.subscription?.status === "active"} href="/billing" title="Ativar assinatura" desc="R$ 299,90/mês · 2.500 mensagens · Trial 7 dias grátis" />
+        </ul>
+      </section>
     </main>
   );
 }
@@ -313,6 +291,7 @@ function Card({
   valueClass,
   icon: Icon,
   tint = "slate",
+  delta,
 }: {
   title: string;
   value: string;
@@ -321,15 +300,14 @@ function Card({
   valueClass?: string;
   icon?: LucideIcon;
   tint?: keyof typeof TINTS | string;
+  delta?: number | null;
 }) {
   return (
     <div className="rounded-2xl bg-white p-5 shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
         {Icon && (
-          <span
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${TINTS[tint] ?? TINTS.slate}`}
-          >
+          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${TINTS[tint] ?? TINTS.slate}`}>
             <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
           </span>
         )}
@@ -338,37 +316,84 @@ function Card({
       {progress !== undefined && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
           <div
-            className={`h-full ${
-              progress >= 100 ? "bg-red-500" : progress >= 80 ? "bg-amber-500" : "bg-emerald-500"
-            }`}
+            className={`h-full ${progress >= 100 ? "bg-red-500" : progress >= 80 ? "bg-amber-500" : "bg-emerald-500"}`}
             style={{ width: `${Math.min(100, progress)}%` }}
           />
         </div>
       )}
-      <div className="mt-1 text-xs text-neutral-500">{hint}</div>
+      <div className="mt-1 flex items-center gap-2 text-xs text-neutral-500">
+        {delta != null && <Delta value={delta} />}
+        <span>{hint}</span>
+      </div>
     </div>
   );
 }
 
-function Step({
-  done,
-  href,
-  title,
-  desc,
+/** Badge de variação vs mês anterior. */
+function Delta({ value }: { value: number }) {
+  const up = value >= 0;
+  return (
+    <span className={`inline-flex items-center gap-0.5 font-medium ${up ? "text-emerald-600" : "text-red-600"}`}>
+      {up ? <TrendingUp className="h-3 w-3" strokeWidth={2.5} /> : <TrendingDown className="h-3 w-3" strokeWidth={2.5} />}
+      {Math.abs(value).toFixed(0)}%
+    </span>
+  );
+}
+
+/** Uma linha da cascata de lucro. */
+function CascadeRow({
+  label,
+  value,
+  sign,
+  strong,
+  highlight,
+  note,
+  tag,
 }: {
-  done: boolean;
-  href: string;
-  title: string;
-  desc: string;
+  label: string;
+  value: number;
+  sign: "+" | "-" | "=";
+  strong?: boolean;
+  highlight?: boolean;
+  note?: string;
+  tag?: string;
 }) {
+  const valueStr = `${sign === "-" ? "− " : ""}${formatBrl(value)}`;
+  return (
+    <div className={`flex items-center justify-between ${highlight ? "text-base" : ""}`}>
+      <span className={`flex items-center gap-2 ${strong ? "font-semibold text-neutral-900" : "text-neutral-600"}`}>
+        {label}
+        {note && <span className="text-xs font-normal text-neutral-400">{note}</span>}
+        {tag && (
+          <span className="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
+            {tag}
+          </span>
+        )}
+      </span>
+      <span
+        className={`tabular-nums ${
+          highlight
+            ? value >= 0
+              ? "font-bold text-emerald-700"
+              : "font-bold text-red-700"
+            : strong
+              ? "font-semibold"
+              : "text-neutral-600"
+        }`}
+      >
+        {valueStr}
+      </span>
+    </div>
+  );
+}
+
+function Step({ done, href, title, desc }: { done: boolean; href: string; title: string; desc: string }) {
   return (
     <li>
       <a
         href={href}
         className={`flex items-center justify-between rounded-lg border p-4 transition ${
-          done
-            ? "border-emerald-200 bg-emerald-50"
-            : "border-neutral-200 bg-white hover:border-neutral-400 hover:bg-neutral-50"
+          done ? "border-emerald-200 bg-emerald-50" : "border-neutral-200 bg-white hover:border-neutral-400 hover:bg-neutral-50"
         }`}
       >
         <div className="flex items-center gap-3">
@@ -390,13 +415,7 @@ function Step({
   );
 }
 
-function Breakdown({
-  title,
-  rows,
-}: {
-  title: string;
-  rows: { label: string; value: number; suffix?: string }[];
-}) {
+function Breakdown({ title, rows }: { title: string; rows: { label: string; value: number; suffix?: string }[] }) {
   const max = Math.max(...rows.map((r) => r.value), 1);
   const nonZero = rows.filter((r) => r.value > 0);
   return (
@@ -416,10 +435,7 @@ function Breakdown({
                 </span>
               </div>
               <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
-                <div
-                  className="h-full bg-neutral-700"
-                  style={{ width: `${(r.value / max) * 100}%` }}
-                />
+                <div className="h-full bg-brand" style={{ width: `${(r.value / max) * 100}%` }} />
               </div>
             </li>
           ))}
@@ -437,20 +453,32 @@ function MonthlyChart({ data }: { data: { label: string; total: number }[] }) {
       <div className="flex h-44 items-end gap-3">
         {data.map((d, i) => (
           <div key={i} className="flex flex-1 flex-col items-center justify-end" title={formatBrl(d.total)}>
-            <span className="mb-1 text-[10px] text-neutral-500">
-              {d.total > 0 ? formatBrl(d.total) : ""}
-            </span>
-            <div
-              className="w-full rounded-t bg-emerald-400"
-              style={{ height: `${(d.total / max) * 100}%`, minHeight: d.total > 0 ? "4px" : "0px" }}
-            />
+            <span className="mb-1 text-[10px] text-neutral-500">{d.total > 0 ? formatBrl(d.total) : ""}</span>
+            <div className="w-full rounded-t bg-emerald-400" style={{ height: `${(d.total / max) * 100}%`, minHeight: d.total > 0 ? "4px" : "0px" }} />
             <span className="mt-1 text-[10px] text-neutral-400">{d.label}</span>
           </div>
         ))}
       </div>
-      {!hasData && (
-        <p className="mt-3 text-center text-xs text-neutral-400">Sem vendas nos últimos meses ainda.</p>
-      )}
+      {!hasData && <p className="mt-3 text-center text-xs text-neutral-400">Sem vendas nos últimos meses ainda.</p>}
+    </div>
+  );
+}
+
+function WeeklyChart({ data }: { data: { label: string; total: number }[] }) {
+  const max = Math.max(...data.map((d) => d.total), 1);
+  const hasData = data.some((d) => d.total > 0);
+  return (
+    <div className="mt-4">
+      <div className="flex h-44 items-end gap-3">
+        {data.map((d, i) => (
+          <div key={i} className="flex flex-1 flex-col items-center justify-end" title={formatBrl(d.total)}>
+            <span className="mb-1 text-[10px] text-neutral-500">{d.total > 0 ? formatBrl(d.total) : ""}</span>
+            <div className="w-full rounded-t bg-brand" style={{ height: `${(d.total / max) * 100}%`, minHeight: d.total > 0 ? "4px" : "0px" }} />
+            <span className="mt-1 text-[10px] text-neutral-400">{d.label}</span>
+          </div>
+        ))}
+      </div>
+      {!hasData && <p className="mt-3 text-center text-xs text-neutral-400">Sem vendas neste mês ainda.</p>}
     </div>
   );
 }
@@ -478,26 +506,14 @@ function SalesChart({ data }: { data: { label: string; total: number }[] }) {
         </defs>
         {hasSales && <path d={area} fill="url(#salesfill)" />}
         {hasSales && (
-          <path
-            d={line}
-            fill="none"
-            stroke="#10b981"
-            strokeWidth="2.5"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-          />
+          <path d={line} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         )}
       </svg>
       <div className="mt-1 flex justify-between text-[10px] text-neutral-400">
         <span>{data[0]?.label}</span>
         <span>{data[data.length - 1]?.label}</span>
       </div>
-      {!hasSales && (
-        <p className="mt-2 text-center text-xs text-neutral-400">
-          Sem vendas nos últimos 14 dias ainda.
-        </p>
-      )}
+      {!hasSales && <p className="mt-2 text-center text-xs text-neutral-400">Sem vendas nos últimos 14 dias ainda.</p>}
     </div>
   );
 }
