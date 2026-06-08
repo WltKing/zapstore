@@ -157,6 +157,9 @@ export async function handleCriarPedido(
           totalBrl,
           paymentMethod: input.paymentMethod,
           notes: input.notes ?? null,
+          // O bot é o vendedor online permanente da loja.
+          channel: "online",
+          sellerName: "Bot",
         },
       });
 

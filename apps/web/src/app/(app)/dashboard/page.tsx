@@ -363,7 +363,7 @@ export default async function DashboardPage({
             </div>
             <div className="rounded-2xl bg-white p-6 shadow-card">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Por vendedor</h2>
-              <HBars data={extras.bySeller.map((s) => ({ label: s.name, value: s.total }))} />
+              <HBars data={extras.bySeller.map((s) => ({ label: /^bot$/i.test(s.name) ? `🤖 ${s.name}` : s.name, value: s.total }))} />
             </div>
             <div className="rounded-2xl bg-white p-6 shadow-card">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Parcelamento</h2>
