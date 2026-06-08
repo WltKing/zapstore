@@ -5,7 +5,7 @@ import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras, getReceiva
 import { NICHE_TEMPLATES } from "@/lib/niches";
 import { Donut, withColors } from "@/components/donut";
 import { AnticipationCalc } from "./anticipation-calc";
-import { AreaTrend, Bars, ProfitWaterfall, type WaterfallStep } from "./charts";
+import { AreaTrend, Bars } from "./charts";
 import {
   TrendingUp,
   TrendingDown,
@@ -79,14 +79,15 @@ export default async function DashboardPage() {
   const lucroDelta = pctChange(lucro, extras.prevLucro);
   const despesasDelta = pctChange(extras.despesasMes, extras.prevDespesas);
 
-  const cascadeSteps: WaterfallStep[] = [
-    { label: "Faturamento", value: faturamento, kind: "start" },
-    ...(has("products") ? [{ label: "Custo (CMV)", value: -extras.cmvMes, kind: "minus" as const }] : []),
-    ...(extras.taxaMaquininha > 0 ? [{ label: "Taxa cartão", value: -extras.taxaMaquininha, kind: "minus" as const }] : []),
-    ...(extras.impostoEstimado > 0 ? [{ label: "Imposto", value: -extras.impostoEstimado, kind: "minus" as const }] : []),
-    ...(extras.despesasMes > 0 ? [{ label: "Despesas", value: -extras.despesasMes, kind: "minus" as const }] : []),
-    { label: "Lucro", value: lucro, kind: "total" },
+  // Composição do faturamento: pra onde foi cada real (+ o que sobrou de lucro).
+  const composition = [
+    ...(has("products") && extras.cmvMes > 0 ? [{ label: "Custo dos produtos", value: extras.cmvMes, color: "#fb7185" }] : []),
+    ...(extras.taxaMaquininha > 0 ? [{ label: "Taxa de cartão", value: extras.taxaMaquininha, color: "#f59e0b" }] : []),
+    ...(extras.impostoEstimado > 0 ? [{ label: "Imposto", value: extras.impostoEstimado, color: "#a78bfa" }] : []),
+    ...(extras.despesasMes > 0 ? [{ label: "Despesas", value: extras.despesasMes, color: "#fb923c" }] : []),
+    { label: "Lucro líquido", value: Math.max(lucro, 0), color: "#10b981" },
   ];
+  const compositionTotal = composition.reduce((s, c) => s + c.value, 0);
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
@@ -141,15 +142,18 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Cascata de lucro — agora em gráfico */}
+      {/* Para onde vai o faturamento — barra de composição */}
       <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Do faturamento ao lucro</h2>
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Para onde vai o faturamento</h2>
+            <p className="text-xs text-neutral-400">De cada R$ que entra, quanto vira lucro</p>
+          </div>
           {faturamento > 0 && (
             <span className={`text-sm font-bold ${lucro >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-              {formatBrl(lucro)}
+              {formatBrl(lucro)} de lucro
               {has("products") && (
-                <span className="ml-1 text-xs font-normal text-neutral-400">margem {extras.margemPct.toFixed(0)}%</span>
+                <span className="ml-1 text-xs font-normal text-neutral-400">· margem {extras.margemPct.toFixed(0)}%</span>
               )}
             </span>
           )}
@@ -157,7 +161,7 @@ export default async function DashboardPage() {
         {faturamento <= 0 ? (
           <p className="mt-4 text-sm text-neutral-400">Sem vendas neste mês ainda.</p>
         ) : (
-          <ProfitWaterfall steps={cascadeSteps} />
+          <CompositionBar segments={composition} total={compositionTotal} />
         )}
         {has("products") && extras.productsWithoutCost > 0 && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-amber-700">
@@ -373,6 +377,46 @@ function Delta({ value, inverted }: { value: number; inverted?: boolean }) {
       {up ? <TrendingUp className="h-3 w-3" strokeWidth={2.5} /> : <TrendingDown className="h-3 w-3" strokeWidth={2.5} />}
       {Math.abs(value).toFixed(0)}%
     </span>
+  );
+}
+
+/** Barra de composição: 1 barra = 100% do faturamento, fatiada em pra-onde-foi + lucro. */
+function CompositionBar({
+  segments,
+  total,
+}: {
+  segments: { label: string; value: number; color: string }[];
+  total: number;
+}) {
+  const segs = segments.filter((s) => s.value > 0);
+  const safeTotal = total > 0 ? total : 1;
+  return (
+    <div className="mt-5">
+      <div className="flex h-10 w-full overflow-hidden rounded-lg bg-neutral-100">
+        {segs.map((s, i) => (
+          <div
+            key={i}
+            title={`${s.label}: ${formatBrl(s.value)}`}
+            style={{ width: `${(s.value / safeTotal) * 100}%`, backgroundColor: s.color }}
+            className="h-full"
+          />
+        ))}
+      </div>
+      <ul className="mt-4 grid gap-x-8 gap-y-2 sm:grid-cols-2">
+        {segs.map((s, i) => (
+          <li key={i} className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-2 text-neutral-600">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
+              {s.label}
+            </span>
+            <span className="font-medium text-neutral-900">
+              {formatBrl(s.value)}
+              <span className="ml-1 text-xs font-normal text-neutral-400">{Math.round((s.value / safeTotal) * 100)}%</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
