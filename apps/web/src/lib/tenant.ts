@@ -274,7 +274,11 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
       createdAt: true,
     } as const;
 
-    const [monthOrders, prevOrders, evoOrders, expAgg, prevExpAgg] = await Promise.all([
+    // Janela p/ "produtos parados": vendas dos últimos 90 dias (a partir de hoje).
+    const stale90 = new Date(now);
+    stale90.setDate(stale90.getDate() - 90);
+
+    const [monthOrders, prevOrders, evoOrders, expAgg, prevExpAgg, recentSales] = await Promise.all([
       tx.order.findMany({
         where: { status: { not: "CANCELED" }, createdAt: { gte: monthStart, lt: monthEnd } },
         select: orderSelect,
@@ -292,7 +296,32 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
         _sum: { amountBrl: true },
         where: { paidAt: { gte: prevStart, lt: monthStart } },
       }),
+      tx.order.findMany({
+        where: { status: { not: "CANCELED" }, createdAt: { gte: stale90 } },
+        select: { items: true },
+      }),
     ]);
+
+    // Produtos vendidos nos últimos 90 dias (por id e por nome).
+    const soldRecently = new Set<string>();
+    for (const o of recentSales) {
+      const items = (Array.isArray(o.items) ? o.items : []) as OrderItemJson[];
+      for (const it of items) {
+        if (it.productId) soldRecently.add(it.productId);
+        if (it.name) soldRecently.add(it.name.trim().toLowerCase());
+      }
+    }
+    // Parados: ativos, com estoque, sem venda há +90 dias.
+    const staleProducts = products
+      .filter((p) => p.active && p.stock > 0 && !soldRecently.has(p.id) && !soldRecently.has(p.name.trim().toLowerCase()))
+      .map((p) => {
+        const cost = p.costBrl != null ? Number(p.costBrl) : 0;
+        return { name: p.name, stock: p.stock, value: cost > 0 ? p.stock * cost : 0 };
+      })
+      .sort((a, b) => b.value - a.value);
+    const staleCount = staleProducts.length;
+    const staleValue = staleProducts.reduce((s, p) => s + p.value, 0);
+    const staleList = staleProducts.slice(0, 5);
 
     // ===== Cascata de lucro (mês atual e anterior) =====
     const fin = computeFinancials(monthOrders, cardFees, taxEstimatePct, costById, costByName);
@@ -307,6 +336,10 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
     const lucroLiquido = brutoMes - cmvMes - taxaMaquininha - impostoEstimado - despesasMes;
     const lucroBruto = brutoMes - cmvMes;
     const margemPct = brutoMes > 0 ? (lucroBruto / brutoMes) * 100 : 0;
+
+    // Cobertura de estoque (dias): no ritmo de CMV do mês, quantos dias o estoque dura.
+    const diasCobertura =
+      cmvMes > 0 && capitalEmEstoque > 0 ? Math.round(capitalEmEstoque / (cmvMes / 30)) : null;
 
     const prevBruto = prevFin.bruto;
     const prevLucro = prevFin.bruto - prevFin.cmv - prevFin.taxa - prevFin.imposto - prevDespesas;
@@ -426,6 +459,10 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
       productsWithoutCost,
       capitalEmEstoque,
       topByMargin,
+      staleCount,
+      staleValue,
+      staleList,
+      diasCobertura,
       ticketMedio,
       orderCount: monthOrders.length,
       // Comparação mês anterior

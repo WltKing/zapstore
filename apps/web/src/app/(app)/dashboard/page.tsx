@@ -285,19 +285,49 @@ export default async function DashboardPage({
                 tint={stats.lowStockCount > 0 ? "red" : "slate"}
               />
             )}
-            {has("products") && extras.capitalEmEstoque > 0 && (
-              <Card
-                title="Capital em estoque"
-                value={formatBrl(extras.capitalEmEstoque)}
-                hint="Dinheiro parado em mercadoria"
-                icon={Warehouse}
-                tint="slate"
-              />
-            )}
             {has("scheduling") && (
               <Card title="Agendamentos hoje" value={String(stats.todaysAppointments)} hint={`${stats.upcomingAppointments} agendados à frente`} icon={CalendarDays} tint="violet" />
             )}
           </div>
+        </section>
+      )}
+
+      {/* Saúde do estoque (produtos, mês corrente) */}
+      {isCurrentMonth && has("products") && (extras.capitalEmEstoque > 0 || extras.staleCount > 0) && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Saúde do estoque</h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card title="Capital em estoque" value={formatBrl(extras.capitalEmEstoque)} hint="Dinheiro parado em mercadoria" icon={Warehouse} tint="slate" />
+            <Card
+              title="Produtos parados"
+              value={String(extras.staleCount)}
+              hint={extras.staleValue > 0 ? `${formatBrl(extras.staleValue)} sem vender há +90 dias` : "Sem vender há +90 dias"}
+              icon={AlertTriangle}
+              tint={extras.staleCount > 0 ? "amber" : "slate"}
+            />
+            <Card
+              title="Cobertura de estoque"
+              value={extras.diasCobertura != null ? `${extras.diasCobertura} dias` : "—"}
+              hint="Quanto o estoque dura no ritmo de vendas atual"
+              icon={Package}
+              tint="slate"
+            />
+          </div>
+          {extras.staleList.length > 0 && (
+            <div className="mt-4 rounded-2xl bg-white p-6 shadow-card">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Parados há mais de 90 dias</h3>
+              <ul className="mt-3 divide-y divide-neutral-100">
+                {extras.staleList.map((p, i) => (
+                  <li key={i} className="flex items-center justify-between py-2 text-sm">
+                    <span>
+                      {p.name} <span className="text-xs text-neutral-400">{p.stock} un.</span>
+                    </span>
+                    <span className="font-medium">{p.value > 0 ? formatBrl(p.value) : "—"}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       )}
 
