@@ -113,7 +113,10 @@ export function HBars({ data }: { data: { label: string; value: number; suffix?:
               ) : null
             }
           />
-          <Bar dataKey="value" fill="var(--brand, #2563eb)" radius={[0, 6, 6, 0]} barSize={16}>
+          <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={16}>
+            {d.map((_, i) => (
+              <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
+            ))}
             <LabelList dataKey="value" position="right" formatter={(v: unknown) => compactBrl(Number(v))} style={{ fontSize: 11, fill: "#374151" }} />
           </Bar>
         </BarChart>

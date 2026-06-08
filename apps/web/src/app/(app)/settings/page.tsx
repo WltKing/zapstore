@@ -30,6 +30,7 @@ export default async function SettingsPage() {
       cardFees={parseCardFees(tenant.cardFees) ?? emptyCardFees()}
       settlement={parseSettlement(tenant.settlement)}
       taxEstimatePct={tenant.taxEstimatePct != null ? Number(tenant.taxEstimatePct) : null}
+      salesGoalBrl={tenant.salesGoalBrl != null ? Number(tenant.salesGoalBrl) : null}
       nicheLabel={nicheLabel}
       niche={tenant.niche ?? "generico"}
       enabledModules={tenant.enabledModules ?? []}

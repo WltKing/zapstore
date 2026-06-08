@@ -12,9 +12,9 @@
 import type { Area } from "@/lib/permissions";
 import { NICHE_TEMPLATES, type NicheId } from "@/lib/niches";
 
-export type ModuleId = "products" | "delivery" | "scheduling" | "fiscal";
+export type ModuleId = "products" | "delivery" | "scheduling" | "fiscal" | "goal";
 
-export const MODULE_IDS: ModuleId[] = ["products", "delivery", "scheduling", "fiscal"];
+export const MODULE_IDS: ModuleId[] = ["products", "delivery", "scheduling", "fiscal", "goal"];
 
 /** Áreas (rotas do menu) que cada módulo destrava. */
 export const MODULE_AREAS: Record<ModuleId, Area[]> = {
@@ -22,6 +22,7 @@ export const MODULE_AREAS: Record<ModuleId, Area[]> = {
   delivery: ["route", "deliveries"],
   scheduling: ["agenda", "scheduling"],
   fiscal: ["fiscal"],
+  goal: [], // só dashboard, sem item de menu
 };
 
 /** Áreas sempre disponíveis, independente de nicho (núcleo universal). */
@@ -42,16 +43,17 @@ export const UNIVERSAL_AREAS: Area[] = [
 
 /**
  * Como cada nicho trata cada módulo:
- *   "core" = sempre ligado (identidade do nicho) — não pergunta, não desliga
- *   "ask"  = pergunta no cadastro; depois o lojista liga/desliga nas Configurações
- *   "off"  = não faz sentido nesse nicho → escondido
+ *   "core"     = sempre ligado (identidade do nicho) — não pergunta, não desliga
+ *   "ask"      = pergunta no cadastro; depois o lojista liga/desliga nas Configurações
+ *   "optional" = não pergunta no cadastro, vem DESLIGADO; o lojista liga nas Configurações
+ *   "off"      = não faz sentido nesse nicho → escondido
  */
-export type NicheModuleMode = "core" | "ask" | "off";
+export type NicheModuleMode = "core" | "ask" | "optional" | "off";
 
 export const NICHE_MODULES: Record<NicheId, Record<ModuleId, NicheModuleMode>> = {
-  colchoes_moveis: { products: "core", delivery: "ask", scheduling: "off", fiscal: "ask" },
-  estetica: { products: "ask", delivery: "off", scheduling: "core", fiscal: "ask" },
-  generico: { products: "ask", delivery: "ask", scheduling: "ask", fiscal: "ask" },
+  colchoes_moveis: { products: "core", delivery: "ask", scheduling: "off", fiscal: "ask", goal: "optional" },
+  estetica: { products: "ask", delivery: "off", scheduling: "core", fiscal: "ask", goal: "optional" },
+  generico: { products: "ask", delivery: "ask", scheduling: "ask", fiscal: "ask", goal: "optional" },
 };
 
 export const MODULE_LABELS: Record<ModuleId, string> = {
@@ -59,6 +61,7 @@ export const MODULE_LABELS: Record<ModuleId, string> = {
   delivery: "Entregas e rota",
   scheduling: "Agenda e agendamentos",
   fiscal: "Nota fiscal",
+  goal: "Meta de vendas",
 };
 
 /** Pergunta sim/não usada no cadastro pros módulos "ask". */
@@ -67,6 +70,7 @@ export const MODULE_QUESTIONS: Record<ModuleId, { question: string; hint: string
   delivery: { question: "Você faz entrega?", hint: "Liga a rota do dia e a gestão de entregas." },
   scheduling: { question: "Você trabalha com horário marcado?", hint: "Liga a agenda, os agendamentos e os profissionais." },
   fiscal: { question: "Você emite nota fiscal?", hint: "Liga a emissão de NFC-e / NF-e." },
+  goal: { question: "", hint: "" }, // optional: não aparece no cadastro
 };
 
 function nicheConfig(niche: string | null | undefined): Record<ModuleId, NicheModuleMode> {
@@ -113,6 +117,7 @@ export function defaultModuleAnswers(niche: string | null | undefined): Record<M
     delivery: tpl.suggestsDelivery,
     scheduling: tpl.acceptsScheduling,
     fiscal: false,
+    goal: false,
   };
 }
 

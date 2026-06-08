@@ -94,6 +94,11 @@ export default async function DashboardPage({
   const lucroDelta = pctChange(lucro, extras.prevLucro);
   const despesasDelta = pctChange(extras.despesasMes, extras.prevDespesas);
 
+  // Meta de vendas (módulo opcional "goal").
+  const goalBrl = tenant.salesGoalBrl != null ? Number(tenant.salesGoalBrl) : null;
+  const showGoal = has("goal") && goalBrl != null && goalBrl > 0;
+  const goalPct = showGoal ? Math.min(100, Math.round((faturamento / goalBrl) * 100)) : 0;
+
   // Barras horizontais: faturamento (100%) e pra onde foi, terminando no lucro.
   const revenueRows = [
     { label: "Faturamento", value: faturamento, color: "#3b82f6", strong: true },
@@ -162,6 +167,41 @@ export default async function DashboardPage({
           <Card title="Despesas" value={formatBrl(extras.despesasMes)} hint="Gastos do mês" icon={TrendingDown} tint="red" delta={despesasDelta} deltaInverted />
         </div>
       </section>
+
+      {/* Meta do mês (módulo opcional) */}
+      {showGoal && (
+        <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Meta do mês</h2>
+            <span className="text-sm font-bold text-neutral-900">
+              {formatBrl(faturamento)}
+              <span className="font-normal text-neutral-400"> de {formatBrl(goalBrl)}</span>
+            </span>
+          </div>
+          <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-neutral-100">
+            <div
+              className={`h-full ${goalPct >= 100 ? "bg-emerald-500" : "bg-brand"}`}
+              style={{ width: `${goalPct}%` }}
+            />
+          </div>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500">
+            <span>
+              <strong className={goalPct >= 100 ? "text-emerald-700" : "text-neutral-700"}>{goalPct}%</strong> da meta
+              {goalBrl - faturamento > 0 && <> · faltam {formatBrl(goalBrl - faturamento)}</>}
+            </span>
+            {isCurrentMonth && (
+              <span>
+                Projeção: <strong>{formatBrl(extras.projectedSales)}</strong>{" "}
+                {extras.projectedSales >= goalBrl ? (
+                  <span className="text-emerald-700">— nesse ritmo você bate a meta 🎯</span>
+                ) : (
+                  <span className="text-amber-700">— nesse ritmo fecha abaixo</span>
+                )}
+              </span>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Para onde vai o faturamento — barra de composição */}
       <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">

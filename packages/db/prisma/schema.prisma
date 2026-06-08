@@ -37,6 +37,7 @@ model Tenant {
   cardFees    Json?    // taxas: { pix, debit, credit: [{n, fee}] } — % por forma/parcela
   settlement  Json?    // repasse da maquininha: { pixDays, debitDays, creditMode, creditAdvanceDays, boletoDays, anticipationFeePct }
   taxEstimatePct Decimal? @db.Decimal(5, 2) // imposto estimado sobre vendas com nota (% p/ caixa)
+  salesGoalBrl Decimal? @db.Decimal(12, 2) // meta de vendas mensal (módulo "goal" opcional)
   status      TenantStatus @default(TRIAL)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

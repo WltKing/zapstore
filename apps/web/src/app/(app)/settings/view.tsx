@@ -27,6 +27,7 @@ export function SettingsView({
   cardFees,
   settlement,
   taxEstimatePct,
+  salesGoalBrl,
   nicheLabel,
   niche,
   enabledModules,
@@ -43,6 +44,7 @@ export function SettingsView({
   cardFees: CardFees;
   settlement: SettlementConfig;
   taxEstimatePct: number | null;
+  salesGoalBrl: number | null;
   nicheLabel: string;
   niche: string;
   enabledModules: string[];
@@ -58,6 +60,8 @@ export function SettingsView({
   const [margin, setMargin] = useState(defaultMarginPct != null ? String(defaultMarginPct) : "");
   const [round90, setRound90] = useState(roundTo90);
   const [taxEst, setTaxEst] = useState(taxEstimatePct != null ? String(taxEstimatePct) : "");
+  const [goal, setGoal] = useState(salesGoalBrl != null ? String(salesGoalBrl) : "");
+  const goalEnabled = enabledModules.includes("goal");
   // Repasse da maquininha (quando o dinheiro cai) + antecipação.
   const [pixDays, setPixDays] = useState(String(settlement.pixDays));
   const [debitDays, setDebitDays] = useState(String(settlement.debitDays));
@@ -105,6 +109,7 @@ export function SettingsView({
             .map((r) => ({ n: Number(r.n), fee: Number(r.fee) })),
         },
         taxEstimatePct: taxEst.trim() === "" ? null : Number(taxEst),
+        salesGoalBrl: goal.trim() === "" ? null : Number(goal),
         settlement: {
           pixDays: Number(pixDays) || 0,
           debitDays: Number(debitDays) || 0,
@@ -367,6 +372,29 @@ export function SettingsView({
             <p className="mt-1 text-xs text-neutral-400">Sobre vendas com nota (NFC-e/NF-e).</p>
           </div>
         </section>
+
+        {/* Meta de vendas — só se o módulo estiver ligado */}
+        {goalEnabled && (
+          <section className="rounded-2xl bg-white p-6 shadow-card">
+            <h2 className="font-semibold">Meta de vendas</h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              Sua meta de faturamento por mês. Aparece na Visão Geral com barra de progresso e projeção.
+            </p>
+            <div className="mt-4 max-w-xs">
+              <label className="block text-sm font-medium text-neutral-700">Meta mensal (R$)</label>
+              <input
+                type="number"
+                min="0"
+                step="100"
+                value={goal}
+                onChange={(e) => setGoal(e.target.value)}
+                placeholder="ex: 30000"
+                className={inputClass}
+              />
+              <p className="mt-1 text-xs text-neutral-400">Deixe em branco pra não usar meta.</p>
+            </div>
+          </section>
+        )}
 
         {/* Recebimento (maquininha) */}
         <section className="rounded-2xl bg-white p-6 shadow-card">

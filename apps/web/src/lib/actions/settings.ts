@@ -36,6 +36,7 @@ export interface StoreSettingsInput {
   cardFees?: CardFees | null;
   settlement?: SettlementConfig | null;
   taxEstimatePct?: number | null;
+  salesGoalBrl?: number | null;
 }
 
 export async function updateStoreSettingsAction(input: StoreSettingsInput): Promise<ActionResult> {
@@ -77,6 +78,12 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
     // Repasse da maquininha (quando o dinheiro cai) — normalizado.
     const settlement = input.settlement ? parseSettlement(input.settlement) : null;
 
+    // Meta de vendas mensal (>= 0). null = sem meta.
+    let salesGoal: number | null = null;
+    if (input.salesGoalBrl != null && !Number.isNaN(input.salesGoalBrl) && input.salesGoalBrl > 0) {
+      salesGoal = input.salesGoalBrl;
+    }
+
     // tenants é tabela global (sem RLS); atualizamos só a loja do próprio usuário.
     await prisma.tenant.update({
       where: { id: tenantId },
@@ -92,6 +99,7 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
         cardFees: fees ? (JSON.parse(JSON.stringify(fees)) as object) : undefined,
         settlement: settlement ? (JSON.parse(JSON.stringify(settlement)) as object) : undefined,
         taxEstimatePct: taxEst,
+        salesGoalBrl: salesGoal,
       },
     });
 
