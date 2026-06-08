@@ -79,15 +79,15 @@ export default async function DashboardPage() {
   const lucroDelta = pctChange(lucro, extras.prevLucro);
   const despesasDelta = pctChange(extras.despesasMes, extras.prevDespesas);
 
-  // Composição do faturamento: pra onde foi cada real (+ o que sobrou de lucro).
-  const composition = [
-    ...(has("products") && extras.cmvMes > 0 ? [{ label: "Custo dos produtos", value: extras.cmvMes, color: "#fb7185" }] : []),
+  // Barras horizontais: faturamento (100%) e pra onde foi, terminando no lucro.
+  const revenueRows = [
+    { label: "Faturamento", value: faturamento, color: "#3b82f6", strong: true },
+    ...(has("products") && extras.cmvMes > 0 ? [{ label: "Custo (CMV)", value: extras.cmvMes, color: "#fb7185" }] : []),
     ...(extras.taxaMaquininha > 0 ? [{ label: "Taxa de cartão", value: extras.taxaMaquininha, color: "#f59e0b" }] : []),
     ...(extras.impostoEstimado > 0 ? [{ label: "Imposto", value: extras.impostoEstimado, color: "#a78bfa" }] : []),
     ...(extras.despesasMes > 0 ? [{ label: "Despesas", value: extras.despesasMes, color: "#fb923c" }] : []),
-    { label: "Lucro líquido", value: Math.max(lucro, 0), color: "#10b981" },
+    { label: "Lucro líquido", value: lucro, color: "#10b981", strong: true },
   ];
-  const compositionTotal = composition.reduce((s, c) => s + c.value, 0);
 
   // Checklist de configuração: some quando o essencial está pronto.
   const setupComplete =
@@ -158,7 +158,7 @@ export default async function DashboardPage() {
         {faturamento <= 0 ? (
           <p className="mt-4 text-sm text-neutral-400">Sem vendas neste mês ainda.</p>
         ) : (
-          <CompositionBar segments={composition} total={compositionTotal} />
+          <RevenueBars rows={revenueRows} max={faturamento} />
         )}
         {has("products") && extras.productsWithoutCost > 0 && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-amber-700">
@@ -406,41 +406,41 @@ function Delta({ value, inverted }: { value: number; inverted?: boolean }) {
 }
 
 /** Barra de composição: 1 barra = 100% do faturamento, fatiada em pra-onde-foi + lucro. */
-function CompositionBar({
-  segments,
-  total,
+/** Barras horizontais: faturamento (100%) e pra onde foi, terminando no lucro. */
+function RevenueBars({
+  rows,
+  max,
 }: {
-  segments: { label: string; value: number; color: string }[];
-  total: number;
+  rows: { label: string; value: number; color: string; strong?: boolean }[];
+  max: number;
 }) {
-  const segs = segments.filter((s) => s.value > 0);
-  const safeTotal = total > 0 ? total : 1;
+  const safe = max > 0 ? max : 1;
   return (
-    <div className="mt-5">
-      <div className="flex h-10 w-full overflow-hidden rounded-lg bg-neutral-100">
-        {segs.map((s, i) => (
-          <div
-            key={i}
-            title={`${s.label}: ${formatBrl(s.value)}`}
-            style={{ width: `${(s.value / safeTotal) * 100}%`, backgroundColor: s.color }}
-            className="h-full"
-          />
-        ))}
-      </div>
-      <ul className="mt-4 grid gap-x-8 gap-y-2 sm:grid-cols-2">
-        {segs.map((s, i) => (
-          <li key={i} className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2 text-neutral-600">
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
-              {s.label}
+    <div className="mt-5 space-y-3">
+      {rows.map((r, i) => {
+        const pct = Math.round((Math.max(r.value, 0) / safe) * 100);
+        return (
+          <div key={i} className="flex items-center gap-3">
+            <span
+              className={`w-28 shrink-0 truncate text-sm sm:w-36 ${
+                r.strong ? "font-semibold text-neutral-900" : "text-neutral-600"
+              }`}
+            >
+              {r.label}
             </span>
-            <span className="font-medium text-neutral-900">
-              {formatBrl(s.value)}
-              <span className="ml-1 text-xs font-normal text-neutral-400">{Math.round((s.value / safeTotal) * 100)}%</span>
+            <div className="relative h-6 flex-1 overflow-hidden rounded-md bg-neutral-100">
+              <div
+                className="h-full rounded-md"
+                style={{ width: `${Math.max((Math.max(r.value, 0) / safe) * 100, 1.5)}%`, backgroundColor: r.color }}
+              />
+            </div>
+            <span className={`w-24 shrink-0 text-right text-sm sm:w-28 ${r.strong ? "font-semibold text-neutral-900" : "text-neutral-600"}`}>
+              {formatBrl(r.value)}
+              <span className="ml-1 hidden text-xs font-normal text-neutral-400 sm:inline">{pct}%</span>
             </span>
-          </li>
-        ))}
-      </ul>
+          </div>
+        );
+      })}
     </div>
   );
 }
