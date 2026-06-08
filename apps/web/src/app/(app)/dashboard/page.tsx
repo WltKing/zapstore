@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras, getReceivables } from "@/lib/tenant";
 import { NICHE_TEMPLATES } from "@/lib/niches";
-import { Donut, withColors } from "@/components/donut";
-import { AreaTrend, Bars } from "./charts";
+import { AreaTrend, Bars, DonutChart, HBars } from "./charts";
 import { MonthSelect } from "../cashflow/month-select";
 import {
   TrendingUp,
@@ -270,46 +269,38 @@ export default async function DashboardPage({
         <>
           <section className="mt-8 grid gap-4 lg:grid-cols-2">
             <div className="rounded-2xl bg-white p-6 shadow-card">
-              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500">Vendas por canal</h2>
-              <Donut
-                data={withColors(
-                  [
-                    { label: "Presencial", value: extras.byChannel.presencial },
-                    { label: "Online", value: extras.byChannel.online },
-                  ].filter((d) => d.value > 0),
-                )}
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">Vendas por canal</h2>
+              <DonutChart
+                data={[
+                  { label: "Presencial", value: extras.byChannel.presencial },
+                  { label: "Online", value: extras.byChannel.online },
+                ]}
               />
             </div>
             <div className="rounded-2xl bg-white p-6 shadow-card">
-              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-neutral-500">Formas de pagamento</h2>
-              <Donut data={withColors(extras.byPayment.map((p) => ({ label: p.method, value: p.total })))} />
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">Formas de pagamento</h2>
+              <DonutChart data={extras.byPayment.map((p) => ({ label: p.method, value: p.total }))} />
             </div>
-            <Breakdown title="Por vendedor" rows={extras.bySeller.map((s) => ({ label: s.name, value: s.total }))} />
-            <Breakdown
-              title="Parcelamento"
-              rows={extras.byInstallments.map((i) => ({
-                label: i.n === 1 ? "À vista (1x)" : `${i.n}x`,
-                value: i.total,
-                suffix: `${i.count} venda${i.count > 1 ? "s" : ""}`,
-              }))}
-            />
+            <div className="rounded-2xl bg-white p-6 shadow-card">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Por vendedor</h2>
+              <HBars data={extras.bySeller.map((s) => ({ label: s.name, value: s.total }))} />
+            </div>
+            <div className="rounded-2xl bg-white p-6 shadow-card">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Parcelamento</h2>
+              <HBars
+                data={extras.byInstallments.map((i) => ({
+                  label: i.n === 1 ? "À vista (1x)" : `${i.n}x`,
+                  value: i.total,
+                  suffix: `${i.count} venda${i.count > 1 ? "s" : ""}`,
+                }))}
+              />
+            </div>
           </section>
 
           {has("products") && extras.topProducts.length > 0 && (
             <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Top produtos do mês</h2>
-              <ul className="mt-4 divide-y divide-neutral-100">
-                {extras.topProducts.map((p, i) => (
-                  <li key={i} className="flex items-center justify-between py-2.5">
-                    <span className="text-sm">
-                      <span className="mr-2 text-neutral-400">{i + 1}.</span>
-                      {p.name}
-                      <span className="ml-2 text-xs text-neutral-400">{p.qty} un.</span>
-                    </span>
-                    <span className="text-sm font-medium">{formatBrl(p.revenue)}</span>
-                  </li>
-                ))}
-              </ul>
+              <HBars data={extras.topProducts.map((p) => ({ label: p.name, value: p.revenue, suffix: `${p.qty} un.` }))} />
             </section>
           )}
 
@@ -508,33 +499,4 @@ function Step({ done, href, title, desc }: { done: boolean; href: string; title:
   );
 }
 
-function Breakdown({ title, rows }: { title: string; rows: { label: string; value: number; suffix?: string }[] }) {
-  const max = Math.max(...rows.map((r) => r.value), 1);
-  const nonZero = rows.filter((r) => r.value > 0);
-  return (
-    <div className="rounded-2xl bg-white p-6 shadow-card">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">{title}</h2>
-      {nonZero.length === 0 ? (
-        <p className="mt-4 text-xs text-neutral-400">Sem dados neste mês.</p>
-      ) : (
-        <ul className="mt-4 space-y-3">
-          {nonZero.map((r, i) => (
-            <li key={i}>
-              <div className="flex items-center justify-between text-sm">
-                <span className="truncate pr-2 capitalize">{r.label}</span>
-                <span className="shrink-0 font-medium">
-                  {formatBrl(r.value)}
-                  {r.suffix && <span className="ml-1 text-xs text-neutral-400">· {r.suffix}</span>}
-                </span>
-              </div>
-              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
-                <div className="h-full bg-brand" style={{ width: `${(r.value / max) * 100}%` }} />
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
 
