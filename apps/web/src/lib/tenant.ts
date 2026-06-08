@@ -154,19 +154,16 @@ export async function getReceivables(tenantId: string) {
   const since = new Date();
   since.setMonth(since.getMonth() - 13);
 
-  const sales = await withTenant(tenantId, (tx) =>
-    tx.order.findMany({
-      where: { status: { not: "CANCELED" }, createdAt: { gte: since } },
-      select: {
-        totalBrl: true,
-        paymentMethod: true,
-        installments: true,
-        createdAt: true,
-        cardAnticipatedAt: true,
-        cardAnticipationFeePct: true,
-      },
-    }),
-  );
+  const { sales, anticipations } = await withTenant(tenantId, async (tx) => {
+    const [sales, anticipations] = await Promise.all([
+      tx.order.findMany({
+        where: { status: { not: "CANCELED" }, createdAt: { gte: since } },
+        select: { totalBrl: true, paymentMethod: true, installments: true, createdAt: true },
+      }),
+      tx.anticipation.findMany({ select: { createdAt: true, grossBrl: true, netBrl: true } }),
+    ]);
+    return { sales, anticipations };
+  });
 
   return summarizeReceivables(
     sales.map((s) => ({
@@ -174,9 +171,8 @@ export async function getReceivables(tenantId: string) {
       paymentMethod: s.paymentMethod,
       installments: s.installments,
       createdAt: s.createdAt,
-      cardAnticipatedAt: s.cardAnticipatedAt,
-      cardAnticipationFeePct: s.cardAnticipationFeePct != null ? Number(s.cardAnticipationFeePct) : null,
     })),
+    anticipations.map((a) => ({ createdAt: a.createdAt, grossBrl: Number(a.grossBrl), netBrl: Number(a.netBrl) })),
     cfg,
     cardFees,
   );

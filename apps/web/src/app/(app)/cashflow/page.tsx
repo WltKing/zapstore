@@ -4,7 +4,7 @@ import { withTenant } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
 import { parseCardFees } from "@/lib/fees";
-import { parseSettlement, settlementEvents } from "@/lib/settlement";
+import { parseSettlement, buildCashEvents } from "@/lib/settlement";
 import { CashflowView, type Movement, type DayPoint } from "./view";
 
 function monthRange(month?: string): { key: string; start: Date; end: Date } {
@@ -58,8 +58,8 @@ export default async function CashflowPage({
   const since = new Date(anchor);
   since.setMonth(since.getMonth() - 13);
 
-  const { orders, expenses } = await withTenant(tenant.id, async (tx) => {
-    const [orders, expenses] = await Promise.all([
+  const { orders, expenses, anticipations } = await withTenant(tenant.id, async (tx) => {
+    const [orders, expenses, anticipations] = await Promise.all([
       tx.order.findMany({
         where: { status: { not: "CANCELED" }, createdAt: { gte: since } },
         select: {
@@ -70,8 +70,6 @@ export default async function CashflowPage({
           installments: true,
           paymentMethod: true,
           invoiceType: true,
-          cardAnticipatedAt: true,
-          cardAnticipationFeePct: true,
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -80,8 +78,9 @@ export default async function CashflowPage({
         select: { category: true, description: true, amountBrl: true, paidAt: true },
         orderBy: { paidAt: "desc" },
       }),
+      tx.anticipation.findMany({ select: { createdAt: true, grossBrl: true, netBrl: true } }),
     ]);
-    return { orders, expenses };
+    return { orders, expenses, anticipations };
   });
 
   // Eventos de recebimento (dinheiro caindo) por pedido.
@@ -97,37 +96,36 @@ export default async function CashflowPage({
   let aReceberFuturo = 0;
   const inMovements: Movement[] = [];
 
-  for (const o of orders) {
-    const sale = {
-      totalBrl: Number(o.totalBrl),
-      paymentMethod: o.paymentMethod,
-      installments: o.installments,
-      createdAt: o.createdAt,
-      cardAnticipatedAt: o.cardAnticipatedAt,
-      cardAnticipationFeePct: o.cardAnticipationFeePct != null ? Number(o.cardAnticipationFeePct) : null,
-    };
-    const events = settlementEvents(sale, cfg, cardFees);
-    events.forEach((ev, idx) => {
-      if (ev.date > now) {
-        aReceberFuturo += ev.net;
-        return;
-      }
-      if (ev.date >= todayStart && ev.date < todayEnd) recebidoHoje += ev.net;
-      if (ev.date >= start && ev.date < end) {
-        recebidoMes += ev.net;
-        const i = Math.floor((ev.date.getTime() - start.getTime()) / dayMs);
-        if (i >= 0 && i < days) chart[i].entradas += ev.net;
-        const parc = !ev.anticipated && events.length > 1 ? ` (parc. ${idx + 1}/${events.length})` : "";
-        inMovements.push({
-          date: ev.date.toISOString(),
-          label: ev.anticipated
-            ? `Antecipação — Pedido #${o.orderNumber} — ${o.customerName}`
-            : `Pedido #${o.orderNumber} — ${o.customerName}${parc}`,
-          amountBrl: ev.net,
-          kind: "in",
-        });
-      }
-    });
+  const sales = orders.map((o) => ({
+    totalBrl: Number(o.totalBrl),
+    paymentMethod: o.paymentMethod,
+    installments: o.installments,
+    createdAt: o.createdAt,
+    ref: `Pedido #${o.orderNumber} — ${o.customerName}`,
+  }));
+  const ants = anticipations.map((a) => ({
+    createdAt: a.createdAt,
+    grossBrl: Number(a.grossBrl),
+    netBrl: Number(a.netBrl),
+  }));
+
+  for (const ev of buildCashEvents(sales, ants, cfg, cardFees)) {
+    if (ev.date > now) {
+      aReceberFuturo += ev.net;
+      continue;
+    }
+    if (ev.date >= todayStart && ev.date < todayEnd) recebidoHoje += ev.net;
+    if (ev.date >= start && ev.date < end) {
+      recebidoMes += ev.net;
+      const i = Math.floor((ev.date.getTime() - start.getTime()) / dayMs);
+      if (i >= 0 && i < days) chart[i].entradas += ev.net;
+      inMovements.push({
+        date: ev.date.toISOString(),
+        label: ev.anticipated ? "Antecipação de recebíveis" : ev.ref ?? "Recebimento",
+        amountBrl: ev.net,
+        kind: "in",
+      });
+    }
   }
 
   const despesasMes = expenses.reduce((s, e) => s + Number(e.amountBrl), 0);

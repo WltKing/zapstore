@@ -76,8 +76,7 @@ export interface SaleForSettlement {
   paymentMethod: string | null;
   installments: number;
   createdAt: Date;
-  cardAnticipatedAt?: Date | null; // se antecipada, eventos futuros caem nesta data
-  cardAnticipationFeePct?: number | null; // taxa aplicada na antecipação
+  ref?: string; // rótulo p/ movimentos do caixa (ex: "Pedido #4 — João")
 }
 
 export interface SettlementEvent {
@@ -86,8 +85,27 @@ export interface SettlementEvent {
   anticipated?: boolean;
 }
 
-/** Eventos "naturais" (sem antecipação): data + líquido após taxa de cartão. */
-function naturalEvents(sale: SaleForSettlement, cfg: SettlementConfig, fees: CardFees | null): SettlementEvent[] {
+/** Antecipação registrada (modelo por valor: permite antecipar parcial). */
+export interface AnticipationRecord {
+  createdAt: Date;
+  grossBrl: number; // recebível antecipado (líquido de taxa de cartão)
+  netBrl: number; // líquido que caiu na antecipação (já com a taxa de antecipação)
+}
+
+/** Evento de caixa: dinheiro entrando (recebimento natural OU antecipação). */
+export interface CashEvent {
+  date: Date;
+  net: number;
+  ref?: string;
+  anticipated?: boolean;
+}
+
+/** Eventos de recebimento (data + líquido após taxa de cartão) de uma venda. */
+export function settlementEvents(
+  sale: SaleForSettlement,
+  cfg: SettlementConfig,
+  fees: CardFees | null,
+): SettlementEvent[] {
   const total = sale.totalBrl;
   const sale0 = sale.createdAt;
   const kind = kindOf(sale.paymentMethod);
@@ -108,36 +126,58 @@ function naturalEvents(sale: SaleForSettlement, cfg: SettlementConfig, fees: Car
   return Array.from({ length: n }, (_, i) => ({ date: addMonths(sale0, i + 1), net: per }));
 }
 
-/** Eventos de recebimento. Se a venda foi antecipada, os eventos posteriores à data
- * da antecipação viram UM evento nessa data, já com a taxa de antecipação descontada. */
-export function settlementEvents(
-  sale: SaleForSettlement,
+/**
+ * Constrói os eventos de caixa (dinheiro entrando) a partir das vendas + antecipações.
+ * Cada antecipação "consome" os recebíveis futuros mais próximos (FIFO) que existiam na
+ * data dela — esses deixam de cair no futuro e viram o líquido da antecipação na data dela.
+ * Isso permite antecipar PARCIAL e nunca duplica nem esconde vendas novas.
+ */
+export function buildCashEvents(
+  sales: SaleForSettlement[],
+  anticipations: AnticipationRecord[],
   cfg: SettlementConfig,
   fees: CardFees | null,
-): SettlementEvent[] {
-  const evs = naturalEvents(sale, cfg, fees);
-  const at = sale.cardAnticipatedAt;
-  if (!at) return evs;
-  const fee = sale.cardAnticipationFeePct ?? 0;
-  const past = evs.filter((e) => e.date <= at);
-  const future = evs.filter((e) => e.date > at);
-  if (future.length > 0) {
-    const net = future.reduce((s, e) => s + e.net, 0) * (1 - fee / 100);
-    past.push({ date: at, net, anticipated: true });
+): CashEvent[] {
+  // Eventos naturais (com a data de criação da venda, p/ saber o que existia em cada antecipação).
+  const evs: { date: Date; net: number; ref?: string; createdAt: Date }[] = [];
+  for (const s of sales) {
+    for (const ev of settlementEvents(s, cfg, fees)) {
+      evs.push({ date: ev.date, net: ev.net, ref: s.ref, createdAt: s.createdAt });
+    }
   }
-  return past;
+
+  const out: CashEvent[] = [];
+  const ants = [...anticipations].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  for (const a of ants) {
+    let remaining = a.grossBrl;
+    const cands = evs
+      .filter((e) => e.net > 0.005 && e.createdAt <= a.createdAt && e.date > a.createdAt)
+      .sort((x, y) => x.date.getTime() - y.date.getTime());
+    for (const e of cands) {
+      if (remaining <= 0.005) break;
+      const take = Math.min(e.net, remaining);
+      e.net -= take;
+      remaining -= take;
+    }
+    out.push({ date: a.createdAt, net: a.netBrl, anticipated: true });
+  }
+
+  for (const e of evs) {
+    if (e.net > 0.005) out.push({ date: e.date, net: e.net, ref: e.ref });
+  }
+  return out;
 }
 
 export interface ReceivablesSummary {
-  total: number; // líquido a receber (eventos no futuro)
-  next7: number; // a receber nos próximos 7 dias
-  next30: number; // a receber nos próximos 30 dias
+  total: number; // líquido a receber (eventos no futuro, já descontando antecipações)
+  next7: number;
+  next30: number;
 }
 
-/** Resume o "a receber" a partir das vendas + config + taxas.
- * A antecipação NÃO entra aqui: a taxa varia e é calculada na hora (na UI). */
+/** Resume o "a receber" (futuro), descontando o que já foi antecipado. */
 export function summarizeReceivables(
   sales: SaleForSettlement[],
+  anticipations: AnticipationRecord[],
   cfg: SettlementConfig,
   fees: CardFees | null,
   now: Date = new Date(),
@@ -147,13 +187,11 @@ export function summarizeReceivables(
   let total = 0;
   let next7 = 0;
   let next30 = 0;
-  for (const sale of sales) {
-    for (const ev of settlementEvents(sale, cfg, fees)) {
-      if (ev.date <= now) continue; // já caiu
-      total += ev.net;
-      if (ev.date <= in7) next7 += ev.net;
-      if (ev.date <= in30) next30 += ev.net;
-    }
+  for (const ev of buildCashEvents(sales, anticipations, cfg, fees)) {
+    if (ev.anticipated || ev.date <= now) continue; // já caiu / já antecipado
+    total += ev.net;
+    if (ev.date <= in7) next7 += ev.net;
+    if (ev.date <= in30) next30 += ev.net;
   }
   return { total, next7, next30 };
 }

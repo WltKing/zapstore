@@ -1,5 +1,6 @@
 import { MonthSelect } from "./month-select";
 import { CaixaPdfButton } from "./pdf-button";
+import { AnticipateBox } from "./anticipate-box";
 
 export interface Movement {
   date: string;
@@ -85,6 +86,9 @@ export function CashflowView({
           hint="Líquido que ainda vai cair pelo repasse da maquininha"
         />
       </div>
+
+      {/* Antecipar recebíveis (parcial ou tudo) */}
+      <AnticipateBox total={aReceberFuturo} />
 
       {/* Seletor de mês */}
       <div className="mt-8 flex items-center gap-3">

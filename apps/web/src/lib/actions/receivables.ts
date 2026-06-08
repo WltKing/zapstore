@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { prisma, withTenant } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { parseCardFees } from "@/lib/fees";
-import { parseSettlement, settlementEvents } from "@/lib/settlement";
+import { parseSettlement, summarizeReceivables } from "@/lib/settlement";
 
 export interface AnticipateResult {
   ok: boolean;
@@ -17,10 +17,12 @@ export interface AnticipateResult {
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
 
-/** Antecipa TODO o valor a receber (recebíveis de cartão ainda no futuro):
- * marca os pedidos como antecipados (saem do "A receber", entram no Caixa na data
- * de hoje, líquido da taxa de antecipação) e registra a antecipação no histórico. */
-export async function anticipateReceivablesAction(feePct: number): Promise<AnticipateResult> {
+/** Antecipa um VALOR do que está a receber (parcial ou tudo). amountBrl = null → tudo.
+ * Registra a antecipação (líquido entra no Caixa de hoje; o equivalente sai do "A receber"). */
+export async function anticipateReceivablesAction(
+  amountBrl: number | null,
+  feePct: number,
+): Promise<AnticipateResult> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session) return { ok: false, error: "Não autenticado." };
@@ -34,6 +36,9 @@ export async function anticipateReceivablesAction(feePct: number): Promise<Antic
     if (!(feePct >= 0 && feePct <= 100) || Number.isNaN(feePct)) {
       return { ok: false, error: "Taxa inválida (0 a 100)." };
     }
+    if (amountBrl != null && (Number.isNaN(amountBrl) || amountBrl <= 0)) {
+      return { ok: false, error: "Valor inválido." };
+    }
 
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -41,48 +46,41 @@ export async function anticipateReceivablesAction(feePct: number): Promise<Antic
     });
     const fees = parseCardFees(tenant?.cardFees);
     const cfg = parseSettlement(tenant?.settlement);
-    const now = new Date();
     const since = new Date();
     since.setMonth(since.getMonth() - 13);
 
     const result = await withTenant(tenantId, async (tx) => {
-      const orders = await tx.order.findMany({
-        where: { status: { not: "CANCELED" }, cardAnticipatedAt: null, createdAt: { gte: since } },
-        select: { id: true, totalBrl: true, paymentMethod: true, installments: true, createdAt: true },
-      });
+      const [orders, anticipations] = await Promise.all([
+        tx.order.findMany({
+          where: { status: { not: "CANCELED" }, createdAt: { gte: since } },
+          select: { totalBrl: true, paymentMethod: true, installments: true, createdAt: true },
+        }),
+        tx.anticipation.findMany({ select: { createdAt: true, grossBrl: true, netBrl: true } }),
+      ]);
 
-      let gross = 0;
-      const ids: string[] = [];
-      for (const o of orders) {
-        const sale = {
-          totalBrl: Number(o.totalBrl),
-          paymentMethod: o.paymentMethod,
-          installments: o.installments,
-          createdAt: o.createdAt,
-        };
-        const futureNet = settlementEvents(sale, cfg, fees)
-          .filter((e) => e.date > now)
-          .reduce((s, e) => s + e.net, 0);
-        if (futureNet > 0.005) {
-          gross += futureNet;
-          ids.push(o.id);
-        }
-      }
+      const sales = orders.map((o) => ({
+        totalBrl: Number(o.totalBrl),
+        paymentMethod: o.paymentMethod,
+        installments: o.installments,
+        createdAt: o.createdAt,
+      }));
+      const ants = anticipations.map((a) => ({
+        createdAt: a.createdAt,
+        grossBrl: Number(a.grossBrl),
+        netBrl: Number(a.netBrl),
+      }));
 
-      if (ids.length === 0) return { gross: 0, cost: 0, net: 0 };
+      // Quanto ainda está disponível pra antecipar (futuro, já descontando antecipações).
+      const available = summarizeReceivables(sales, ants, cfg, fees).total;
+      const gross = round2(amountBrl == null ? available : Math.min(amountBrl, available));
+      if (gross <= 0.005) return { gross: 0, cost: 0, net: 0 };
 
       const cost = round2((gross * feePct) / 100);
       const net = round2(gross - cost);
-      gross = round2(gross);
 
-      await tx.order.updateMany({
-        where: { id: { in: ids } },
-        data: { cardAnticipatedAt: now, cardAnticipationFeePct: feePct },
-      });
       await tx.anticipation.create({
         data: { tenantId, grossBrl: gross, feePct, costBrl: cost, netBrl: net },
       });
-
       return { gross, cost, net };
     });
 
