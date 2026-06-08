@@ -89,6 +89,13 @@ export default async function DashboardPage() {
   ];
   const compositionTotal = composition.reduce((s, c) => s + c.value, 0);
 
+  // Checklist de configuração: some quando o essencial está pronto.
+  const setupComplete =
+    !!tenant.botConfig &&
+    (!has("products") || stats.productCount > 0) &&
+    (tenant.botConfig?.whatsappConnected ?? false) &&
+    tenant.subscription?.status === "active";
+
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
       <header>
@@ -112,16 +119,6 @@ export default async function DashboardPage() {
           upgrade antes de atingir o limite. <a href="/billing" className="underline">Ver opções →</a>
         </div>
       ) : null}
-
-      {has("products") && stats.lowStockCount > 0 && (
-        <div className="mt-6 flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-          <Package className="h-4 w-4 shrink-0" strokeWidth={2} />
-          <span>
-            <strong>{stats.lowStockCount}</strong> produto(s) com estoque baixo.{" "}
-            <a href="/products" className="underline">Ver produtos →</a>
-          </span>
-        </div>
-      )}
 
       {/* Núcleo de KPIs do mês */}
       <section className="mt-8">
@@ -172,26 +169,7 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* Cards operacionais (respeitam o nicho) */}
-      <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card title="Vendas hoje" value={formatBrl(stats.salesTodayBrl)} hint={`Ticket médio ${stats.orderCount === 0 ? "—" : formatBrl(stats.avgTicketBrl)}`} icon={ShoppingCart} tint="blue" />
-        <Card title="Pedidos abertos" value={String(stats.openOrderCount)} hint="A confirmar / entregar" icon={Package} tint="amber" />
-        {has("products") && (
-          <Card
-            title="Estoque baixo"
-            value={String(stats.lowStockCount)}
-            hint="Produtos abaixo do limite"
-            icon={AlertTriangle}
-            tint={stats.lowStockCount > 0 ? "red" : "slate"}
-          />
-        )}
-        {has("scheduling") && (
-          <Card title="Agendamentos hoje" value={String(stats.todaysAppointments)} hint={`${stats.upcomingAppointments} agendados à frente`} icon={CalendarDays} tint="violet" />
-        )}
-        <Card title="Mensagens este mês" value={`${used.toLocaleString("pt-BR")} / ${quota.toLocaleString("pt-BR")}`} hint={`${pct}% do plano`} progress={pct} icon={MessageSquare} tint="blue" />
-      </section>
-
-      {/* A receber (maquininha) */}
+      {/* A receber (maquininha) — informação financeira, fica logo após o lucro */}
       {receivables.total > 0 && (
         <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
           <div className="flex items-center justify-between gap-3">
@@ -221,6 +199,27 @@ export default async function DashboardPage() {
           </p>
         </section>
       )}
+
+      {/* Hoje / precisa de você */}
+      <section className="mt-8">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Hoje</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card title="Vendas hoje" value={formatBrl(stats.salesTodayBrl)} hint="Total vendido hoje" icon={ShoppingCart} tint="blue" />
+          <Card title="Pedidos abertos" value={String(stats.openOrderCount)} hint="A confirmar / entregar" icon={Package} tint="amber" />
+          {has("products") && (
+            <Card
+              title="Estoque baixo"
+              value={String(stats.lowStockCount)}
+              hint={stats.lowStockCount > 0 ? "Repor em breve" : "Tudo certo"}
+              icon={AlertTriangle}
+              tint={stats.lowStockCount > 0 ? "red" : "slate"}
+            />
+          )}
+          {has("scheduling") && (
+            <Card title="Agendamentos hoje" value={String(stats.todaysAppointments)} hint={`${stats.upcomingAppointments} agendados à frente`} icon={CalendarDays} tint="violet" />
+          )}
+        </div>
+      </section>
 
       {/* Tendência: vendas 14 dias + semanas do mês */}
       <section className="mt-8 grid gap-4 lg:grid-cols-2">
@@ -288,8 +287,33 @@ export default async function DashboardPage() {
         </>
       )}
 
-      {/* Próximos passos */}
-      <section className="mt-10 rounded-2xl bg-white p-6 shadow-card">
+      {/* Plano (uso de mensagens) — assunto de assinatura, discreto no fim */}
+      <section className="mt-8 rounded-2xl bg-white p-5 shadow-card">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <MessageSquare className="h-[18px] w-[18px]" strokeWidth={2} />
+            </span>
+            <div>
+              <div className="text-sm font-medium text-neutral-900">Mensagens do plano</div>
+              <div className="text-xs text-neutral-500">
+                {used.toLocaleString("pt-BR")} de {quota.toLocaleString("pt-BR")} usadas neste mês
+              </div>
+            </div>
+          </div>
+          <a href="/billing" className="text-sm text-brand hover:underline">Ver plano →</a>
+        </div>
+        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+          <div
+            className={`h-full ${pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-emerald-500"}`}
+            style={{ width: `${Math.min(100, pct)}%` }}
+          />
+        </div>
+      </section>
+
+      {/* Próximos passos — some quando a loja já está configurada */}
+      {!setupComplete && (
+      <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
         <h2 className="text-lg font-semibold">Próximos passos</h2>
         <p className="mt-1 text-sm text-neutral-500">Pra deixar seu bot 100% pronto.</p>
         <ul className="mt-5 space-y-3">
@@ -307,6 +331,7 @@ export default async function DashboardPage() {
           <Step done={tenant.subscription?.status === "active"} href="/billing" title="Ativar assinatura" desc="R$ 299,90/mês · 2.500 mensagens · Trial 7 dias grátis" />
         </ul>
       </section>
+      )}
     </main>
   );
 }
