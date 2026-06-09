@@ -14,8 +14,15 @@ interface RawItem {
   freightBrl?: number;
 }
 
-export default async function EditOrderPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditOrderPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ nota?: string }>;
+}) {
   const { id } = await params;
+  const { nota } = await searchParams;
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/login");
 
@@ -79,6 +86,10 @@ export default async function EditOrderPage({ params }: { params: Promise<{ id: 
     notes: order.notes ?? "",
     items: items.length ? items : [{ productId: "", qty: 1 }],
   };
+
+  // Veio da lista pedindo pra emitir uma nota → já abre com o tipo selecionado
+  // (mostra os campos obrigatórios do destinatário).
+  if (nota === "nfe" || nota === "nfce") initial.invoiceType = nota;
 
   return (
     <OrderForm

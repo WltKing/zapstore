@@ -80,7 +80,7 @@ export function RowFiscal({
       const ok = confirm(
         `Para emitir a NF-e faltam: ${nfeMissing.join(", ")}.\n\nAbrir o pedido para completar agora?`,
       );
-      if (ok) router.push(`/orders/${orderId}`);
+      if (ok) router.push(`/orders/${orderId}?nota=nfe`);
       return;
     }
     if (!confirm(`Emitir ${nome} do pedido #${orderNumber}?\nAmbiente: ${ambienteLabel}.`)) return;
