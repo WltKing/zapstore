@@ -151,7 +151,7 @@ export default async function DashboardPage({
       {/* Núcleo de KPIs do mês */}
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-          <span className="capitalize">{isCurrentMonth ? "Este mês" : monthName}</span>
+          {isCurrentMonth ? "Este mês" : monthName}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card title="Faturamento" value={formatBrl(faturamento)} icon={TrendingUp} tint="blue" delta={faturamentoDelta} />
@@ -504,15 +504,15 @@ function Card({
 }) {
   return (
     <div className="rounded-2xl bg-white p-6 shadow-card">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {Icon && (
-          <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${TINTS[tint] ?? TINTS.slate}`}>
-            <Icon className="h-6 w-6" strokeWidth={2} />
+          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${TINTS[tint] ?? TINTS.slate}`}>
+            <Icon className="h-5 w-5" strokeWidth={2} />
           </span>
         )}
         <div className="min-w-0">
-          <div className="text-sm font-medium text-neutral-500">{title}</div>
-          <div className={`text-2xl font-bold ${valueClass ?? "text-neutral-900"}`}>{value}</div>
+          <div className="truncate text-sm font-medium text-neutral-500">{title}</div>
+          <div className={`text-xl font-bold ${valueClass ?? "text-neutral-900"}`}>{value}</div>
         </div>
       </div>
       {progress !== undefined && (
