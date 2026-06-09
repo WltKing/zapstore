@@ -6,7 +6,6 @@ import {
   FileDown,
   Plus,
   Printer,
-  ArrowRight,
   Pencil,
   Ban,
   Trash2,
@@ -14,6 +13,7 @@ import {
 import { deleteOrderAction, updateOrderStatusAction } from "@/lib/actions/orders";
 import { printReport, esc, formatBrlReport } from "@/lib/print-report";
 import { paymentLabel } from "@/lib/payments";
+import { RowFiscal, type RowFiscalConfig } from "./row-fiscal";
 
 interface OrderItem {
   productId?: string;
@@ -36,6 +36,11 @@ export interface OrderRow {
   paymentMethod: string | null;
   notes: string | null;
   createdAt: string;
+  fiscalModel: string | null;
+  fiscalStatus: string | null;
+  fiscalNumero: string | null;
+  fiscalDanfeUrl: string | null;
+  fiscalXmlUrl: string | null;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -52,14 +57,6 @@ const STATUS_COLORS: Record<string, string> = {
   IN_DELIVERY: "bg-purple-100 text-purple-800",
   DELIVERED: "bg-emerald-100 text-emerald-800",
   CANCELED: "bg-neutral-200 text-neutral-600",
-};
-
-const NEXT_STATUS: Record<string, string | null> = {
-  PENDING: "CONFIRMED",
-  CONFIRMED: "IN_DELIVERY",
-  IN_DELIVERY: "DELIVERED",
-  DELIVERED: null,
-  CANCELED: null,
 };
 
 function formatBrl(value: number): string {
@@ -79,7 +76,15 @@ function monthLabel(key: string): string {
   return new Date(y, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
 
-export function OrdersView({ storeName, orders }: { storeName: string; orders: OrderRow[] }) {
+export function OrdersView({
+  storeName,
+  orders,
+  fiscalConfig,
+}: {
+  storeName: string;
+  orders: OrderRow[];
+  fiscalConfig: RowFiscalConfig;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -140,16 +145,6 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
         <tfoot><tr><td colspan="4">Total</td><td class="r">${formatBrlReport(total)}</td></tr></tfoot>
       </table>`;
     printReport(`Vendas — ${storeName}`, periodLabel, body);
-  };
-
-  const advance = (id: string, status: string) => {
-    const next = NEXT_STATUS[status];
-    if (!next) return;
-    startTransition(async () => {
-      const r = await updateOrderStatusAction(id, next as never);
-      if (!r.ok) setError(r.error ?? "Erro");
-      else router.refresh();
-    });
   };
 
   const cancel = (id: string, num: number) => {
@@ -274,6 +269,20 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
                       >
                         {STATUS_LABELS[o.status] ?? o.status}
                       </span>
+                      {o.status !== "CANCELED" && (
+                        <RowFiscal
+                          orderId={o.id}
+                          orderNumber={o.orderNumber}
+                          config={fiscalConfig}
+                          fiscal={{
+                            model: o.fiscalModel,
+                            status: o.fiscalStatus,
+                            numero: o.fiscalNumero,
+                            danfeUrl: o.fiscalDanfeUrl,
+                            xmlUrl: o.fiscalXmlUrl,
+                          }}
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() =>
@@ -326,18 +335,6 @@ export function OrdersView({ storeName, orders }: { storeName: string; orders: O
                       </div>
 
                       <div className="mt-4 flex gap-2">
-                        {NEXT_STATUS[o.status] && (
-                          <button
-                            type="button"
-                            onClick={() => advance(o.id, o.status)}
-                            disabled={isPending}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
-                          >
-                            Avançar
-                            <ArrowRight className="h-4 w-4" strokeWidth={2} />
-                            {STATUS_LABELS[NEXT_STATUS[o.status]!]}
-                          </button>
-                        )}
                         <a
                           href={`/orders/${o.id}`}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"

@@ -12,9 +12,13 @@ export default async function OrdersPage() {
   const tenant = await getPrimaryTenantForUser(session.user.id);
   if (!tenant) redirect("/onboarding");
 
-  const orders = await withTenant(tenant.id, (tx) =>
-    tx.order.findMany({ orderBy: { createdAt: "desc" }, take: 100 }),
-  );
+  const { orders, fiscalCfg } = await withTenant(tenant.id, async (tx) => {
+    const [orders, fiscalCfg] = await Promise.all([
+      tx.order.findMany({ orderBy: { createdAt: "desc" }, take: 100 }),
+      tx.fiscalConfig.findUnique({ where: { tenantId: tenant.id } }),
+    ]);
+    return { orders, fiscalCfg };
+  });
 
   const rows = orders.map((o) => ({
     id: o.id,
@@ -28,7 +32,19 @@ export default async function OrdersPage() {
     paymentMethod: o.paymentMethod,
     notes: o.notes,
     createdAt: o.createdAt.toISOString(),
+    fiscalModel: o.fiscalModel,
+    fiscalStatus: o.fiscalStatus,
+    fiscalNumero: o.fiscalNumero,
+    fiscalDanfeUrl: o.fiscalDanfeUrl,
+    fiscalXmlUrl: o.fiscalXmlUrl,
   }));
 
-  return <OrdersView storeName={tenant.name} orders={rows} />;
+  const fiscalConfig = {
+    configured: !!fiscalCfg?.enabled,
+    ambiente: fiscalCfg?.ambiente ?? "homologacao",
+    habilitaNfce: fiscalCfg?.habilitaNfce ?? false,
+    habilitaNfe: fiscalCfg?.habilitaNfe ?? false,
+  };
+
+  return <OrdersView storeName={tenant.name} orders={rows} fiscalConfig={fiscalConfig} />;
 }

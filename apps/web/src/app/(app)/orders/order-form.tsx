@@ -81,16 +81,34 @@ export function OrderForm({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const set = (patch: Partial<OrderInput>) => setForm((f) => ({ ...f, ...patch }));
+  const set = (patch: Partial<OrderInput>) => {
+    setDirty(true);
+    setForm((f) => ({ ...f, ...patch }));
+  };
   const priceOf = (id: string) => products.find((p) => p.id === id)?.priceBrl ?? 0;
 
-  const setItem = (i: number, patch: Partial<OrderInput["items"][number]>) =>
+  const setItem = (i: number, patch: Partial<OrderInput["items"][number]>) => {
+    setDirty(true);
     setForm((f) => ({ ...f, items: f.items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)) }));
-  const addItem = () => setForm((f) => ({ ...f, items: [...f.items, { productId: "", qty: 1 }] }));
-  const removeItem = (i: number) =>
+  };
+  const addItem = () => {
+    setDirty(true);
+    setForm((f) => ({ ...f, items: [...f.items, { productId: "", qty: 1 }] }));
+  };
+  const removeItem = (i: number) => {
+    setDirty(true);
     setForm((f) => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }));
+  };
+
+  // Sai do form descartando alterações; confirma se houver mudança não salva.
+  const discard = () => {
+    if (!dirty || confirm("Sair sem salvar? As alterações não salvas serão perdidas.")) {
+      router.push("/orders");
+    }
+  };
 
   const lineTotal = (it: OrderInput["items"][number]) =>
     it.qty * priceOf(it.productId) - (it.discountBrl ?? 0) + (it.freightBrl ?? 0);
@@ -456,9 +474,9 @@ export function OrderForm({
       {fiscalSlot}
 
       <div className="flex justify-end gap-2 border-t border-neutral-200 pt-5">
-        <a href="/orders" className="rounded-lg border border-neutral-300 px-5 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100">
-          Cancelar
-        </a>
+        <button type="button" onClick={discard} className="rounded-lg border border-neutral-300 px-5 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100">
+          Voltar sem salvar
+        </button>
         <button type="submit" disabled={isPending} className="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400">
           {isPending ? "Salvando..." : orderId ? "Atualizar pedido" : "Salvar pedido"}
         </button>
