@@ -5,6 +5,28 @@ import type { OrderInput } from "./actions/orders";
 
 const digits = (s: string | undefined | null) => (s ?? "").replace(/\D/g, "");
 
+/** Campos do destinatário que a NF-e exige e que estão faltando (rótulos amigáveis). */
+export function missingNfeFields(o: {
+  customerCpf?: string | null;
+  cep?: string | null;
+  street?: string | null;
+  streetNumber?: string | null;
+  neighborhood?: string | null;
+  city?: string | null;
+  state?: string | null;
+}): string[] {
+  const miss: string[] = [];
+  const doc = digits(o.customerCpf);
+  if (doc.length !== 11 && doc.length !== 14) miss.push("CPF ou CNPJ");
+  if (digits(o.cep).length !== 8) miss.push("CEP");
+  if (!o.street?.trim()) miss.push("rua");
+  if (!o.streetNumber?.trim()) miss.push("número");
+  if (!o.neighborhood?.trim()) miss.push("bairro");
+  if (!o.city?.trim()) miss.push("cidade");
+  if ((o.state ?? "").trim().length !== 2) miss.push("UF");
+  return miss;
+}
+
 /** Retorna a 1ª mensagem de erro encontrada, ou null se o pedido está válido. */
 export function validateOrderInput(input: OrderInput): string | null {
   if (!input.customerName.trim()) return "Informe o nome do cliente.";
@@ -26,13 +48,8 @@ export function validateOrderInput(input: OrderInput): string | null {
 
   // NF-e exige destinatário completo (regra da SEFAZ).
   if (input.invoiceType === "nfe") {
-    if (doc.length !== 11 && doc.length !== 14) return "Para NF-e, informe o CPF ou CNPJ do cliente.";
-    if (digits(input.cep).length !== 8) return "Para NF-e, informe o CEP do cliente.";
-    if (!input.street?.trim()) return "Para NF-e, informe a rua do endereço.";
-    if (!input.streetNumber?.trim()) return "Para NF-e, informe o número do endereço.";
-    if (!input.neighborhood?.trim()) return "Para NF-e, informe o bairro.";
-    if (!input.city?.trim()) return "Para NF-e, informe a cidade.";
-    if ((input.state ?? "").trim().length !== 2) return "Para NF-e, informe a UF.";
+    const miss = missingNfeFields(input);
+    if (miss.length) return `Para NF-e, preencha: ${miss.join(", ")}.`;
   }
 
   return null;

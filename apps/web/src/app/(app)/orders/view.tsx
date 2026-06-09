@@ -41,6 +41,7 @@ export interface OrderRow {
   fiscalNumero: string | null;
   fiscalDanfeUrl: string | null;
   fiscalXmlUrl: string | null;
+  nfeMissing: string[];
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -280,6 +281,7 @@ export function OrdersView({
                             orderId={o.id}
                             orderNumber={o.orderNumber}
                             config={fiscalConfig}
+                            nfeMissing={o.nfeMissing}
                             fiscal={{
                               model: o.fiscalModel,
                               status: o.fiscalStatus,

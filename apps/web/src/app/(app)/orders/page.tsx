@@ -4,6 +4,7 @@ import { withTenant, type Prisma } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
 import { OrdersView } from "./view";
+import { missingNfeFields } from "@/lib/order-validation";
 
 export default async function OrdersPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -37,6 +38,7 @@ export default async function OrdersPage() {
     fiscalNumero: o.fiscalNumero,
     fiscalDanfeUrl: o.fiscalDanfeUrl,
     fiscalXmlUrl: o.fiscalXmlUrl,
+    nfeMissing: missingNfeFields(o),
   }));
 
   const fiscalConfig = {

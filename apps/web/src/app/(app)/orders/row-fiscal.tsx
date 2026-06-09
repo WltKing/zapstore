@@ -39,11 +39,13 @@ export function RowFiscal({
   orderNumber,
   config,
   fiscal,
+  nfeMissing = [],
 }: {
   orderId: string;
   orderNumber: number;
   config: RowFiscalConfig;
   fiscal: RowFiscalData;
+  nfeMissing?: string[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -73,6 +75,14 @@ export function RowFiscal({
 
   const emit = (model: Model) => {
     const nome = model === "nfce" ? "NFC-e" : "NF-e";
+    // NF-e exige destinatário completo: se faltar dado, leva pra edição em vez de tomar erro da SEFAZ.
+    if (model === "nfe" && nfeMissing.length > 0) {
+      const ok = confirm(
+        `Para emitir a NF-e faltam: ${nfeMissing.join(", ")}.\n\nAbrir o pedido para completar agora?`,
+      );
+      if (ok) router.push(`/orders/${orderId}`);
+      return;
+    }
     if (!confirm(`Emitir ${nome} do pedido #${orderNumber}?\nAmbiente: ${ambienteLabel}.`)) return;
     run(() => emitNotaAction(orderId, model));
   };
