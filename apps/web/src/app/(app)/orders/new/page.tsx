@@ -38,19 +38,24 @@ export default async function NewOrderPage() {
   const tenant = await getPrimaryTenantForUser(session.user.id);
   if (!tenant) redirect("/onboarding");
 
-  const products = await withTenant(tenant.id, (tx) =>
-    tx.product.findMany({
-      where: { active: true },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, priceBrl: true },
-    }),
-  );
+  const { products, professionals } = await withTenant(tenant.id, async (tx) => {
+    const [products, professionals] = await Promise.all([
+      tx.product.findMany({
+        where: { active: true },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, priceBrl: true },
+      }),
+      tx.professional.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { name: true } }),
+    ]);
+    return { products, professionals };
+  });
 
   const links = await prisma.tenantUser.findMany({
     where: { tenantId: tenant.id },
     include: { user: { select: { name: true, email: true } } },
   });
-  const sellers = links.map((l) => l.user.name || l.user.email);
+  // Vendedores = cadastrados em Equipe (Professional) + usuários do sistema (sem repetir).
+  const sellers = [...new Set([...professionals.map((p) => p.name), ...links.map((l) => l.user.name || l.user.email)])];
 
   return (
     <OrderForm

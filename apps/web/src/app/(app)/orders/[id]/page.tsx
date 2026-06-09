@@ -22,8 +22,8 @@ export default async function EditOrderPage({ params }: { params: Promise<{ id: 
   const tenant = await getPrimaryTenantForUser(session.user.id);
   if (!tenant) redirect("/onboarding");
 
-  const { order, products, fiscalCfg } = await withTenant(tenant.id, async (tx) => {
-    const [order, products, fiscalCfg] = await Promise.all([
+  const { order, products, fiscalCfg, professionals } = await withTenant(tenant.id, async (tx) => {
+    const [order, products, fiscalCfg, professionals] = await Promise.all([
       tx.order.findUnique({ where: { id } }),
       tx.product.findMany({
         where: { active: true },
@@ -31,8 +31,9 @@ export default async function EditOrderPage({ params }: { params: Promise<{ id: 
         select: { id: true, name: true, priceBrl: true },
       }),
       tx.fiscalConfig.findUnique({ where: { tenantId: tenant.id } }),
+      tx.professional.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { name: true } }),
     ]);
-    return { order, products, fiscalCfg };
+    return { order, products, fiscalCfg, professionals };
   });
   if (!order || order.tenantId !== tenant.id) notFound();
 
@@ -40,7 +41,7 @@ export default async function EditOrderPage({ params }: { params: Promise<{ id: 
     where: { tenantId: tenant.id },
     include: { user: { select: { name: true, email: true } } },
   });
-  const sellers = links.map((l) => l.user.name || l.user.email);
+  const sellers = [...new Set([...professionals.map((p) => p.name), ...links.map((l) => l.user.name || l.user.email)])];
 
   const rawItems = (Array.isArray(order.items) ? order.items : []) as RawItem[];
   const items = rawItems

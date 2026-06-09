@@ -4,17 +4,13 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   createAppointmentAction,
-  createProfessionalAction,
   createServiceAction,
   completeAppointmentAction,
   deleteAppointmentAction,
-  deleteProfessionalAction,
   deleteServiceAction,
   updateAppointmentStatusAction,
-  updateProfessionalAction,
   updateServiceAction,
   type AppointmentInput,
-  type ProfessionalInput,
   type ServiceInput,
 } from "@/lib/actions/scheduling";
 import { PAYMENT_OPTIONS, paymentHasInstallments } from "@/lib/payments";
@@ -100,7 +96,6 @@ export function SchedulingView({
   const [error, setError] = useState<string | null>(null);
   const [newAppt, setNewAppt] = useState(false);
   const [editingService, setEditingService] = useState<ServiceRow | "new" | null>(null);
-  const [editingProf, setEditingProf] = useState<ProfessionalRow | "new" | null>(null);
   // Concluir atendimento -> vira venda (escolhe forma de pagamento).
   const [completing, setCompleting] = useState<AppointmentRow | null>(null);
   const [payMethod, setPayMethod] = useState("pix");
@@ -271,28 +266,15 @@ export function SchedulingView({
             },
           }))}
         />
-        <ManageCard
-          title="Profissionais"
-          addLabel="+ Profissional"
-          onAdd={() => {
-            setError(null);
-            setEditingProf("new");
-          }}
-          empty="Nenhum profissional cadastrado."
-          rows={professionals.map((p) => ({
-            id: p.id,
-            primary: p.name,
-            secondary: p.active ? "Ativo" : "Inativo",
-            active: p.active,
-            onEdit: () => {
-              setError(null);
-              setEditingProf(p);
-            },
-            onDelete: () => {
-              if (confirm(`Excluir "${p.name}"?`)) run(() => deleteProfessionalAction(p.id));
-            },
-          }))}
-        />
+        <div className="rounded-2xl bg-white p-6 shadow-card">
+          <h2 className="font-semibold">Profissionais</h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            {professionals.length} cadastrado(s). A equipe é gerenciada na página de Profissionais.
+          </p>
+          <a href="/team" className="mt-3 inline-block text-sm font-medium text-brand hover:underline">
+            Gerenciar profissionais →
+          </a>
+        </div>
       </div>
 
       {newAppt && (
@@ -312,16 +294,6 @@ export function SchedulingView({
           onClose={() => setEditingService(null)}
           onSaved={() => {
             setEditingService(null);
-            router.refresh();
-          }}
-        />
-      )}
-      {editingProf && (
-        <ProfessionalDialog
-          professional={editingProf === "new" ? null : editingProf}
-          onClose={() => setEditingProf(null)}
-          onSaved={() => {
-            setEditingProf(null);
             router.refresh();
           }}
         />
@@ -708,59 +680,3 @@ function ServiceDialog({
   );
 }
 
-function ProfessionalDialog({
-  professional,
-  onClose,
-  onSaved,
-}: {
-  professional: ProfessionalRow | null;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [form, setForm] = useState<ProfessionalInput>(
-    professional ? { name: professional.name, active: professional.active } : { name: "", active: true },
-  );
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    startTransition(async () => {
-      const res = professional
-        ? await updateProfessionalAction(professional.id, form)
-        : await createProfessionalAction(form);
-      if (!res.ok) setError(res.error ?? "Erro");
-      else onSaved();
-    });
-  };
-
-  return (
-    <DialogShell
-      title={professional ? "Editar profissional" : "Novo profissional"}
-      onClose={onClose}
-      onSubmit={submit}
-      isPending={isPending}
-      error={error}
-    >
-      <div>
-        <label className="block text-sm font-medium text-neutral-700">Nome</label>
-        <input
-          required
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          className={inputClass}
-        />
-      </div>
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={form.active}
-          onChange={(e) => setForm({ ...form, active: e.target.checked })}
-          className="h-4 w-4 rounded border-neutral-300"
-        />
-        <span className="text-sm text-neutral-700">Profissional ativo</span>
-      </label>
-    </DialogShell>
-  );
-}

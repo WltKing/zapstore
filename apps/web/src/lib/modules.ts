@@ -36,6 +36,7 @@ export const UNIVERSAL_AREAS: Area[] = [
   "bot",
   "simulator",
   "whatsapp",
+  "team",
   "billing",
   "users",
   "settings",

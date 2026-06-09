@@ -11,6 +11,7 @@ import {
   Smartphone,
   CalendarDays,
   CalendarClock,
+  Contact,
   Wallet,
   Banknote,
   Megaphone,
@@ -43,6 +44,7 @@ const SECTIONS: NavSection[] = [
       { href: "/orders", label: "Pedidos", icon: ShoppingCart },
       { href: "/products", label: "Produtos", icon: Package },
       { href: "/customers", label: "Clientes", icon: Users },
+      { href: "/team", label: "Vendedores", icon: Contact },
     ],
   },
   {
@@ -98,6 +100,7 @@ const SECTIONS_SERVICE: NavSection[] = [
       { href: "/scheduling", label: "Agendamentos", icon: CalendarClock },
       { href: "/agenda", label: "Agenda do dia", icon: CalendarDays },
       { href: "/customers", label: "Clientes", icon: Users },
+      { href: "/team", label: "Profissionais", icon: Contact },
     ],
   },
   {
