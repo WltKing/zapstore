@@ -42,6 +42,7 @@ export interface OrderRow {
   fiscalDanfeUrl: string | null;
   fiscalXmlUrl: string | null;
   nfeMissing: string[];
+  kind: "service" | "product";
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -86,10 +87,12 @@ export function OrdersView({
   storeName,
   orders,
   fiscalConfig,
+  showType = false,
 }: {
   storeName: string;
   orders: OrderRow[];
   fiscalConfig: RowFiscalConfig;
+  showType?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -100,6 +103,7 @@ export function OrdersView({
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState<string>(currentMonth);
 
   const months = useMemo(() => {
@@ -115,6 +119,7 @@ export function OrdersView({
     return orders.filter((o) => {
       if (monthFilter !== "all" && monthKey(o.createdAt) !== monthFilter) return false;
       if (statusFilter !== "all" && o.status !== statusFilter) return false;
+      if (showType && typeFilter !== "all" && o.kind !== typeFilter) return false;
       if (q) {
         const hit =
           o.customerName.toLowerCase().includes(q) ||
@@ -124,7 +129,7 @@ export function OrdersView({
       }
       return true;
     });
-  }, [orders, query, statusFilter, monthFilter]);
+  }, [orders, query, statusFilter, typeFilter, monthFilter, showType]);
 
   const exportPdf = () => {
     const total = filtered.reduce((s, o) => s + o.totalBrl, 0);
@@ -221,6 +226,17 @@ export function OrdersView({
             </option>
           ))}
         </select>
+        {showType && (
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          >
+            <option value="all">Produtos e serviços</option>
+            <option value="product">Só produtos</option>
+            <option value="service">Só serviços</option>
+          </select>
+        )}
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -262,7 +278,20 @@ export function OrdersView({
                     >
                       <span className="text-sm font-mono text-neutral-500">#{o.orderNumber}</span>
                       <div>
-                        <div className="font-medium">{o.customerName}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{o.customerName}</span>
+                          {showType && (
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                o.kind === "service"
+                                  ? "bg-violet-100 text-violet-700"
+                                  : "bg-neutral-100 text-neutral-600"
+                              }`}
+                            >
+                              {o.kind === "service" ? "Serviço" : "Produto"}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-neutral-500">
                           {formatDate(o.createdAt)} · {o.customerPhone}
                         </div>

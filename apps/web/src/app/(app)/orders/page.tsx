@@ -13,12 +13,27 @@ export default async function OrdersPage() {
   const tenant = await getPrimaryTenantForUser(session.user.id);
   if (!tenant) redirect("/onboarding");
 
-  const { orders, fiscalCfg } = await withTenant(tenant.id, async (tx) => {
+  const modules = tenant.enabledModules ?? [];
+  const schedulingOn = modules.includes("scheduling");
+  const productsOn = modules.includes("products");
+  // Etiqueta/filtro de tipo só fazem sentido quando a loja faz os DOIS (produto + serviço).
+  const showType = schedulingOn && productsOn;
+
+  const { orders, fiscalCfg, serviceOrderIds } = await withTenant(tenant.id, async (tx) => {
     const [orders, fiscalCfg] = await Promise.all([
       tx.order.findMany({ orderBy: { createdAt: "desc" }, take: 100 }),
       tx.fiscalConfig.findUnique({ where: { tenantId: tenant.id } }),
     ]);
-    return { orders, fiscalCfg };
+    // Pedido de serviço = ligado a um agendamento concluído (Appointment.orderId).
+    let serviceOrderIds = new Set<string>();
+    if (schedulingOn && orders.length) {
+      const appts = await tx.appointment.findMany({
+        where: { orderId: { in: orders.map((o) => o.id) } },
+        select: { orderId: true },
+      });
+      serviceOrderIds = new Set(appts.map((a) => a.orderId).filter((x): x is string => !!x));
+    }
+    return { orders, fiscalCfg, serviceOrderIds };
   });
 
   const rows = orders.map((o) => ({
@@ -39,6 +54,7 @@ export default async function OrdersPage() {
     fiscalDanfeUrl: o.fiscalDanfeUrl,
     fiscalXmlUrl: o.fiscalXmlUrl,
     nfeMissing: missingNfeFields(o),
+    kind: (serviceOrderIds.has(o.id) ? "service" : "product") as "service" | "product",
   }));
 
   const fiscalConfig = {
@@ -48,5 +64,5 @@ export default async function OrdersPage() {
     habilitaNfe: fiscalCfg?.habilitaNfe ?? false,
   };
 
-  return <OrdersView storeName={tenant.name} orders={rows} fiscalConfig={fiscalConfig} />;
+  return <OrdersView storeName={tenant.name} orders={rows} fiscalConfig={fiscalConfig} showType={showType} />;
 }
