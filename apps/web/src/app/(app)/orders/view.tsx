@@ -297,9 +297,6 @@ export function OrdersView({
                       >
                         <Printer className="h-[18px] w-[18px]" strokeWidth={2} />
                       </button>
-                      <a href={`/orders/${o.id}`} className="text-sm text-neutral-600 hover:text-neutral-900">
-                        Abrir
-                      </a>
                     </div>
                   </div>
 
