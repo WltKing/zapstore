@@ -6,6 +6,7 @@ import {
   createAppointmentAction,
   createProfessionalAction,
   createServiceAction,
+  completeAppointmentAction,
   deleteAppointmentAction,
   deleteProfessionalAction,
   deleteServiceAction,
@@ -16,6 +17,7 @@ import {
   type ProfessionalInput,
   type ServiceInput,
 } from "@/lib/actions/scheduling";
+import { PAYMENT_OPTIONS, paymentHasInstallments } from "@/lib/payments";
 
 export interface ProfessionalRow {
   id: string;
@@ -96,6 +98,10 @@ export function SchedulingView({
   const [newAppt, setNewAppt] = useState(false);
   const [editingService, setEditingService] = useState<ServiceRow | "new" | null>(null);
   const [editingProf, setEditingProf] = useState<ProfessionalRow | "new" | null>(null);
+  // Concluir atendimento -> vira venda (escolhe forma de pagamento).
+  const [completing, setCompleting] = useState<AppointmentRow | null>(null);
+  const [payMethod, setPayMethod] = useState("pix");
+  const [payInstallments, setPayInstallments] = useState(1);
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) => {
     startTransition(async () => {
@@ -189,9 +195,13 @@ export function SchedulingView({
                           <>
                             <button
                               type="button"
-                              onClick={() => run(() => updateAppointmentStatusAction(a.id, "DONE" as never))}
+                              onClick={() => {
+                                setPayMethod("pix");
+                                setPayInstallments(1);
+                                setCompleting(a);
+                              }}
                               disabled={isPending}
-                              className="text-sm text-emerald-700 hover:text-emerald-800"
+                              className="text-sm font-medium text-emerald-700 hover:text-emerald-800"
                             >
                               Concluir
                             </button>
@@ -312,6 +322,74 @@ export function SchedulingView({
             router.refresh();
           }}
         />
+      )}
+
+      {/* Concluir atendimento -> vira venda */}
+      {completing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setCompleting(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold">Concluir atendimento</h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              {completing.serviceName} · {completing.customerName} ·{" "}
+              <strong>{formatBrl(completing.priceBrl)}</strong>
+            </p>
+            <p className="mt-3 text-xs text-neutral-400">Isso registra a venda no caixa e no faturamento.</p>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-neutral-700">Forma de pagamento</label>
+              <select
+                value={payMethod}
+                onChange={(e) => setPayMethod(e.target.value)}
+                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+              >
+                {PAYMENT_OPTIONS.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {paymentHasInstallments(payMethod) && (
+              <div className="mt-3 max-w-[8rem]">
+                <label className="block text-sm font-medium text-neutral-700">Parcelas</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  step="1"
+                  value={payInstallments}
+                  onChange={(e) => setPayInstallments(Number(e.target.value) || 1)}
+                  className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                />
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setCompleting(null)}
+                className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => {
+                  const appt = completing;
+                  const method = payMethod;
+                  const inst = paymentHasInstallments(payMethod) ? payInstallments : 1;
+                  setCompleting(null);
+                  run(() => completeAppointmentAction(appt.id, method, inst));
+                }}
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
+              >
+                Concluir e registrar venda
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

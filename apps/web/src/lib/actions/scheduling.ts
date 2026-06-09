@@ -234,6 +234,62 @@ export async function updateAppointmentStatusAction(
   }
 }
 
+/** Conclui o atendimento E gera a venda (entra no faturamento/caixa).
+ * Atendimento realizado = venda: o serviço vira item, o profissional vira vendedor. */
+export async function completeAppointmentAction(
+  id: string,
+  paymentMethod: string,
+  installments: number,
+): Promise<ActionResult> {
+  try {
+    const tenantId = await requireTenantId();
+    const res = await withTenant(tenantId, async (tx): Promise<ActionResult> => {
+      const appt = await tx.appointment.findUnique({ where: { id }, include: { professional: true } });
+      if (!appt) return { ok: false, error: "Agendamento não encontrado." };
+
+      // Já concluído com venda: só garante o status (evita venda duplicada).
+      if (appt.orderId) {
+        await tx.appointment.update({ where: { id }, data: { status: "DONE" } });
+        return { ok: true };
+      }
+
+      const price = Number(appt.priceBrl);
+      const last = await tx.order.findFirst({
+        where: { tenantId },
+        orderBy: { orderNumber: "desc" },
+        select: { orderNumber: true },
+      });
+      const orderNumber = (last?.orderNumber ?? 0) + 1;
+
+      const order = await tx.order.create({
+        data: {
+          tenantId,
+          orderNumber,
+          customerName: appt.customerName,
+          customerPhone: appt.customerPhone,
+          status: "DELIVERED", // serviço realizado
+          channel: "presencial",
+          sellerName: appt.professional?.name ?? null,
+          items: [{ name: appt.serviceName, qty: 1, priceBrl: price, lineTotal: price }],
+          totalBrl: price,
+          paymentMethod,
+          installments: installments > 0 ? installments : 1,
+        },
+      });
+      await tx.appointment.update({ where: { id }, data: { status: "DONE", orderId: order.id } });
+      return { ok: true };
+    });
+
+    revalidatePath("/scheduling");
+    revalidatePath("/dashboard");
+    revalidatePath("/cashflow");
+    revalidatePath("/orders");
+    return res;
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function deleteAppointmentAction(id: string): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();

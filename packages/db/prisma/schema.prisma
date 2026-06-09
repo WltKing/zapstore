@@ -487,6 +487,7 @@ model Appointment {
   priceBrl       Decimal           @default(0) @db.Decimal(10, 2)
   status         AppointmentStatus @default(SCHEDULED)
   notes          String?           @db.Text
+  orderId        String?           @db.Uuid // venda gerada ao concluir (atendimento realizado = venda)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
