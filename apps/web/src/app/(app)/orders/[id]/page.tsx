@@ -29,8 +29,8 @@ export default async function EditOrderPage({
   const tenant = await getPrimaryTenantForUser(session.user.id);
   if (!tenant) redirect("/onboarding");
 
-  const { order, products, fiscalCfg, professionals } = await withTenant(tenant.id, async (tx) => {
-    const [order, products, fiscalCfg, professionals] = await Promise.all([
+  const { order, products, fiscalCfg, professionals, isService } = await withTenant(tenant.id, async (tx) => {
+    const [order, products, fiscalCfg, professionals, apptLink] = await Promise.all([
       tx.order.findUnique({ where: { id } }),
       tx.product.findMany({
         where: { active: true },
@@ -39,8 +39,9 @@ export default async function EditOrderPage({
       }),
       tx.fiscalConfig.findUnique({ where: { tenantId: tenant.id } }),
       tx.professional.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { name: true } }),
+      tx.appointment.findFirst({ where: { orderId: id }, select: { id: true } }),
     ]);
-    return { order, products, fiscalCfg, professionals };
+    return { order, products, fiscalCfg, professionals, isService: !!apptLink };
   });
   if (!order || order.tenantId !== tenant.id) notFound();
 
@@ -99,22 +100,32 @@ export default async function EditOrderPage({
       orderId={order.id}
       orderNumber={order.orderNumber}
       fiscalSlot={
-        <OrderFiscalCard
-          orderId={order.id}
-          configured={!!fiscalCfg?.enabled}
-          ambiente={fiscalCfg?.ambiente ?? "homologacao"}
-          habilitaNfce={fiscalCfg?.habilitaNfce ?? false}
-          habilitaNfe={fiscalCfg?.habilitaNfe ?? false}
-          fiscal={{
-            model: order.fiscalModel,
-            status: order.fiscalStatus,
-            chave: order.fiscalChave,
-            numero: order.fiscalNumero,
-            danfeUrl: order.fiscalDanfeUrl,
-            xmlUrl: order.fiscalXmlUrl,
-            message: order.fiscalMessage,
-          }}
-        />
+        isService ? (
+          <section className="rounded-2xl bg-white p-5 shadow-card">
+            <h2 className="font-semibold">Nota fiscal de serviço (NFS-e)</h2>
+            <p className="mt-2 text-sm text-neutral-500">
+              Atendimentos usam <strong>NFS-e</strong> (nota municipal de serviço, ISS), diferente da
+              NFC-e/NF-e de produtos. A emissão de NFS-e estará disponível em breve.
+            </p>
+          </section>
+        ) : (
+          <OrderFiscalCard
+            orderId={order.id}
+            configured={!!fiscalCfg?.enabled}
+            ambiente={fiscalCfg?.ambiente ?? "homologacao"}
+            habilitaNfce={fiscalCfg?.habilitaNfce ?? false}
+            habilitaNfe={fiscalCfg?.habilitaNfe ?? false}
+            fiscal={{
+              model: order.fiscalModel,
+              status: order.fiscalStatus,
+              chave: order.fiscalChave,
+              numero: order.fiscalNumero,
+              danfeUrl: order.fiscalDanfeUrl,
+              xmlUrl: order.fiscalXmlUrl,
+              message: order.fiscalMessage,
+            }}
+          />
+        )
       }
     />
   );

@@ -305,7 +305,7 @@ export function OrdersView({
                         {STATUS_LABELS[o.status] ?? o.status}
                       </span>
                       <div className="flex items-center gap-2">
-                        {o.status !== "CANCELED" && (
+                        {o.status !== "CANCELED" && o.kind !== "service" && (
                           <RowFiscal
                             orderId={o.id}
                             orderNumber={o.orderNumber}
