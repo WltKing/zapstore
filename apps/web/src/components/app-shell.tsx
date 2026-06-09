@@ -10,6 +10,7 @@ export function AppShell({
   iconUrl,
   allowed,
   isSuperAdmin,
+  serviceLed,
   nicheLabel,
   userName,
   children,
@@ -18,6 +19,7 @@ export function AppShell({
   iconUrl?: string | null;
   allowed?: string[];
   isSuperAdmin?: boolean;
+  serviceLed?: boolean;
   nicheLabel: string;
   userName: string;
   children: React.ReactNode;
@@ -31,6 +33,7 @@ export function AppShell({
         iconUrl={iconUrl}
         allowed={allowed}
         isSuperAdmin={isSuperAdmin}
+        serviceLed={serviceLed}
         open={open}
         onClose={() => setOpen(false)}
       />

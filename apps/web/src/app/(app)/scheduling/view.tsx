@@ -61,13 +61,15 @@ const STATUS_COLORS: Record<string, string> = {
 function formatBrl(v: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 }
+const TZ = "America/Sao_Paulo";
 function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
 }
 function fmtTimeEnd(iso: string, durationMin: number): string {
   return new Date(new Date(iso).getTime() + durationMin * 60000).toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: TZ,
   });
 }
 function dayLabel(iso: string): string {
@@ -75,6 +77,7 @@ function dayLabel(iso: string): string {
     weekday: "long",
     day: "2-digit",
     month: "long",
+    timeZone: TZ,
   });
 }
 function dayKey(iso: string): string {

@@ -89,11 +89,54 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
+// Menu pra negócios de SERVIÇO (estética/salão): agenda em destaque, vendas no financeiro.
+const SECTIONS_SERVICE: NavSection[] = [
+  {
+    title: "Principal",
+    items: [
+      { href: "/dashboard", label: "Visão Geral", icon: LayoutGrid },
+      { href: "/scheduling", label: "Agendamentos", icon: CalendarClock },
+      { href: "/agenda", label: "Agenda do dia", icon: CalendarDays },
+      { href: "/customers", label: "Clientes", icon: Users },
+    ],
+  },
+  {
+    title: "Atendimento",
+    items: [
+      { href: "/bot", label: "Configurar Bot", icon: Bot },
+      { href: "/simulator", label: "Simulador", icon: MessageSquare },
+      { href: "/whatsapp", label: "WhatsApp", icon: Smartphone },
+    ],
+  },
+  {
+    title: "Financeiro",
+    items: [
+      { href: "/orders", label: "Vendas", icon: ShoppingCart },
+      { href: "/expenses", label: "Despesas", icon: Wallet },
+      { href: "/cashflow", label: "Caixa", icon: Banknote },
+    ],
+  },
+  {
+    title: "Marketing",
+    items: [{ href: "/marketing", label: "Marketing", icon: Megaphone }],
+  },
+  {
+    title: "Sistema",
+    items: [
+      { href: "/billing", label: "Assinatura", icon: CreditCard },
+      { href: "/fiscal", label: "Fiscal", icon: ReceiptText },
+      { href: "/users", label: "Usuários", icon: KeyRound },
+      { href: "/settings", label: "Configurações", icon: Settings },
+    ],
+  },
+];
+
 export function Sidebar({
   storeName,
   iconUrl,
   allowed,
   isSuperAdmin,
+  serviceLed,
   open,
   onClose,
 }: {
@@ -101,17 +144,19 @@ export function Sidebar({
   iconUrl?: string | null;
   allowed?: string[];
   isSuperAdmin?: boolean;
+  serviceLed?: boolean;
   open: boolean;
   onClose: () => void;
 }) {
   const pathname = usePathname();
 
+  const base = serviceLed ? SECTIONS_SERVICE : SECTIONS;
   const sections = allowed
-    ? SECTIONS.map((s) => ({
+    ? base.map((s) => ({
         ...s,
         items: s.items.filter((it) => allowed.includes(it.href.split("/").filter(Boolean)[0] ?? "")),
       })).filter((s) => s.items.length > 0)
-    : SECTIONS;
+    : base;
 
   const itemClass = (active: boolean) =>
     `mt-0.5 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition ${

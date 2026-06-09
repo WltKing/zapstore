@@ -28,40 +28,43 @@ export default async function AgendaPage({
   const { day } = await searchParams;
   const { key, start, end } = dayRange(day);
 
+  // Entregas só pra quem tem o módulo de entrega ligado (estética não tem).
+  const hasDelivery = (tenant.enabledModules ?? []).includes("delivery");
+
   const { appts, candidates } = await withTenant(tenant.id, async (tx) => {
-    const [appts, candidates] = await Promise.all([
-      tx.appointment.findMany({
-        where: { status: { not: "CANCELED" }, scheduledFor: { gte: start, lt: end } },
-        orderBy: { scheduledFor: "asc" },
-        select: {
-          id: true,
-          serviceName: true,
-          customerName: true,
-          customerPhone: true,
-          scheduledFor: true,
-          durationMin: true,
-          status: true,
-          professional: { select: { name: true } },
-        },
-      }),
-      tx.order.findMany({
-        where: { status: { not: "CANCELED" }, deliveryType: { not: "pickup" } },
-        orderBy: [{ routeSeq: "asc" }, { createdAt: "asc" }],
-        take: 500,
-        select: {
-          id: true,
-          orderNumber: true,
-          customerName: true,
-          customerAddress: true,
-          deliveryShift: true,
-          routeStatus: true,
-          status: true,
-          deliveryDate: true,
-          scheduledFor: true,
-          createdAt: true,
-        },
-      }),
-    ]);
+    const appts = await tx.appointment.findMany({
+      where: { status: { not: "CANCELED" }, scheduledFor: { gte: start, lt: end } },
+      orderBy: { scheduledFor: "asc" },
+      select: {
+        id: true,
+        serviceName: true,
+        customerName: true,
+        customerPhone: true,
+        scheduledFor: true,
+        durationMin: true,
+        status: true,
+        professional: { select: { name: true } },
+      },
+    });
+    const candidates = hasDelivery
+      ? await tx.order.findMany({
+          where: { status: { not: "CANCELED" }, deliveryType: { not: "pickup" } },
+          orderBy: [{ routeSeq: "asc" }, { createdAt: "asc" }],
+          take: 500,
+          select: {
+            id: true,
+            orderNumber: true,
+            customerName: true,
+            customerAddress: true,
+            deliveryShift: true,
+            routeStatus: true,
+            status: true,
+            deliveryDate: true,
+            scheduledFor: true,
+            createdAt: true,
+          },
+        })
+      : [];
     return { appts, candidates };
   });
 
@@ -70,7 +73,7 @@ export default async function AgendaPage({
     serviceName: a.serviceName,
     customerName: a.customerName,
     customerPhone: a.customerPhone,
-    time: new Date(a.scheduledFor).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    time: new Date(a.scheduledFor).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }),
     durationMin: a.durationMin,
     professional: a.professional?.name ?? null,
     status: a.status,

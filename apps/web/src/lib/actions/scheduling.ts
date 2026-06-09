@@ -180,7 +180,10 @@ export async function createAppointmentAction(input: AppointmentInput): Promise<
     if (!input.customerName.trim()) return { ok: false, error: "Informe o nome do cliente." };
     if (!input.customerPhone.replace(/\D/g, "")) return { ok: false, error: "Informe o telefone." };
     if (!input.scheduledFor) return { ok: false, error: "Informe a data e hora." };
-    const when = new Date(input.scheduledFor);
+    // datetime-local não tem fuso; o servidor roda em UTC. Interpretar como São Paulo (−03:00),
+    // senão 11:00 vira 08:00. (Brasil sem horário de verão = offset fixo.)
+    const raw = input.scheduledFor;
+    const when = new Date(/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw) ? raw : `${raw}-03:00`);
     if (Number.isNaN(when.getTime())) return { ok: false, error: "Data/hora inválida." };
 
     await withTenant(tenantId, async (tx) => {
@@ -270,12 +273,24 @@ export async function completeAppointmentAction(
           status: "DELIVERED", // serviço realizado
           channel: "presencial",
           sellerName: appt.professional?.name ?? null,
+          deliveryType: "pickup", // serviço não é entrega — não entra em rota/entregas
           items: [{ name: appt.serviceName, qty: 1, priceBrl: price, lineTotal: price }],
           totalBrl: price,
           paymentMethod,
           installments: installments > 0 ? installments : 1,
         },
       });
+
+      // Cliente atendido fica salvo em Clientes (CRM).
+      const phone = appt.customerPhone.replace(/\D/g, "");
+      if (phone) {
+        await tx.customer.upsert({
+          where: { tenantId_phone: { tenantId, phone } },
+          create: { tenantId, phone, name: appt.customerName },
+          update: { name: appt.customerName },
+        });
+      }
+
       await tx.appointment.update({ where: { id }, data: { status: "DONE", orderId: order.id } });
       return { ok: true };
     });

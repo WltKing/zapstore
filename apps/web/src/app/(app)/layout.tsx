@@ -27,7 +27,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const permAllowed = effectivePermissions(link?.role ?? "OPERATOR", link?.permissions);
 
   // Eixo NICHO: áreas liberadas pelos módulos ativos da loja (universais + módulos).
-  const nicheAreas = allowedAreasForModules(tenant.enabledModules ?? []);
+  const modules = tenant.enabledModules ?? [];
+  const nicheAreas = allowedAreasForModules(modules);
+  // Negócio "de serviço" (estética/salão): tem agenda e não vende produto → menu com agenda em destaque.
+  const serviceLed = modules.includes("scheduling") && !modules.includes("products");
 
   // Acesso efetivo = (permissão do usuário) E (módulo do nicho ligado).
   const allowed = permAllowed.filter((a) => nicheAreas.has(a));
@@ -47,6 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         iconUrl={tenant.iconUrl}
         allowed={allowed}
         isSuperAdmin={isSuperAdminEmail(session.user.email)}
+        serviceLed={serviceLed}
         nicheLabel={NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Loja"}
         userName={session.user.name?.trim() || session.user.email.split("@")[0]}
       >
