@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 import {
   LayoutGrid,
   ShoppingCart,
@@ -22,7 +21,6 @@ import {
   KeyRound,
   Settings,
   Wrench,
-  Menu,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -96,14 +94,17 @@ export function Sidebar({
   iconUrl,
   allowed,
   isSuperAdmin,
+  open,
+  onClose,
 }: {
   storeName: string;
   iconUrl?: string | null;
   allowed?: string[];
   isSuperAdmin?: boolean;
+  open: boolean;
+  onClose: () => void;
 }) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
 
   const sections = allowed
     ? SECTIONS.map((s) => ({
@@ -121,17 +122,7 @@ export function Sidebar({
 
   return (
     <>
-      {/* Botão mobile */}
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="fixed left-4 top-4 z-30 rounded-lg border border-neutral-300 bg-white p-2 text-neutral-700 shadow-card lg:hidden"
-        aria-label="Abrir menu"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
-
-      {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
+      {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={onClose} />}
 
       <aside
         className={`no-scrollbar fixed inset-y-0 left-0 z-40 w-64 transform overflow-y-auto bg-brand transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
@@ -160,7 +151,7 @@ export function Sidebar({
           </div>
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={onClose}
             className="opacity-70 hover:opacity-100 lg:hidden"
             aria-label="Fechar menu"
           >
@@ -178,7 +169,7 @@ export function Sidebar({
                 const active = pathname === item.href || pathname.startsWith(item.href + "/");
                 const Icon = item.icon;
                 return (
-                  <a key={item.href} href={item.href} onClick={() => setOpen(false)} className={itemClass(active)}>
+                  <a key={item.href} href={item.href} onClick={onClose} className={itemClass(active)}>
                     <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
                     {item.label}
                   </a>
@@ -192,7 +183,7 @@ export function Sidebar({
               <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider opacity-55">
                 Dono do SaaS
               </div>
-              <a href="/admin" onClick={() => setOpen(false)} className={itemClass(pathname.startsWith("/admin"))}>
+              <a href="/admin" onClick={onClose} className={itemClass(pathname.startsWith("/admin"))}>
                 <Wrench className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
                 Painel do dono
               </a>

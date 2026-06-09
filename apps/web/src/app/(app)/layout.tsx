@@ -8,8 +8,7 @@ import { allowedAreasForModules } from "@/lib/modules";
 import { isSuperAdminEmail } from "@/lib/super-admin";
 import { brandCssVars } from "@/lib/theme";
 import { NICHE_TEMPLATES } from "@/lib/niches";
-import { CircleUser, LogOut } from "lucide-react";
-import { Sidebar } from "@/components/sidebar";
+import { AppShell } from "@/components/app-shell";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const h = await headers();
@@ -40,42 +39,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (area && !allowed.includes(area)) redirect("/dashboard");
 
   return (
-    <div className="flex min-h-screen bg-neutral-50">
+    <>
       {/* Tema white-label: cor da loja aplicada no sistema todo. */}
       <style dangerouslySetInnerHTML={{ __html: brandCssVars(tenant.brandColor) }} />
-      <Sidebar
+      <AppShell
         storeName={tenant.name}
         iconUrl={tenant.iconUrl}
         allowed={allowed}
         isSuperAdmin={isSuperAdminEmail(session.user.email)}
-      />
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Barra superior fixa */}
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-neutral-200 bg-white/90 px-6 backdrop-blur">
-          <div className="min-w-0 pl-10 lg:pl-0">
-            <div className="truncate text-sm font-semibold text-neutral-900">{tenant.name}</div>
-            <div className="truncate text-xs text-neutral-500">
-              {NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Loja"}
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden items-center gap-2 rounded-full bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-700 sm:inline-flex">
-              <CircleUser className="h-4 w-4 text-brand" strokeWidth={2} />
-              Bem-vindo, {session.user.name?.trim() || session.user.email.split("@")[0]}
-            </span>
-            <form action="/api/auth/sign-out" method="POST">
-              <button
-                type="submit"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-              >
-                <LogOut className="h-4 w-4" strokeWidth={2} />
-                Sair
-              </button>
-            </form>
-          </div>
-        </header>
-        <div className="min-w-0 flex-1 overflow-x-hidden">{children}</div>
-      </div>
-    </div>
+        nicheLabel={NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Loja"}
+        userName={session.user.name?.trim() || session.user.email.split("@")[0]}
+      >
+        {children}
+      </AppShell>
+    </>
   );
 }

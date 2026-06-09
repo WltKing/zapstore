@@ -503,7 +503,7 @@ function Card({
   deltaInverted?: boolean;
 }) {
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-card">
+    <div className="rounded-2xl bg-white p-6 shadow-card">
       <div className="flex items-center gap-4">
         {Icon && (
           <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${TINTS[tint] ?? TINTS.slate}`}>
@@ -511,7 +511,7 @@ function Card({
           </span>
         )}
         <div className="min-w-0">
-          <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
+          <div className="text-sm font-medium text-neutral-500">{title}</div>
           <div className={`text-2xl font-bold ${valueClass ?? "text-neutral-900"}`}>{value}</div>
         </div>
       </div>
