@@ -115,6 +115,7 @@ const SECTIONS_SERVICE: NavSection[] = [
     title: "Cadastros",
     items: [
       { href: "/services", label: "Serviços", icon: Sparkles },
+      { href: "/products", label: "Produtos", icon: Package },
       { href: "/team", label: "Profissionais", icon: Contact },
     ],
   },
