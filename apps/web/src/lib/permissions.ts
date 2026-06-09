@@ -12,6 +12,7 @@ export const AREAS = [
   "customers",
   "agenda",
   "scheduling",
+  "services",
   "team",
   "route",
   "deliveries",
@@ -35,6 +36,7 @@ export const AREA_LABELS: Record<Area, string> = {
   customers: "Clientes",
   agenda: "Agenda",
   scheduling: "Agendamentos",
+  services: "Serviços",
   team: "Equipe (vendedores/profissionais)",
   route: "Rota do dia",
   deliveries: "Entregas",
@@ -53,7 +55,7 @@ export const AREA_LABELS: Record<Area, string> = {
 /** Presets por perfil pronto. ADMIN = tudo. */
 export const ROLE_PERMISSIONS: Record<Role, Area[]> = {
   ADMIN: [...AREAS],
-  OPERATOR: ["dashboard", "orders", "products", "customers", "agenda", "scheduling", "simulator"],
+  OPERATOR: ["dashboard", "orders", "products", "customers", "agenda", "scheduling", "services", "simulator"],
   FINANCIAL: ["dashboard", "orders", "cashflow", "expenses", "billing"],
   DELIVERY: ["dashboard", "route", "deliveries", "agenda"],
 };

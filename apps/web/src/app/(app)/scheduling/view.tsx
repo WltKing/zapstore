@@ -4,14 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   createAppointmentAction,
-  createServiceAction,
   completeAppointmentAction,
   deleteAppointmentAction,
-  deleteServiceAction,
   updateAppointmentStatusAction,
-  updateServiceAction,
   type AppointmentInput,
-  type ServiceInput,
 } from "@/lib/actions/scheduling";
 import { PAYMENT_OPTIONS, paymentHasInstallments } from "@/lib/payments";
 
@@ -95,7 +91,6 @@ export function SchedulingView({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [newAppt, setNewAppt] = useState(false);
-  const [editingService, setEditingService] = useState<ServiceRow | "new" | null>(null);
   // Concluir atendimento -> vira venda (escolhe forma de pagamento).
   const [completing, setCompleting] = useState<AppointmentRow | null>(null);
   const [payMethod, setPayMethod] = useState("pix");
@@ -242,41 +237,6 @@ export function SchedulingView({
         )}
       </section>
 
-      {/* GESTÃO: serviços + profissionais */}
-      <div className="mt-10 grid gap-6 md:grid-cols-2">
-        <ManageCard
-          title="Serviços"
-          addLabel="+ Serviço"
-          onAdd={() => {
-            setError(null);
-            setEditingService("new");
-          }}
-          empty="Nenhum serviço cadastrado."
-          rows={services.map((s) => ({
-            id: s.id,
-            primary: s.name,
-            secondary: `${s.durationMin} min · ${formatBrl(s.priceBrl)}`,
-            active: s.active,
-            onEdit: () => {
-              setError(null);
-              setEditingService(s);
-            },
-            onDelete: () => {
-              if (confirm(`Excluir o serviço "${s.name}"?`)) run(() => deleteServiceAction(s.id));
-            },
-          }))}
-        />
-        <div className="rounded-2xl bg-white p-6 shadow-card">
-          <h2 className="font-semibold">Profissionais</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            {professionals.length} cadastrado(s). A equipe é gerenciada na página de Profissionais.
-          </p>
-          <a href="/team" className="mt-3 inline-block text-sm font-medium text-brand hover:underline">
-            Gerenciar profissionais →
-          </a>
-        </div>
-      </div>
-
       {newAppt && (
         <AppointmentDialog
           services={services.filter((s) => s.active)}
@@ -284,16 +244,6 @@ export function SchedulingView({
           onClose={() => setNewAppt(false)}
           onSaved={() => {
             setNewAppt(false);
-            router.refresh();
-          }}
-        />
-      )}
-      {editingService && (
-        <ServiceDialog
-          service={editingService === "new" ? null : editingService}
-          onClose={() => setEditingService(null)}
-          onSaved={() => {
-            setEditingService(null);
             router.refresh();
           }}
         />
@@ -367,72 +317,6 @@ export function SchedulingView({
         </div>
       )}
     </main>
-  );
-}
-
-function ManageCard({
-  title,
-  addLabel,
-  onAdd,
-  empty,
-  rows,
-}: {
-  title: string;
-  addLabel: string;
-  onAdd: () => void;
-  empty: string;
-  rows: {
-    id: string;
-    primary: string;
-    secondary: string;
-    active: boolean;
-    onEdit: () => void;
-    onDelete: () => void;
-  }[];
-}) {
-  return (
-    <section className="rounded-2xl bg-white p-5 shadow-card">
-      <div className="flex items-center justify-between">
-        <h2 className="font-semibold">{title}</h2>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-        >
-          {addLabel}
-        </button>
-      </div>
-      {rows.length === 0 ? (
-        <p className="mt-4 text-sm text-neutral-500">{empty}</p>
-      ) : (
-        <ul className="mt-3 divide-y divide-neutral-100">
-          {rows.map((r) => (
-            <li key={r.id} className="flex items-center justify-between py-2.5">
-              <div className={r.active ? "" : "opacity-50"}>
-                <div className="text-sm font-medium">{r.primary}</div>
-                <div className="text-xs text-neutral-500">{r.secondary}</div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={r.onEdit}
-                  className="text-sm text-neutral-600 hover:text-neutral-900"
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  onClick={r.onDelete}
-                  className="text-sm text-neutral-400 hover:text-red-700"
-                >
-                  Excluir
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   );
 }
 
@@ -596,87 +480,4 @@ function AppointmentDialog({
   );
 }
 
-function ServiceDialog({
-  service,
-  onClose,
-  onSaved,
-}: {
-  service: ServiceRow | null;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [form, setForm] = useState<ServiceInput>(
-    service
-      ? { name: service.name, durationMin: service.durationMin, priceBrl: service.priceBrl, active: service.active }
-      : { name: "", durationMin: 30, priceBrl: 0, active: true },
-  );
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    startTransition(async () => {
-      const res = service ? await updateServiceAction(service.id, form) : await createServiceAction(form);
-      if (!res.ok) setError(res.error ?? "Erro");
-      else onSaved();
-    });
-  };
-
-  return (
-    <DialogShell
-      title={service ? "Editar serviço" : "Novo serviço"}
-      onClose={onClose}
-      onSubmit={submit}
-      isPending={isPending}
-      error={error}
-    >
-      <div>
-        <label className="block text-sm font-medium text-neutral-700">Nome do serviço</label>
-        <input
-          required
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          placeholder="Ex: Corte, Limpeza de pele..."
-          className={inputClass}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="block text-sm font-medium text-neutral-700">Duração (min)</label>
-          <input
-            type="number"
-            min="5"
-            step="1"
-            required
-            value={form.durationMin}
-            onChange={(e) => setForm({ ...form, durationMin: Number(e.target.value) })}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-neutral-700">Preço (R$)</label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            required
-            value={form.priceBrl}
-            onChange={(e) => setForm({ ...form, priceBrl: Number(e.target.value) })}
-            className={inputClass}
-          />
-        </div>
-      </div>
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={form.active}
-          onChange={(e) => setForm({ ...form, active: e.target.checked })}
-          className="h-4 w-4 rounded border-neutral-300"
-        />
-        <span className="text-sm text-neutral-700">Serviço ativo</span>
-      </label>
-    </DialogShell>
-  );
-}
 

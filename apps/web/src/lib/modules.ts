@@ -20,7 +20,7 @@ export const MODULE_IDS: ModuleId[] = ["products", "delivery", "scheduling", "fi
 export const MODULE_AREAS: Record<ModuleId, Area[]> = {
   products: ["products"],
   delivery: ["route", "deliveries"],
-  scheduling: ["agenda", "scheduling"],
+  scheduling: ["agenda", "scheduling", "services"],
   fiscal: ["fiscal"],
   goal: [], // só dashboard, sem item de menu
 };
