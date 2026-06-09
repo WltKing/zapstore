@@ -81,30 +81,30 @@ export default async function EditOrderPage({ params }: { params: Promise<{ id: 
   };
 
   return (
-    <>
-      <OrderForm
-        products={products.map((p) => ({ id: p.id, name: p.name, priceBrl: Number(p.priceBrl) }))}
-        sellers={sellers}
-        initial={initial}
-        orderId={order.id}
-        orderNumber={order.orderNumber}
-      />
-      <OrderFiscalCard
-        orderId={order.id}
-        configured={!!fiscalCfg?.enabled}
-        ambiente={fiscalCfg?.ambiente ?? "homologacao"}
-        habilitaNfce={fiscalCfg?.habilitaNfce ?? false}
-        habilitaNfe={fiscalCfg?.habilitaNfe ?? false}
-        fiscal={{
-          model: order.fiscalModel,
-          status: order.fiscalStatus,
-          chave: order.fiscalChave,
-          numero: order.fiscalNumero,
-          danfeUrl: order.fiscalDanfeUrl,
-          xmlUrl: order.fiscalXmlUrl,
-          message: order.fiscalMessage,
-        }}
-      />
-    </>
+    <OrderForm
+      products={products.map((p) => ({ id: p.id, name: p.name, priceBrl: Number(p.priceBrl) }))}
+      sellers={sellers}
+      initial={initial}
+      orderId={order.id}
+      orderNumber={order.orderNumber}
+      fiscalSlot={
+        <OrderFiscalCard
+          orderId={order.id}
+          configured={!!fiscalCfg?.enabled}
+          ambiente={fiscalCfg?.ambiente ?? "homologacao"}
+          habilitaNfce={fiscalCfg?.habilitaNfce ?? false}
+          habilitaNfe={fiscalCfg?.habilitaNfe ?? false}
+          fiscal={{
+            model: order.fiscalModel,
+            status: order.fiscalStatus,
+            chave: order.fiscalChave,
+            numero: order.fiscalNumero,
+            danfeUrl: order.fiscalDanfeUrl,
+            xmlUrl: order.fiscalXmlUrl,
+            message: order.fiscalMessage,
+          }}
+        />
+      }
+    />
   );
 }

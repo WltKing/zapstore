@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { prisma, withTenant, type OrderStatus } from "@zapstore/db";
 import { auth } from "@/lib/auth";
+import { validateOrderInput } from "@/lib/order-validation";
 
 async function requireTenantId(): Promise<string> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -58,17 +59,6 @@ export interface OrderInput {
 
 function n(v: number | undefined | null): number {
   return v != null && !Number.isNaN(v) ? v : 0;
-}
-
-function validateOrder(input: OrderInput): string | null {
-  if (!input.customerName.trim()) return "Informe o nome do cliente.";
-  if (!input.customerPhone.replace(/\D/g, "")) return "Informe o telefone do cliente.";
-  if (!input.items?.length) return "Adicione pelo menos um item.";
-  for (const it of input.items) {
-    if (!it.productId) return "Selecione o produto de cada item.";
-    if (!Number.isInteger(it.qty) || it.qty < 1) return "Quantidade invalida nos itens.";
-  }
-  return null;
 }
 
 /** Itens (snapshot) + total, com desconto/frete por item e do pedido. */
@@ -192,7 +182,7 @@ export async function createOrderAction(
 ): Promise<ActionResult & { orderId?: string }> {
   try {
     const tenantId = await requireTenantId();
-    const err = validateOrder(input);
+    const err = validateOrderInput(input);
     if (err) return { ok: false, error: err };
 
     const orderId = await withTenant(tenantId, async (tx) => {
@@ -228,7 +218,7 @@ export async function createOrderAction(
 export async function updateOrderAction(id: string, input: OrderInput): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
-    const err = validateOrder(input);
+    const err = validateOrderInput(input);
     if (err) return { ok: false, error: err };
 
     await withTenant(tenantId, async (tx) => {

@@ -1,11 +1,17 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Printer, Plus, CheckCircle2, X } from "lucide-react";
 import { createOrderAction, updateOrderAction, type OrderInput } from "@/lib/actions/orders";
 import { lookupCepAction, searchCepAction } from "@/lib/actions/cep";
 import { PAYMENT_OPTIONS, paymentHasInstallments } from "@/lib/payments";
+import { validateOrderInput } from "@/lib/order-validation";
+import { maskPhone, maskCep, maskCpfCnpj } from "@/lib/format";
+
+function Req() {
+  return <span className="text-red-500" aria-hidden>{" *"}</span>;
+}
 
 export interface ProductOpt {
   id: string;
@@ -55,15 +61,23 @@ export function OrderForm({
   initial,
   orderId,
   orderNumber,
+  fiscalSlot,
 }: {
   products: ProductOpt[];
   sellers: string[];
   initial: OrderInput;
   orderId?: string;
   orderNumber?: number;
+  fiscalSlot?: ReactNode;
 }) {
   const router = useRouter();
-  const [form, setForm] = useState<OrderInput>(initial);
+  // Aplica as máscaras nos valores que vêm crus do banco (só dígitos).
+  const [form, setForm] = useState<OrderInput>(() => ({
+    ...initial,
+    customerPhone: maskPhone(initial.customerPhone),
+    customerCpf: maskCpfCnpj(initial.customerCpf ?? ""),
+    cep: maskCep(initial.cep ?? ""),
+  }));
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
@@ -138,6 +152,12 @@ export function OrderForm({
     e.preventDefault();
     setError(null);
     setSaved(false);
+    const invalid = validateOrderInput(form);
+    if (invalid) {
+      setError(invalid);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     startTransition(async () => {
       if (orderId) {
         const r = await updateOrderAction(orderId, form);
@@ -156,6 +176,9 @@ export function OrderForm({
   };
 
   const isDelivery = form.deliveryType !== "pickup";
+  const needsFiscalAddress = form.invoiceType === "nfe"; // NF-e exige endereço mesmo na retirada
+  const showAddress = isDelivery || needsFiscalAddress;
+  const isNfe = form.invoiceType === "nfe";
 
   return (
     <form onSubmit={submit} className="mx-auto max-w-3xl px-6 py-10 space-y-6">
@@ -209,16 +232,18 @@ export function OrderForm({
         <h2 className="font-semibold">Cliente</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Nome</label>
+            <label className="block text-sm font-medium text-neutral-700">Nome<Req /></label>
             <input required value={form.customerName} onChange={(e) => set({ customerName: e.target.value })} className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Telefone</label>
-            <input required value={form.customerPhone} onChange={(e) => set({ customerPhone: e.target.value })} placeholder="(62) 99157-2500" className={inputClass} />
+            <label className="block text-sm font-medium text-neutral-700">Telefone<Req /></label>
+            <input required inputMode="tel" value={form.customerPhone} onChange={(e) => set({ customerPhone: maskPhone(e.target.value) })} placeholder="(62) 99157-2500" className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">CPF/CNPJ (opcional)</label>
-            <input value={form.customerCpf} onChange={(e) => set({ customerCpf: e.target.value })} className={inputClass} />
+            <label className="block text-sm font-medium text-neutral-700">
+              CPF/CNPJ{isNfe ? <Req /> : " (opcional)"}
+            </label>
+            <input inputMode="numeric" value={form.customerCpf} onChange={(e) => set({ customerCpf: maskCpfCnpj(e.target.value) })} placeholder="000.000.000-00" className={inputClass} />
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700">E-mail (opcional)</label>
@@ -239,7 +264,7 @@ export function OrderForm({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Vendedor</label>
+            <label className="block text-sm font-medium text-neutral-700">Vendedor<Req /></label>
             <input list="sellers" value={form.sellerName} onChange={(e) => set({ sellerName: e.target.value })} className={inputClass} />
             <datalist id="sellers">
               {sellers.map((s) => (
@@ -276,15 +301,21 @@ export function OrderForm({
           </label>
         </div>
 
-        {isDelivery && (
+        {showAddress && (
           <>
+            {!isDelivery && needsFiscalAddress && (
+              <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                A NF-e exige o endereço do cliente, mesmo na retirada na loja.
+              </p>
+            )}
             <div className="mt-3 flex items-end gap-2">
               <div className="w-40">
-                <label className="block text-sm font-medium text-neutral-700">CEP</label>
+                <label className="block text-sm font-medium text-neutral-700">CEP{isNfe && <Req />}</label>
                 <input
+                  inputMode="numeric"
                   value={form.cep}
                   onChange={(e) => {
-                    set({ cep: e.target.value });
+                    set({ cep: maskCep(e.target.value) });
                     doLookupCep(e.target.value);
                   }}
                   placeholder="00000-000"
@@ -297,11 +328,11 @@ export function OrderForm({
             </div>
             <div className="mt-3 grid gap-3 sm:grid-cols-6">
               <div className="sm:col-span-4">
-                <label className="block text-sm font-medium text-neutral-700">Rua</label>
+                <label className="block text-sm font-medium text-neutral-700">Rua{isNfe && <Req />}</label>
                 <input value={form.street} onChange={(e) => set({ street: e.target.value })} onBlur={doReverseCep} className={inputClass} />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-neutral-700">Número</label>
+                <label className="block text-sm font-medium text-neutral-700">Número{isNfe && <Req />}</label>
                 <input value={form.streetNumber} onChange={(e) => set({ streetNumber: e.target.value })} className={inputClass} />
               </div>
               <div className="sm:col-span-3">
@@ -309,33 +340,36 @@ export function OrderForm({
                 <input value={form.complement} onChange={(e) => set({ complement: e.target.value })} className={inputClass} />
               </div>
               <div className="sm:col-span-3">
-                <label className="block text-sm font-medium text-neutral-700">Bairro</label>
+                <label className="block text-sm font-medium text-neutral-700">Bairro{isNfe && <Req />}</label>
                 <input value={form.neighborhood} onChange={(e) => set({ neighborhood: e.target.value })} className={inputClass} />
               </div>
               <div className="sm:col-span-4">
-                <label className="block text-sm font-medium text-neutral-700">Cidade</label>
+                <label className="block text-sm font-medium text-neutral-700">Cidade{isNfe && <Req />}</label>
                 <input value={form.city} onChange={(e) => set({ city: e.target.value })} onBlur={doReverseCep} className={inputClass} />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-neutral-700">UF</label>
+                <label className="block text-sm font-medium text-neutral-700">UF{isNfe && <Req />}</label>
                 <input maxLength={2} value={form.state} onChange={(e) => set({ state: e.target.value.toUpperCase() })} className={inputClass} />
               </div>
             </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700">Data de entrega</label>
-                <input type="date" value={form.deliveryDate} onChange={(e) => set({ deliveryDate: e.target.value })} className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700">Turno</label>
-                <select value={form.deliveryShift} onChange={(e) => set({ deliveryShift: e.target.value })} className={inputClass}>
-                  <option value="">—</option>
-                  <option value="morning">Manhã</option>
-                  <option value="afternoon">Tarde</option>
-                </select>
-              </div>
-            </div>
           </>
+        )}
+
+        {isDelivery && (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700">Data de entrega<Req /></label>
+              <input type="date" value={form.deliveryDate} onChange={(e) => set({ deliveryDate: e.target.value })} className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700">Turno</label>
+              <select value={form.deliveryShift} onChange={(e) => set({ deliveryShift: e.target.value })} className={inputClass}>
+                <option value="">—</option>
+                <option value="morning">Manhã</option>
+                <option value="afternoon">Tarde</option>
+              </select>
+            </div>
+          </div>
         )}
       </section>
 
@@ -377,8 +411,8 @@ export function OrderForm({
         <h2 className="font-semibold">Pagamento</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Forma</label>
-            <select value={form.paymentMethod} onChange={(e) => set({ paymentMethod: e.target.value })} className={inputClass}>
+            <label className="block text-sm font-medium text-neutral-700">Forma<Req /></label>
+            <select required value={form.paymentMethod} onChange={(e) => set({ paymentMethod: e.target.value })} className={inputClass}>
               <option value="">—</option>
               {PAYMENTS.map((p) => (
                 <option key={p.value} value={p.value}>{p.label}</option>
@@ -418,7 +452,10 @@ export function OrderForm({
         <textarea rows={2} value={form.notes} onChange={(e) => set({ notes: e.target.value })} className={inputClass} />
       </section>
 
-      <div className="flex justify-end gap-2">
+      {/* Nota fiscal (só em pedido já salvo) — agora como seção do pedido, não solta no rodapé */}
+      {fiscalSlot}
+
+      <div className="flex justify-end gap-2 border-t border-neutral-200 pt-5">
         <a href="/orders" className="rounded-lg border border-neutral-300 px-5 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100">
           Cancelar
         </a>
