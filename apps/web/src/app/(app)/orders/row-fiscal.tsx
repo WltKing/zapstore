@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, RotateCw } from "lucide-react";
+import { Receipt, FileText, RotateCw, XCircle } from "lucide-react";
 import { emitNotaAction, refreshNotaAction, cancelNotaAction } from "@/lib/actions/fiscal-emit";
 
 export interface RowFiscalConfig {
@@ -20,15 +20,18 @@ export interface RowFiscalData {
   xmlUrl: string | null;
 }
 
-const STATUS_UI: Record<string, { label: string; cls: string }> = {
-  autorizado: { label: "Autorizada", cls: "bg-emerald-100 text-emerald-800" },
-  processando: { label: "Processando", cls: "bg-amber-100 text-amber-800" },
-  processando_autorizacao: { label: "Processando", cls: "bg-amber-100 text-amber-800" },
-  erro_autorizacao: { label: "Rejeitada", cls: "bg-red-100 text-red-700" },
-  cancelado: { label: "Cancelada", cls: "bg-neutral-200 text-neutral-600" },
+const STATUS_UI: Record<string, { label: string; dot: string; text: string }> = {
+  autorizado: { label: "Autorizada", dot: "bg-emerald-500", text: "text-emerald-700" },
+  processando: { label: "Processando", dot: "bg-amber-500", text: "text-amber-700" },
+  processando_autorizacao: { label: "Processando", dot: "bg-amber-500", text: "text-amber-700" },
+  erro_autorizacao: { label: "Rejeitada", dot: "bg-red-500", text: "text-red-700" },
+  cancelado: { label: "Cancelada", dot: "bg-neutral-400", text: "text-neutral-500" },
 };
 
-/** Controle compacto de NFC-e/NF-e por linha de pedido (emite/cancela sem abrir a edição). */
+const menuItem =
+  "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 disabled:opacity-50";
+
+/** Controle discreto de NFC-e/NF-e por linha: 1 ícone que abre um menu de ações. */
 export function RowFiscal({
   orderId,
   orderNumber,
@@ -42,16 +45,27 @@ export function RowFiscal({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  if (!config.configured) return null;
+  const hasNota = !!fiscal.status;
+  const statusUi = fiscal.status ? STATUS_UI[fiscal.status] : null;
+  const canEmit = fiscal.status !== "autorizado" && fiscal.status !== "cancelado";
+  const processing = fiscal.status === "processando" || fiscal.status === "processando_autorizacao";
 
-  const run = (fn: () => Promise<{ ok: boolean; error?: string; status?: string }>) => {
+  // Nada a fazer: sem fiscal configurado, ou sem nota e sem modelo habilitado.
+  if (!config.configured) return null;
+  if (!hasNota && !config.habilitaNfce && !config.habilitaNfe) return null;
+
+  const run = (fn: () => Promise<{ ok: boolean; error?: string }>) => {
     setMsg(null);
     startTransition(async () => {
       const r = await fn();
       if (!r.ok) setMsg(r.error ?? "Erro");
-      else router.refresh();
+      else {
+        setOpen(false);
+        router.refresh();
+      }
     });
   };
 
@@ -73,75 +87,76 @@ export function RowFiscal({
     run(() => cancelNotaAction(orderId, j));
   };
 
-  const hasNota = !!fiscal.status;
-  const statusUi = fiscal.status
-    ? STATUS_UI[fiscal.status] ?? { label: fiscal.status, cls: "bg-neutral-100 text-neutral-600" }
-    : null;
-  const canEmit = fiscal.status !== "autorizado" && fiscal.status !== "cancelado";
-  const processing = fiscal.status === "processando" || fiscal.status === "processando_autorizacao";
-
   return (
-    <div className="flex items-center gap-1" title={msg ?? undefined}>
-      {/* Botões de emissão (quando ainda não autorizada nem cancelada) */}
-      {canEmit && config.habilitaNfce && (
-        <button
-          type="button"
-          onClick={() => emit("nfce")}
-          disabled={isPending}
-          className="rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-50"
-        >
-          {hasNota && fiscal.model === "nfce" ? "Reemitir NFC-e" : "NFC-e"}
-        </button>
-      )}
-      {canEmit && config.habilitaNfe && (
-        <button
-          type="button"
-          onClick={() => emit("nfe")}
-          disabled={isPending}
-          className="rounded-md border border-blue-300 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-800 hover:bg-blue-100 disabled:opacity-50"
-        >
-          {hasNota && fiscal.model === "nfe" ? "Reemitir NF-e" : "NF-e"}
-        </button>
-      )}
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title={statusUi ? `Nota fiscal: ${statusUi.label}` : "Nota fiscal"}
+        className="relative text-neutral-400 hover:text-neutral-700"
+      >
+        <Receipt className="h-[18px] w-[18px]" strokeWidth={2} />
+        {statusUi && (
+          <span className={`absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full ring-2 ring-white ${statusUi.dot}`} />
+        )}
+      </button>
 
-      {/* Status + ações da nota existente */}
-      {hasNota && statusUi && (
-        <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${statusUi.cls}`}>
-          {statusUi.label}
-        </span>
-      )}
-      {fiscal.danfeUrl && (
-        <a
-          href={fiscal.danfeUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Ver/Imprimir DANFE"
-          className="text-neutral-400 hover:text-neutral-700"
-        >
-          <FileText className="h-[18px] w-[18px]" strokeWidth={2} />
-        </a>
-      )}
-      {processing && (
-        <button
-          type="button"
-          onClick={() => run(() => refreshNotaAction(orderId))}
-          disabled={isPending}
-          title="Atualizar status"
-          className="text-neutral-400 hover:text-neutral-700 disabled:opacity-50"
-        >
-          <RotateCw className="h-[18px] w-[18px]" strokeWidth={2} />
-        </button>
-      )}
-      {fiscal.status === "autorizado" && (
-        <button
-          type="button"
-          onClick={doCancel}
-          disabled={isPending}
-          title="Cancelar nota fiscal"
-          className="rounded-md border border-red-300 px-2 py-1 text-[11px] font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-        >
-          Cancelar nota
-        </button>
+      {open && (
+        <>
+          <button type="button" aria-label="Fechar" onClick={() => setOpen(false)} className="fixed inset-0 z-10 cursor-default" />
+          <div className="absolute right-0 z-20 mt-2 w-60 rounded-xl border border-neutral-200 bg-white p-1 shadow-lg">
+            <div className="flex items-center justify-between px-3 py-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Nota fiscal</span>
+              {statusUi && (
+                <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${statusUi.text}`}>
+                  <span className={`h-2 w-2 rounded-full ${statusUi.dot}`} />
+                  {statusUi.label}
+                  {fiscal.numero ? ` · nº ${fiscal.numero}` : ""}
+                </span>
+              )}
+            </div>
+
+            {canEmit && config.habilitaNfce && (
+              <button type="button" onClick={() => emit("nfce")} disabled={isPending} className={menuItem}>
+                <Receipt className="h-4 w-4" strokeWidth={2} />
+                {hasNota && fiscal.model === "nfce" ? "Reemitir NFC-e" : "Emitir NFC-e"}
+              </button>
+            )}
+            {canEmit && config.habilitaNfe && (
+              <button type="button" onClick={() => emit("nfe")} disabled={isPending} className={menuItem}>
+                <FileText className="h-4 w-4" strokeWidth={2} />
+                {hasNota && fiscal.model === "nfe" ? "Reemitir NF-e" : "Emitir NF-e"}
+              </button>
+            )}
+
+            {fiscal.danfeUrl && (
+              <a
+                href={fiscal.danfeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+                className={menuItem}
+              >
+                <FileText className="h-4 w-4" strokeWidth={2} />
+                Ver/Imprimir DANFE
+              </a>
+            )}
+            {processing && (
+              <button type="button" onClick={() => run(() => refreshNotaAction(orderId))} disabled={isPending} className={menuItem}>
+                <RotateCw className="h-4 w-4" strokeWidth={2} />
+                Atualizar status
+              </button>
+            )}
+            {fiscal.status === "autorizado" && (
+              <button type="button" onClick={doCancel} disabled={isPending} className={`${menuItem} text-red-700 hover:bg-red-50`}>
+                <XCircle className="h-4 w-4" strokeWidth={2} />
+                Cancelar nota
+              </button>
+            )}
+
+            {msg && <p className="px-3 py-2 text-xs text-red-600">{msg}</p>}
+          </div>
+        </>
       )}
     </div>
   );
