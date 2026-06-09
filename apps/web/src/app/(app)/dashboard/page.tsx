@@ -154,21 +154,56 @@ export default async function DashboardPage({
           <span className="capitalize">{isCurrentMonth ? "Este mês" : monthName}</span>
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card title="Faturamento" value={formatBrl(faturamento)} hint="Vendas do mês" icon={TrendingUp} tint="blue" delta={faturamentoDelta} />
+          <Card title="Faturamento" value={formatBrl(faturamento)} icon={TrendingUp} tint="blue" delta={faturamentoDelta} />
           <Card
             title="Lucro líquido"
             value={formatBrl(lucro)}
-            hint="Depois de custos, taxas, imposto e despesas"
             icon={Wallet}
             tint={lucro >= 0 ? "green" : "red"}
             valueClass={lucro >= 0 ? "text-emerald-700" : "text-red-700"}
             delta={lucroDelta}
-            highlight
           />
-          <Card title="Ticket médio" value={formatBrl(extras.ticketMedio)} hint={`${extras.orderCount} venda(s) no mês`} icon={ShoppingCart} tint="violet" />
-          <Card title="Despesas" value={formatBrl(extras.despesasMes)} hint="Gastos do mês" icon={TrendingDown} tint="red" delta={despesasDelta} deltaInverted />
+          <Card title="Ticket médio" value={formatBrl(extras.ticketMedio)} icon={ShoppingCart} tint="violet" />
+          <Card title="Despesas" value={formatBrl(extras.despesasMes)} icon={TrendingDown} tint="red" delta={despesasDelta} deltaInverted />
         </div>
       </section>
+
+      {/* Bot — o diferencial: atendimento automático */}
+      {isCurrentMonth && (
+        <section className="mt-6 overflow-hidden rounded-2xl bg-brand p-6 text-white shadow-card">
+          <div className="flex flex-wrap items-center justify-between gap-5">
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 text-2xl">🤖</span>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide opacity-80">Atendimento automático</div>
+                <div className="text-lg font-bold">Seu vendedor que nunca dorme</div>
+              </div>
+            </div>
+            {extras.botSales > 0 || extras.botConversations > 0 ? (
+              <div className="flex flex-wrap gap-x-8 gap-y-3">
+                <div>
+                  <div className="text-2xl font-bold">{formatBrl(extras.botSales)}</div>
+                  <div className="text-xs opacity-80">
+                    vendido pelo bot{extras.botPctOfRevenue > 0 ? ` · ${extras.botPctOfRevenue.toFixed(0)}% do total` : ""}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold">{extras.botOrderCount}</div>
+                  <div className="text-xs opacity-80">vendas fechadas</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold">{extras.botConversations}</div>
+                  <div className="text-xs opacity-80">atendimentos no mês</div>
+                </div>
+              </div>
+            ) : (
+              <div className="max-w-md text-sm opacity-90">
+                Pronto pra atender 24h — as vendas e os atendimentos do bot aparecem aqui.
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Meta do mês (módulo opcional) */}
       {showGoal && (
@@ -208,10 +243,7 @@ export default async function DashboardPage({
       {/* Para onde vai o faturamento — barra de composição */}
       <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
         <div className="flex items-baseline justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Para onde vai o faturamento</h2>
-            <p className="text-xs text-neutral-400">De cada R$ que entra, quanto vira lucro</p>
-          </div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Para onde vai o faturamento</h2>
           {faturamento > 0 && (
             <span className={`text-sm font-bold ${lucro >= 0 ? "text-emerald-700" : "text-red-700"}`}>
               {formatBrl(lucro)} de lucro
@@ -258,14 +290,8 @@ export default async function DashboardPage({
               <div className="text-xs text-neutral-500">próximos 30 dias</div>
             </div>
           </div>
-          <div className="mt-4 flex items-center justify-between gap-3 border-t border-neutral-100 pt-3">
-            <p className="text-xs text-neutral-400">
-              Calculado pelo repasse configurado em{" "}
-              <a href="/settings" className="underline">Configurações → Recebimento</a>.
-            </p>
-            <a href="/cashflow" className="shrink-0 text-sm font-medium text-brand hover:underline">
-              Antecipar no Caixa →
-            </a>
+          <div className="mt-4 flex justify-end border-t border-neutral-100 pt-3">
+            <a href="/cashflow" className="text-sm font-medium text-brand hover:underline">Antecipar no Caixa →</a>
           </div>
         </section>
       )}
@@ -275,19 +301,18 @@ export default async function DashboardPage({
         <section className="mt-8">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Hoje</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card title="Vendas hoje" value={formatBrl(stats.salesTodayBrl)} hint="Total vendido hoje" icon={ShoppingCart} tint="blue" />
-            <Card title="Pedidos abertos" value={String(stats.openOrderCount)} hint="A confirmar / entregar" icon={Package} tint="amber" />
+            <Card title="Vendas hoje" value={formatBrl(stats.salesTodayBrl)} icon={ShoppingCart} tint="blue" />
+            <Card title="Pedidos abertos" value={String(stats.openOrderCount)} icon={Package} tint="amber" />
             {has("products") && (
               <Card
                 title="Estoque baixo"
                 value={String(stats.lowStockCount)}
-                hint={stats.lowStockCount > 0 ? "Repor em breve" : "Tudo certo"}
                 icon={AlertTriangle}
                 tint={stats.lowStockCount > 0 ? "red" : "slate"}
               />
             )}
             {has("scheduling") && (
-              <Card title="Agendamentos hoje" value={String(stats.todaysAppointments)} hint={`${stats.upcomingAppointments} agendados à frente`} icon={CalendarDays} tint="violet" />
+              <Card title="Agendamentos hoje" value={String(stats.todaysAppointments)} icon={CalendarDays} tint="violet" />
             )}
           </div>
         </section>
@@ -298,37 +323,21 @@ export default async function DashboardPage({
         <section className="mt-8">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Saúde do estoque</h2>
           <div className="grid gap-4 sm:grid-cols-3">
-            <Card title="Capital em estoque" value={formatBrl(extras.capitalEmEstoque)} hint="Dinheiro parado em mercadoria" icon={Warehouse} tint="slate" />
+            <Card title="Capital em estoque" value={formatBrl(extras.capitalEmEstoque)} icon={Warehouse} tint="slate" />
             <Card
               title="Produtos parados"
               value={String(extras.staleCount)}
-              hint={extras.staleValue > 0 ? `${formatBrl(extras.staleValue)} sem vender há +90 dias` : "Sem vender há +90 dias"}
+              hint={extras.staleValue > 0 ? formatBrl(extras.staleValue) : undefined}
               icon={AlertTriangle}
               tint={extras.staleCount > 0 ? "amber" : "slate"}
             />
             <Card
               title="Cobertura de estoque"
               value={extras.diasCobertura != null ? `${extras.diasCobertura} dias` : "—"}
-              hint="Quanto o estoque dura no ritmo de vendas atual"
               icon={Package}
               tint="slate"
             />
           </div>
-          {extras.staleList.length > 0 && (
-            <div className="mt-4 rounded-2xl bg-white p-6 shadow-card">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Parados há mais de 90 dias</h3>
-              <ul className="mt-3 divide-y divide-neutral-100">
-                {extras.staleList.map((p, i) => (
-                  <li key={i} className="flex items-center justify-between py-2 text-sm">
-                    <span>
-                      {p.name} <span className="text-xs text-neutral-400">{p.stock} un.</span>
-                    </span>
-                    <span className="font-medium">{p.value > 0 ? formatBrl(p.value) : "—"}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </section>
       )}
 
@@ -482,21 +491,19 @@ function Card({
   tint = "slate",
   delta,
   deltaInverted,
-  highlight,
 }: {
   title: string;
   value: string;
-  hint: string;
+  hint?: string;
   progress?: number;
   valueClass?: string;
   icon?: LucideIcon;
   tint?: keyof typeof TINTS | string;
   delta?: number | null;
   deltaInverted?: boolean;
-  highlight?: boolean;
 }) {
   return (
-    <div className={`rounded-2xl bg-white p-5 shadow-card ${highlight ? "ring-2 ring-emerald-200" : ""}`}>
+    <div className="rounded-2xl bg-white p-5 shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
         {Icon && (
@@ -505,7 +512,7 @@ function Card({
           </span>
         )}
       </div>
-      <div className={`mt-2 font-bold ${highlight ? "text-3xl" : "text-2xl"} ${valueClass ?? "text-neutral-900"}`}>{value}</div>
+      <div className={`mt-2 text-2xl font-bold ${valueClass ?? "text-neutral-900"}`}>{value}</div>
       {progress !== undefined && (
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
           <div
@@ -514,10 +521,12 @@ function Card({
           />
         </div>
       )}
-      <div className="mt-1 flex items-center gap-2 text-xs text-neutral-500">
-        {delta != null && <Delta value={delta} inverted={deltaInverted} />}
-        <span>{hint}</span>
-      </div>
+      {(delta != null || hint) && (
+        <div className="mt-1 flex items-center gap-2 text-xs text-neutral-500">
+          {delta != null && <Delta value={delta} inverted={deltaInverted} />}
+          {hint && <span>{hint}</span>}
+        </div>
+      )}
     </div>
   );
 }

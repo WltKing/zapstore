@@ -278,7 +278,7 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
     const stale90 = new Date(now);
     stale90.setDate(stale90.getDate() - 90);
 
-    const [monthOrders, prevOrders, evoOrders, expAgg, prevExpAgg, recentSales] = await Promise.all([
+    const [monthOrders, prevOrders, evoOrders, expAgg, prevExpAgg, recentSales, botConversations] = await Promise.all([
       tx.order.findMany({
         where: { status: { not: "CANCELED" }, createdAt: { gte: monthStart, lt: monthEnd } },
         select: orderSelect,
@@ -300,6 +300,7 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
         where: { status: { not: "CANCELED" }, createdAt: { gte: stale90 } },
         select: { items: true },
       }),
+      tx.conversation.count({ where: { lastMessageAt: { gte: monthStart, lt: monthEnd } } }),
     ]);
 
     // Produtos vendidos nos últimos 90 dias (por id e por nome).
@@ -345,6 +346,13 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
     const prevLucro = prevFin.bruto - prevFin.cmv - prevFin.taxa - prevFin.imposto - prevDespesas;
 
     const ticketMedio = monthOrders.length > 0 ? brutoMes / monthOrders.length : 0;
+
+    // Bot = vendedor online. Quanto ele fechou no mês.
+    const botSales = monthOrders
+      .filter((o) => (o.sellerName?.trim() ?? "") === "Bot")
+      .reduce((s, o) => s + Number(o.totalBrl), 0);
+    const botOrderCount = monthOrders.filter((o) => (o.sellerName?.trim() ?? "") === "Bot").length;
+    const botPctOfRevenue = brutoMes > 0 ? (botSales / brutoMes) * 100 : 0;
 
     // Projeção de fechamento (run-rate) — só faz sentido no mês corrente; mês fechado = bruto.
     const daysInMonth = new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate();
@@ -463,6 +471,10 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
       staleValue,
       staleList,
       diasCobertura,
+      botSales,
+      botOrderCount,
+      botPctOfRevenue,
+      botConversations,
       ticketMedio,
       orderCount: monthOrders.length,
       // Comparação mês anterior
