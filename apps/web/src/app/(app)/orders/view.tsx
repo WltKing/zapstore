@@ -64,7 +64,12 @@ function formatBrl(value: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
+  // timeZone fixo evita hydration mismatch (servidor UTC × navegador BR).
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
+  }).format(new Date(iso));
 }
 
 function monthKey(iso: string): string {

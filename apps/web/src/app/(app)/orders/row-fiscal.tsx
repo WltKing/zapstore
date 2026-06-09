@@ -103,7 +103,7 @@ export function RowFiscal({
     };
 
     return (
-      <div className="relative">
+      <div className="relative inline-flex items-center">
         <button
           type="button"
           onClick={onClick}
