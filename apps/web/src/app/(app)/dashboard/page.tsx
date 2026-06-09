@@ -446,6 +446,42 @@ export default async function DashboardPage({
         </>
       )}
 
+      {/* Clientes (novos × recorrentes) e atendimentos (faltas) do mês */}
+      {(extras.novosClientes + extras.recorrentesClientes > 0 ||
+        (serviceLed && extras.atendimentosRealizados + extras.faltas > 0)) && (
+        <>
+          <SectionDivider>{serviceLed ? "Clientes e atendimentos" : "Clientes"}</SectionDivider>
+          <section className="mt-4 grid gap-4 lg:grid-cols-2">
+            {extras.novosClientes + extras.recorrentesClientes > 0 && (
+              <div className="rounded-2xl bg-white p-6 shadow-card">
+                <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">Novos × recorrentes</h2>
+                <DonutChart
+                  data={[
+                    { label: "Recorrentes", value: extras.recorrentesClientes },
+                    { label: "Novos", value: extras.novosClientes },
+                  ]}
+                />
+              </div>
+            )}
+            {serviceLed && extras.atendimentosRealizados + extras.faltas > 0 && (
+              <div className="rounded-2xl bg-white p-6 shadow-card">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Atendimentos do mês</h2>
+                <div className="mt-5 grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-3xl font-bold text-emerald-700">{extras.atendimentosRealizados}</div>
+                    <div className="mt-1 text-xs text-neutral-500">realizados</div>
+                  </div>
+                  <div>
+                    <div className="text-3xl font-bold text-amber-700">{extras.faltas}</div>
+                    <div className="mt-1 text-xs text-neutral-500">faltas · {extras.noShowPct.toFixed(0)}% no-show</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
       {/* Plano (uso de mensagens) — só no mês corrente */}
       {isCurrentMonth && (
       <section className="mt-8 rounded-2xl bg-white p-5 shadow-card">

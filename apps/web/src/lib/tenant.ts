@@ -272,6 +272,7 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
       invoiceType: true,
       items: true,
       createdAt: true,
+      customerPhone: true,
     } as const;
 
     // Janela p/ "produtos parados": vendas dos últimos 90 dias (a partir de hoje).
@@ -460,6 +461,29 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
 
     const liquidoMes = brutoMes - taxaMaquininha - impostoEstimado; // compat (antigo)
 
+    // Clientes novos × recorrentes (mês de referência): recorrente = já comprou antes.
+    const monthPhones = [
+      ...new Set(monthOrders.map((o) => o.customerPhone).filter((p): p is string => !!p && p.trim() !== "")),
+    ];
+    let recorrentesClientes = 0;
+    if (monthPhones.length > 0) {
+      const prior = await tx.order.findMany({
+        where: { status: { not: "CANCELED" }, createdAt: { lt: monthStart }, customerPhone: { in: monthPhones } },
+        select: { customerPhone: true },
+        distinct: ["customerPhone"],
+      });
+      recorrentesClientes = prior.length;
+    }
+    const novosClientes = Math.max(0, monthPhones.length - recorrentesClientes);
+
+    // Atendimentos do mês (estética): realizados × faltas (no-show).
+    const [atendimentosRealizados, faltas] = await Promise.all([
+      tx.appointment.count({ where: { status: "DONE", scheduledFor: { gte: monthStart, lt: monthEnd } } }),
+      tx.appointment.count({ where: { status: "NO_SHOW", scheduledFor: { gte: monthStart, lt: monthEnd } } }),
+    ]);
+    const noShowPct =
+      atendimentosRealizados + faltas > 0 ? (faltas / (atendimentosRealizados + faltas)) * 100 : 0;
+
     return {
       // Cascata de lucro
       brutoMes,
@@ -483,6 +507,11 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
       botPctOfRevenue,
       botConversations,
       autoGoal,
+      novosClientes,
+      recorrentesClientes,
+      atendimentosRealizados,
+      faltas,
+      noShowPct,
       ticketMedio,
       orderCount: monthOrders.length,
       // Comparação mês anterior
