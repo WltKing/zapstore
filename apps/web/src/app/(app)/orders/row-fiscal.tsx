@@ -115,7 +115,7 @@ export function RowFiscal({
                 ? `${label}: ${statusUi.label}`
                 : `Emitir ${label}`
           }
-          className={`relative ${blocked ? "cursor-not-allowed text-neutral-200" : "text-neutral-400 hover:text-neutral-700"}`}
+          className={`relative inline-flex items-center justify-center ${blocked ? "cursor-not-allowed text-neutral-200" : "text-neutral-400 hover:text-neutral-700"}`}
         >
           <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
           {statusUi && (

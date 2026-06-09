@@ -293,7 +293,7 @@ export function OrdersView({
                           )
                         }
                         title="Imprimir"
-                        className="text-neutral-400 hover:text-neutral-700"
+                        className="inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700"
                       >
                         <Printer className="h-[18px] w-[18px]" strokeWidth={2} />
                       </button>
