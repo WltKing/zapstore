@@ -504,17 +504,19 @@ function Card({
 }) {
   return (
     <div className="rounded-2xl bg-white p-5 shadow-card">
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
+      <div className="flex items-center gap-4">
         {Icon && (
-          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${TINTS[tint] ?? TINTS.slate}`}>
-            <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+          <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${TINTS[tint] ?? TINTS.slate}`}>
+            <Icon className="h-6 w-6" strokeWidth={2} />
           </span>
         )}
+        <div className="min-w-0">
+          <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
+          <div className={`text-2xl font-bold ${valueClass ?? "text-neutral-900"}`}>{value}</div>
+        </div>
       </div>
-      <div className={`mt-2 text-2xl font-bold ${valueClass ?? "text-neutral-900"}`}>{value}</div>
       {progress !== undefined && (
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
           <div
             className={`h-full ${progress >= 100 ? "bg-red-500" : progress >= 80 ? "bg-amber-500" : "bg-emerald-500"}`}
             style={{ width: `${Math.min(100, progress)}%` }}
@@ -522,7 +524,7 @@ function Card({
         </div>
       )}
       {(delta != null || hint) && (
-        <div className="mt-1 flex items-center gap-2 text-xs text-neutral-500">
+        <div className="mt-2 flex items-center gap-2 text-xs text-neutral-500">
           {delta != null && <Delta value={delta} inverted={deltaInverted} />}
           {hint && <span>{hint}</span>}
         </div>
