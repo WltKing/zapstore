@@ -274,34 +274,36 @@ export function OrdersView({
                       >
                         {STATUS_LABELS[o.status] ?? o.status}
                       </span>
-                      {o.status !== "CANCELED" && (
-                        <RowFiscal
-                          orderId={o.id}
-                          orderNumber={o.orderNumber}
-                          config={fiscalConfig}
-                          fiscal={{
-                            model: o.fiscalModel,
-                            status: o.fiscalStatus,
-                            numero: o.fiscalNumero,
-                            danfeUrl: o.fiscalDanfeUrl,
-                            xmlUrl: o.fiscalXmlUrl,
-                          }}
-                        />
-                      )}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          window.open(
-                            `/print/order/${o.id}`,
-                            "print-popup",
-                            "width=480,height=720,menubar=no,toolbar=no",
-                          )
-                        }
-                        title="Imprimir"
-                        className="inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700"
-                      >
-                        <Printer className="h-[18px] w-[18px]" strokeWidth={2} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {o.status !== "CANCELED" && (
+                          <RowFiscal
+                            orderId={o.id}
+                            orderNumber={o.orderNumber}
+                            config={fiscalConfig}
+                            fiscal={{
+                              model: o.fiscalModel,
+                              status: o.fiscalStatus,
+                              numero: o.fiscalNumero,
+                              danfeUrl: o.fiscalDanfeUrl,
+                              xmlUrl: o.fiscalXmlUrl,
+                            }}
+                          />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            window.open(
+                              `/print/order/${o.id}`,
+                              "print-popup",
+                              "width=480,height=720,menubar=no,toolbar=no",
+                            )
+                          }
+                          title="Imprimir"
+                          className="inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700"
+                        >
+                          <Printer className="h-[18px] w-[18px]" strokeWidth={2} />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
