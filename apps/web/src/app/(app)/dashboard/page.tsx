@@ -89,6 +89,8 @@ export default async function DashboardPage({
 
   const modules = tenant.enabledModules ?? [];
   const has = (m: string) => modules.includes(m);
+  // Negócio de serviço (estética/salão): terminologia "Serviço/Profissional".
+  const serviceLed = has("scheduling") && !has("products");
 
   const quota = tenant.subscription?.messageQuota ?? DEFAULT_QUOTA;
   const used = stats.messagesUsedThisMonth ?? 0;
@@ -398,20 +400,24 @@ export default async function DashboardPage({
             <Bars data={extras.evolution} color="#10b981" />
           </section>
 
-          {/* ===== Produtos ===== */}
-          {has("products") && (extras.topProducts.length > 0 || extras.topByMargin.length > 0) && (
+          {/* ===== Produtos / Serviços ===== */}
+          {(has("products") || has("scheduling")) && (extras.topProducts.length > 0 || extras.topByMargin.length > 0) && (
             <>
-              <SectionDivider>Produtos</SectionDivider>
+              <SectionDivider>{serviceLed ? "Serviços" : "Produtos"}</SectionDivider>
               <section className="mt-4 grid gap-4 lg:grid-cols-2">
                 {extras.topProducts.length > 0 && (
                   <div className="rounded-2xl bg-white p-6 shadow-card">
-                    <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Top produtos (faturamento)</h2>
-                    <HBars data={extras.topProducts.map((p) => ({ label: p.name, value: p.revenue, suffix: `${p.qty} un.` }))} />
+                    <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                      {serviceLed ? "Serviços mais vendidos" : "Top produtos (faturamento)"}
+                    </h2>
+                    <HBars data={extras.topProducts.map((p) => ({ label: p.name, value: p.revenue, suffix: `${p.qty}${serviceLed ? "×" : " un."}` }))} />
                   </div>
                 )}
                 {extras.topByMargin.length > 0 && (
                   <div className="rounded-2xl bg-white p-6 shadow-card">
-                    <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Produtos mais lucrativos</h2>
+                    <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                      {serviceLed ? "Serviços mais lucrativos" : "Produtos mais lucrativos"}
+                    </h2>
                     <HBars data={extras.topByMargin.map((p) => ({ label: p.name, value: p.profit, suffix: `${p.marginPct.toFixed(0)}% margem` }))} />
                   </div>
                 )}
@@ -419,11 +425,11 @@ export default async function DashboardPage({
             </>
           )}
 
-          {/* ===== Vendedores e parcelamento ===== */}
-          <SectionDivider>Vendedores e parcelamento</SectionDivider>
+          {/* ===== Vendedores/Profissionais e parcelamento ===== */}
+          <SectionDivider>{serviceLed ? "Profissionais e parcelamento" : "Vendedores e parcelamento"}</SectionDivider>
           <section className="mt-4 grid gap-4 lg:grid-cols-2">
             <div className="rounded-2xl bg-white p-6 shadow-card">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Por vendedor</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">{serviceLed ? "Por profissional" : "Por vendedor"}</h2>
               <HBars data={extras.bySeller.map((s) => ({ label: /^bot$/i.test(s.name) ? `🤖 ${s.name}` : s.name, value: s.total }))} />
             </div>
             <div className="rounded-2xl bg-white p-6 shadow-card">
