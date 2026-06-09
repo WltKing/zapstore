@@ -31,6 +31,11 @@ function pctChange(cur: number, prev: number): number | null {
   return ((cur - prev) / prev) * 100;
 }
 
+/** Classe de grid que faz N cards preencherem a linha (sem buraco). */
+function gridCols(n: number): string {
+  return n >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : n === 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2";
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -95,10 +100,16 @@ export default async function DashboardPage({
   const lucroDelta = pctChange(lucro, extras.prevLucro);
   const despesasDelta = pctChange(extras.despesasMes, extras.prevDespesas);
 
-  // Meta de vendas (módulo opcional "goal").
-  const goalBrl = tenant.salesGoalBrl != null ? Number(tenant.salesGoalBrl) : null;
-  const showGoal = has("goal") && goalBrl != null && goalBrl > 0;
+  // Meta de vendas (módulo opcional "goal"). Manual; se não houver, automática (média dos últimos meses).
+  const manualGoal = tenant.salesGoalBrl != null ? Number(tenant.salesGoalBrl) : null;
+  const hasManualGoal = manualGoal != null && manualGoal > 0;
+  const goalBrl = hasManualGoal ? manualGoal : extras.autoGoal ?? 0;
+  const isAutoGoal = !hasManualGoal && extras.autoGoal != null;
+  const showGoal = has("goal") && goalBrl > 0;
   const goalPct = showGoal ? Math.min(100, Math.round((faturamento / goalBrl) * 100)) : 0;
+
+  // Quantidade de cards na faixa "Hoje" (varia por nicho) — pra grade preencher a linha.
+  const hojeCount = 2 + (has("products") ? 1 : 0) + (has("scheduling") ? 1 : 0);
 
   // Barras horizontais: faturamento (100%) e pra onde foi, terminando no lucro.
   const revenueRows = [
@@ -209,7 +220,10 @@ export default async function DashboardPage({
       {showGoal && (
         <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Meta do mês</h2>
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Meta do mês</h2>
+              {isAutoGoal && <p className="text-xs text-neutral-400">Automática — média dos últimos meses</p>}
+            </div>
             <span className="text-sm font-bold text-neutral-900">
               {formatBrl(faturamento)}
               <span className="font-normal text-neutral-400"> de {formatBrl(goalBrl)}</span>
@@ -300,7 +314,7 @@ export default async function DashboardPage({
       {isCurrentMonth && (
         <section className="mt-8">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Hoje</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className={`grid gap-4 ${gridCols(hojeCount)}`}>
             <Card title="Vendas hoje" value={formatBrl(stats.salesTodayBrl)} icon={ShoppingCart} tint="blue" />
             <Card title="Pedidos abertos" value={String(stats.openOrderCount)} icon={Package} tint="amber" />
             {has("products") && (
@@ -322,14 +336,19 @@ export default async function DashboardPage({
       {isCurrentMonth && has("products") && (extras.capitalEmEstoque > 0 || extras.staleCount > 0) && (
         <section className="mt-8">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Saúde do estoque</h2>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card title="Capital em estoque" value={formatBrl(extras.capitalEmEstoque)} icon={Warehouse} tint="slate" />
             <Card
               title="Produtos parados"
               value={String(extras.staleCount)}
-              hint={extras.staleValue > 0 ? formatBrl(extras.staleValue) : undefined}
               icon={AlertTriangle}
               tint={extras.staleCount > 0 ? "amber" : "slate"}
+            />
+            <Card
+              title="Valor parado"
+              value={formatBrl(extras.staleValue)}
+              icon={Wallet}
+              tint={extras.staleValue > 0 ? "amber" : "slate"}
             />
             <Card
               title="Cobertura de estoque"

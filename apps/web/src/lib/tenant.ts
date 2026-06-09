@@ -451,6 +451,13 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
       if (idx >= 0 && idx < 6) evolution[idx].total += Number(o.totalBrl);
     }
 
+    // Meta automática: média dos 3 meses anteriores ao de referência (que tiveram vendas).
+    const priorTotals = evolution
+      .slice(2, 5)
+      .map((e) => e.total)
+      .filter((t) => t > 0);
+    const autoGoal = priorTotals.length > 0 ? priorTotals.reduce((a, b) => a + b, 0) / priorTotals.length : null;
+
     const liquidoMes = brutoMes - taxaMaquininha - impostoEstimado; // compat (antigo)
 
     return {
@@ -475,6 +482,7 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
       botOrderCount,
       botPctOfRevenue,
       botConversations,
+      autoGoal,
       ticketMedio,
       orderCount: monthOrders.length,
       // Comparação mês anterior

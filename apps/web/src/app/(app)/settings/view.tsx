@@ -391,7 +391,9 @@ export function SettingsView({
                 placeholder="ex: 30000"
                 className={inputClass}
               />
-              <p className="mt-1 text-xs text-neutral-400">Deixe em branco pra não usar meta.</p>
+              <p className="mt-1 text-xs text-neutral-400">
+                Deixe em branco pra usar <strong>meta automática</strong> (média dos últimos meses).
+              </p>
             </div>
           </section>
         )}
