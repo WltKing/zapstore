@@ -279,7 +279,7 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
     const stale90 = new Date(now);
     stale90.setDate(stale90.getDate() - 90);
 
-    const [monthOrders, prevOrders, evoOrders, expAgg, prevExpAgg, recentSales, botConversations] = await Promise.all([
+    const [monthOrders, prevOrders, evoOrders, monthExpenses, prevExpenses, recentSales, botConversations] = await Promise.all([
       tx.order.findMany({
         where: { status: { not: "CANCELED" }, createdAt: { gte: monthStart, lt: monthEnd } },
         select: orderSelect,
@@ -292,10 +292,13 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
         where: { status: { not: "CANCELED" }, createdAt: { gte: sixStart, lt: monthEnd } },
         select: { totalBrl: true, createdAt: true },
       }),
-      tx.expense.aggregate({ _sum: { amountBrl: true }, where: { paidAt: { gte: monthStart, lt: monthEnd } } }),
-      tx.expense.aggregate({
-        _sum: { amountBrl: true },
+      tx.expense.findMany({
+        where: { paidAt: { gte: monthStart, lt: monthEnd } },
+        select: { category: true, amountBrl: true },
+      }),
+      tx.expense.findMany({
         where: { paidAt: { gte: prevStart, lt: monthStart } },
+        select: { category: true, amountBrl: true },
       }),
       tx.order.findMany({
         where: { status: { not: "CANCELED" }, createdAt: { gte: stale90 } },
@@ -328,14 +331,23 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
     // ===== Cascata de lucro (mês atual e anterior) =====
     const fin = computeFinancials(monthOrders, cardFees, taxEstimatePct, costById, costByName);
     const prevFin = computeFinancials(prevOrders, cardFees, taxEstimatePct, costById, costByName);
-    const despesasMes = Number(expAgg._sum.amountBrl ?? 0);
-    const prevDespesas = Number(prevExpAgg._sum.amountBrl ?? 0);
+    // Compra de mercadoria NÃO entra no lucro (o custo já entra via CMV quando vende
+    // — senão conta 2×). No Caixa ela continua: lá é saída de dinheiro real.
+    const isMerchPurchase = (c: string) => /fornecedor|mercadoria/i.test(c);
+    const sumExp = (rows: { category: string; amountBrl: unknown }[], merch: boolean) =>
+      rows.filter((e) => isMerchPurchase(e.category) === merch).reduce((s, e) => s + Number(e.amountBrl), 0);
+
+    const comprasMercadoriaMes = sumExp(monthExpenses, true);
+    const despesasOperacionaisMes = sumExp(monthExpenses, false);
+    const despesasMes = comprasMercadoriaMes + despesasOperacionaisMes;
+    const prevDespesasOperacionais = sumExp(prevExpenses, false);
+    const prevDespesas = sumExp(prevExpenses, true) + prevDespesasOperacionais;
 
     const brutoMes = fin.bruto;
     const taxaMaquininha = fin.taxa;
     const impostoEstimado = fin.imposto;
     const cmvMes = fin.cmv;
-    const lucroLiquido = brutoMes - cmvMes - taxaMaquininha - impostoEstimado - despesasMes;
+    const lucroLiquido = brutoMes - cmvMes - taxaMaquininha - impostoEstimado - despesasOperacionaisMes;
     const lucroBruto = brutoMes - cmvMes;
     const margemPct = brutoMes > 0 ? (lucroBruto / brutoMes) * 100 : 0;
 
@@ -344,7 +356,7 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
       cmvMes > 0 && capitalEmEstoque > 0 ? Math.round(capitalEmEstoque / (cmvMes / 30)) : null;
 
     const prevBruto = prevFin.bruto;
-    const prevLucro = prevFin.bruto - prevFin.cmv - prevFin.taxa - prevFin.imposto - prevDespesas;
+    const prevLucro = prevFin.bruto - prevFin.cmv - prevFin.taxa - prevFin.imposto - prevDespesasOperacionais;
 
     const ticketMedio = monthOrders.length > 0 ? brutoMes / monthOrders.length : 0;
 
@@ -493,6 +505,8 @@ export async function getDashboardExtras(tenantId: string, ref: Date = new Date(
       taxaMaquininha,
       impostoEstimado,
       despesasMes,
+      despesasOperacionaisMes,
+      comprasMercadoriaMes,
       lucroLiquido,
       liquidoMes,
       productsWithoutCost,

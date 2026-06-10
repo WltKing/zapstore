@@ -120,7 +120,9 @@ export default async function DashboardPage({
     ...(has("products") && extras.cmvMes > 0 ? [{ label: "Custo (CMV)", value: extras.cmvMes, color: "#fb7185" }] : []),
     ...(extras.taxaMaquininha > 0 ? [{ label: "Taxa de cartão", value: extras.taxaMaquininha, color: "#f59e0b" }] : []),
     ...(extras.impostoEstimado > 0 ? [{ label: "Imposto", value: extras.impostoEstimado, color: "#a78bfa" }] : []),
-    ...(extras.despesasMes > 0 ? [{ label: "Despesas", value: extras.despesasMes, color: "#fb923c" }] : []),
+    ...(extras.despesasOperacionaisMes > 0
+      ? [{ label: "Despesas", value: extras.despesasOperacionaisMes, color: "#fb923c" }]
+      : []),
     { label: "Lucro líquido", value: lucro, color: "#10b981", strong: true },
   ];
 
@@ -274,6 +276,12 @@ export default async function DashboardPage({
           <p className="mt-4 text-sm text-neutral-400">Sem vendas neste mês ainda.</p>
         ) : (
           <RevenueBars rows={revenueRows} max={faturamento} />
+        )}
+        {extras.comprasMercadoriaMes > 0 && (
+          <p className="mt-3 text-xs text-neutral-400">
+            Compras de mercadoria ({formatBrl(extras.comprasMercadoriaMes)}) não entram aqui — o custo
+            do produto já é descontado no CMV quando a venda acontece.
+          </p>
         )}
         {has("products") && extras.productsWithoutCost > 0 && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-amber-700">
