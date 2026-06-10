@@ -365,7 +365,11 @@ export function OrdersView({
                           <div className="mt-2 space-y-1 text-sm">
                             <div><strong>Telefone:</strong> {o.customerPhone}</div>
                             {o.customerAddress && <div><strong>Endereço:</strong> {o.customerAddress}</div>}
-                            {o.sellerName && <div><strong>Vendedor:</strong> {o.sellerName}</div>}
+                            {o.sellerName && (
+                              <div>
+                                <strong>{o.kind === "service" ? "Profissional" : "Vendedor"}:</strong> {o.sellerName}
+                              </div>
+                            )}
                             {o.paymentMethod && <div><strong>Pagamento:</strong> {paymentLabel(o.paymentMethod)}</div>}
                             {o.notes && <div><strong>Obs:</strong> {o.notes}</div>}
                           </div>
