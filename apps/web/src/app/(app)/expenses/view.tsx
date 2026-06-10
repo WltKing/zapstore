@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil, Trash2 } from "lucide-react";
 import {
   createExpenseAction,
   deleteExpenseAction,
@@ -20,16 +21,21 @@ export interface ExpenseRow {
 }
 
 const COMMON_CATEGORIES = [
-  "Fornecedor",
+  "Mercadorias (fornecedores)",
+  "Frete e logística",
+  "Folha de pagamento",
+  "Comissões",
   "Aluguel",
-  "Salário",
-  "Marketing",
   "Energia",
   "Água",
-  "Internet",
-  "Imposto",
-  "Frete",
-  "Manutenção",
+  "Internet e telefone",
+  "Marketing e anúncios",
+  "Impostos e taxas",
+  "Tarifas de cartão e banco",
+  "Manutenção e reparos",
+  "Embalagens",
+  "Materiais e suprimentos",
+  "Equipamentos",
   "Outros",
 ];
 
@@ -45,7 +51,8 @@ function monthLabel(key: string): string {
   return new Date(y, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
 function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("pt-BR");
+  // timeZone fixo evita hydration mismatch (servidor UTC × navegador BR).
+  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 function todayInput(): string {
   const d = new Date();
@@ -137,8 +144,8 @@ export function ExpensesView({ storeName, expenses }: { storeName: string; expen
   };
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Despesas</h1>
@@ -214,43 +221,50 @@ export function ExpensesView({ storeName, expenses }: { storeName: string; expen
           <table className="w-full">
             <thead className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-500">
               <tr>
-                <th className="px-6 py-3 text-left">Data</th>
-                <th className="px-6 py-3 text-left">Categoria</th>
-                <th className="px-6 py-3 text-left">Descrição</th>
-                <th className="px-6 py-3 text-right">Valor</th>
-                <th className="px-6 py-3 text-right">Ações</th>
+                <th className="py-3 pl-4 pr-2 text-left sm:px-4">Data</th>
+                <th className="px-2 py-3 text-left sm:px-4">Categoria</th>
+                <th className="hidden px-2 py-3 text-left md:table-cell md:px-4">Descrição</th>
+                <th className="px-2 py-3 text-right sm:px-4">Valor</th>
+                <th className="py-3 pl-2 pr-4 text-right sm:px-4">Ações</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((e) => (
                 <tr key={e.id} className="border-b border-neutral-100 last:border-0">
-                  <td className="px-6 py-4 text-sm text-neutral-600">{fmtDate(e.paidAt)}</td>
-                  <td className="px-6 py-4">
+                  <td className="whitespace-nowrap py-3 pl-4 pr-2 text-[13px] text-neutral-600 sm:px-4 sm:py-4 sm:text-sm">{fmtDate(e.paidAt)}</td>
+                  <td className="px-2 py-3 sm:px-4 sm:py-4">
                     <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600">
                       {e.category}
                     </span>
+                    {e.description && (
+                      <div className="mt-1 line-clamp-1 text-xs text-neutral-500 md:hidden">{e.description}</div>
+                    )}
                   </td>
-                  <td className="px-6 py-4 text-sm">{e.description ?? "—"}</td>
-                  <td className="px-6 py-4 text-right font-medium text-red-700">{formatBrl(e.amountBrl)}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setError(null);
-                        setEditing(e);
-                      }}
-                      className="mr-2 text-sm text-neutral-600 hover:text-neutral-900"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => remove(e.id, e.category)}
-                      disabled={isPending}
-                      className="text-sm text-red-600 hover:text-red-700"
-                    >
-                      Excluir
-                    </button>
+                  <td className="hidden px-2 py-4 text-sm md:table-cell md:px-4">{e.description ?? "—"}</td>
+                  <td className="whitespace-nowrap px-2 py-3 text-right text-[13px] font-medium text-red-700 sm:px-4 sm:py-4 sm:text-base">{formatBrl(e.amountBrl)}</td>
+                  <td className="py-3 pl-2 pr-4 sm:px-4 sm:py-4">
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setError(null);
+                          setEditing(e);
+                        }}
+                        title="Editar"
+                        className="inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700"
+                      >
+                        <Pencil className="h-[18px] w-[18px]" strokeWidth={2} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => remove(e.id, e.category)}
+                        disabled={isPending}
+                        title="Excluir"
+                        className="inline-flex items-center justify-center text-neutral-400 hover:text-red-600 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-[18px] w-[18px]" strokeWidth={2} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -295,6 +309,10 @@ function ExpenseDialog({
   );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // "Outra" = categoria livre (fora da lista padrão).
+  const [customCategory, setCustomCategory] = useState(
+    !!expense && !COMMON_CATEGORIES.includes(expense.category),
+  );
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -321,19 +339,50 @@ function ExpenseDialog({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-neutral-700">Categoria</label>
-            <input
-              required
-              list="expense-categories"
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-              placeholder="Ex: Fornecedor"
-              className={inputClass}
-            />
-            <datalist id="expense-categories">
-              {COMMON_CATEGORIES.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
+            {customCategory ? (
+              <>
+                <input
+                  required
+                  autoFocus
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  placeholder="Digite a categoria"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomCategory(false);
+                    setForm({ ...form, category: "" });
+                  }}
+                  className="mt-1 text-xs font-medium text-neutral-600 underline hover:text-neutral-900"
+                >
+                  Escolher da lista
+                </button>
+              </>
+            ) : (
+              <select
+                required
+                value={form.category}
+                onChange={(e) => {
+                  if (e.target.value === "__custom__") {
+                    setCustomCategory(true);
+                    setForm({ ...form, category: "" });
+                  } else {
+                    setForm({ ...form, category: e.target.value });
+                  }
+                }}
+                className={inputClass}
+              >
+                <option value="">Selecione...</option>
+                {COMMON_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+                <option value="__custom__">Outra (digitar)</option>
+              </select>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700">Valor (R$)</label>
