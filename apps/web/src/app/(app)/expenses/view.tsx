@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, TrendingUp, TrendingDown, Tag, Hash } from "lucide-react";
 import {
   createExpenseAction,
   deleteExpenseAction,
@@ -87,19 +87,51 @@ export function ExpensesView({ storeName, expenses }: { storeName: string; expen
     return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [expenses]);
 
+  // Predicado dos filtros SEM o mês (reusado pra comparar com o mês anterior).
+  const matchesFilters = (e: ExpenseRow, q: string) => {
+    if (categoryFilter !== "all" && e.category !== categoryFilter) return false;
+    if (q) {
+      const hay = `${e.category} ${e.description ?? ""} ${e.notes ?? ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  };
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return expenses.filter((e) => {
-      if (month !== "all" && monthKey(e.paidAt) !== month) return false;
-      if (categoryFilter !== "all" && e.category !== categoryFilter) return false;
-      if (q) {
-        const hay = `${e.category} ${e.description ?? ""} ${e.notes ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
+    return expenses.filter(
+      (e) => (month === "all" || monthKey(e.paidAt) === month) && matchesFilters(e, q),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expenses, month, categoryFilter, query]);
   const total = filtered.reduce((s, e) => s + e.amountBrl, 0);
+
+  // Comparação com o mês anterior (mesmos filtros de categoria/busca).
+  const prevMonth = useMemo(() => {
+    if (month === "all") return null;
+    const [y, m] = month.split("-").map(Number);
+    const d = new Date(y, m - 2, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }, [month]);
+  const prevTotal = useMemo(() => {
+    if (!prevMonth) return null;
+    const q = query.trim().toLowerCase();
+    return expenses
+      .filter((e) => monthKey(e.paidAt) === prevMonth && matchesFilters(e, q))
+      .reduce((s, e) => s + e.amountBrl, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expenses, prevMonth, categoryFilter, query]);
+  const deltaPct =
+    prevTotal != null && prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : null;
+
+  // Maior categoria do período filtrado.
+  const topCategory = useMemo(() => {
+    const byCat = new Map<string, number>();
+    for (const e of filtered) byCat.set(e.category, (byCat.get(e.category) ?? 0) + e.amountBrl);
+    let best: { name: string; value: number } | null = null;
+    for (const [name, value] of byCat) if (!best || value > best.value) best = { name, value };
+    return best;
+  }, [filtered]);
 
   const periodLabel = month === "all" ? "Todos os meses" : monthLabel(month);
 
@@ -205,9 +237,57 @@ export function ExpensesView({ storeName, expenses }: { storeName: string; expen
             </option>
           ))}
         </select>
-        <div className="ml-auto text-right">
+      </div>
+
+      {/* Resumo do período (reage aos filtros) */}
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl bg-white p-4 shadow-card">
           <span className="text-xs uppercase tracking-wide text-neutral-500">Total no período</span>
-          <div className="text-xl font-bold text-red-700">{formatBrl(total)}</div>
+          <div className="mt-1 text-2xl font-bold text-red-700">{formatBrl(total)}</div>
+          {prevMonth && (
+            deltaPct != null ? (
+              <div className={`mt-1 inline-flex items-center gap-1 text-xs font-medium ${deltaPct > 0 ? "text-red-600" : deltaPct < 0 ? "text-emerald-600" : "text-neutral-500"}`}>
+                {deltaPct > 0 ? (
+                  <TrendingUp className="h-3.5 w-3.5" strokeWidth={2} />
+                ) : deltaPct < 0 ? (
+                  <TrendingDown className="h-3.5 w-3.5" strokeWidth={2} />
+                ) : null}
+                {deltaPct > 0 ? "+" : ""}{deltaPct.toFixed(0)}% vs mês anterior ({formatBrl(prevTotal ?? 0)})
+              </div>
+            ) : (
+              <div className="mt-1 text-xs text-neutral-400">
+                {total > 0 ? "sem despesas no mês anterior pra comparar" : "—"}
+              </div>
+            )
+          )}
+        </div>
+        <div className="rounded-2xl bg-white p-4 shadow-card">
+          <span className="text-xs uppercase tracking-wide text-neutral-500">Lançamentos</span>
+          <div className="mt-1 flex items-center gap-2 text-2xl font-bold">
+            <Hash className="h-5 w-5 text-neutral-400" strokeWidth={2} />
+            {filtered.length}
+          </div>
+          {filtered.length > 0 && (
+            <div className="mt-1 text-xs text-neutral-500">
+              média de {formatBrl(total / filtered.length)} por lançamento
+            </div>
+          )}
+        </div>
+        <div className="rounded-2xl bg-white p-4 shadow-card">
+          <span className="text-xs uppercase tracking-wide text-neutral-500">Maior categoria</span>
+          {topCategory ? (
+            <>
+              <div className="mt-1 flex items-center gap-2 text-lg font-bold">
+                <Tag className="h-5 w-5 shrink-0 text-neutral-400" strokeWidth={2} />
+                <span className="truncate">{topCategory.name}</span>
+              </div>
+              <div className="mt-1 text-xs text-neutral-500">
+                {formatBrl(topCategory.value)} ({total > 0 ? Math.round((topCategory.value / total) * 100) : 0}% do total)
+              </div>
+            </>
+          ) : (
+            <div className="mt-1 text-2xl font-bold text-neutral-300">—</div>
+          )}
         </div>
       </div>
 
