@@ -177,8 +177,8 @@ export function OrdersView({
   };
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Pedidos</h1>
@@ -270,19 +270,19 @@ export function OrdersView({
               const items = Array.isArray(o.items) ? (o.items as OrderItem[]) : [];
               return (
                 <li key={o.id}>
-                  <div className="flex w-full items-center justify-between px-6 py-4">
+                  <div className="flex w-full flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                     <button
                       type="button"
                       onClick={() => setExpanded(isOpen ? null : o.id)}
-                      className="flex flex-1 items-center gap-4 text-left"
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left sm:gap-4"
                     >
                       <span className="text-sm font-mono text-neutral-500">#{o.orderNumber}</span>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{o.customerName}</span>
+                          <span className="truncate font-medium">{o.customerName}</span>
                           {showType && (
                             <span
-                              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                              className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
                                 o.kind === "service"
                                   ? "bg-violet-100 text-violet-700"
                                   : "bg-neutral-100 text-neutral-600"
@@ -292,15 +292,15 @@ export function OrdersView({
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-neutral-500">
+                        <div className="truncate text-xs text-neutral-500">
                           {formatDate(o.createdAt)} · {o.customerPhone}
                         </div>
                       </div>
                     </button>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between gap-3 pl-8 sm:justify-end sm:gap-4 sm:pl-0">
                       <span className="font-medium">{formatBrl(o.totalBrl)}</span>
                       <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[o.status]}`}
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[o.status]}`}
                       >
                         {STATUS_LABELS[o.status] ?? o.status}
                       </span>
@@ -339,7 +339,7 @@ export function OrdersView({
                   </div>
 
                   {isOpen && (
-                    <div className="bg-neutral-50 px-6 py-4">
+                    <div className="bg-neutral-50 px-4 py-4 sm:px-6">
                       <div className="grid gap-6 md:grid-cols-2">
                         <div>
                           <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
