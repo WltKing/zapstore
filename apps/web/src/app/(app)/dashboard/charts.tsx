@@ -126,7 +126,7 @@ export function HBars({ data }: { data: { label: string; value: number; suffix?:
             tickFormatter={truncate}
           />
           <Tooltip
-            cursor={{ fill: "rgba(0,0,0,0.04)" }}
+            cursor={false}
             content={({ active, payload }) =>
               active && payload?.length ? (
                 <TipBox label={String(payload[0].payload.label)} value={payload[0].value as number} suffix={payload[0].payload.suffix} />
@@ -166,7 +166,7 @@ export function AreaTrend({ data }: { data: Point[] }) {
             <XAxis dataKey="label" tick={AXIS} tickLine={false} axisLine={false} minTickGap={24} />
             <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} tickFormatter={axisBrl} />
             <Tooltip
-              cursor={{ stroke: "#10b981", strokeWidth: 1, strokeDasharray: "4 4" }}
+              cursor={false}
               content={({ active, payload }) =>
                 active && payload?.length ? <TipBox label={payload[0].payload.label} value={payload[0].value as number} /> : null
               }
@@ -192,7 +192,7 @@ export function Bars({ data, color = "var(--brand, #2563eb)" }: { data: Point[];
             <XAxis dataKey="label" tick={AXIS} tickLine={false} axisLine={false} />
             <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} tickFormatter={axisBrl} />
             <Tooltip
-              cursor={{ fill: "rgba(0,0,0,0.04)" }}
+              cursor={false}
               content={({ active, payload }) =>
                 active && payload?.length ? <TipBox label={payload[0].payload.label} value={payload[0].value as number} /> : null
               }
@@ -240,7 +240,7 @@ export function ProfitWaterfall({ steps }: { steps: WaterfallStep[] }) {
           <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} tickLine={false} axisLine={false} interval={0} />
           <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} tickFormatter={axisBrl} />
           <Tooltip
-            cursor={{ fill: "rgba(0,0,0,0.04)" }}
+            cursor={false}
             content={({ active, payload }) =>
               active && payload?.length ? (
                 <TipBox label={payload[0].payload.label} value={Math.abs(payload[0].payload.raw)} />
@@ -275,7 +275,7 @@ export function CashBars({ data }: { data: InOutPoint[] }) {
             <XAxis dataKey="label" tick={AXIS} tickLine={false} axisLine={false} minTickGap={16} />
             <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} tickFormatter={axisBrl} />
             <Tooltip
-              cursor={{ fill: "rgba(0,0,0,0.04)" }}
+              cursor={false}
               content={({ active, payload }) =>
                 active && payload?.length ? (
                   <div className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs shadow-card">
