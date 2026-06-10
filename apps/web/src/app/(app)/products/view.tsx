@@ -352,10 +352,10 @@ export function ProductsView({
                     className="h-4 w-4 rounded border-neutral-300 align-middle"
                   />
                 </th>
-                <th className="px-2 py-3 text-left sm:px-4">Produto</th>
+                <th className="py-3 pl-4 pr-2 text-left sm:px-4">Produto</th>
                 <th className="px-2 py-3 text-right sm:px-4">Preço</th>
                 <th className="hidden px-3 py-3 text-right md:table-cell md:px-4">Margem</th>
-                <th className="px-2 py-3 text-right sm:px-4">Estoque</th>
+                <th className="py-3 pl-2 pr-4 text-right sm:px-4">Estoque</th>
                 <th className="hidden px-3 py-3 text-center sm:table-cell sm:px-4">Ativo</th>
                 <th className="hidden px-3 py-3 text-right sm:table-cell sm:px-4">Ações</th>
               </tr>
@@ -378,7 +378,7 @@ export function ProductsView({
                       className="h-4 w-4 rounded border-neutral-300 align-middle"
                     />
                   </td>
-                  <td className="px-2 py-3 sm:px-4 sm:py-4">
+                  <td className="py-3 pl-4 pr-2 sm:px-4 sm:py-4">
                     <div className="flex items-center gap-2 sm:gap-3">
                       {p.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -418,7 +418,7 @@ export function ProductsView({
                   <td className="hidden px-3 py-4 text-right text-neutral-600 md:table-cell md:px-4">
                     {marginLabel(p.priceBrl, p.costBrl)}
                   </td>
-                  <td className="px-2 py-3 text-right text-[13px] sm:px-4 sm:py-4 sm:text-base">
+                  <td className="py-3 pl-2 pr-4 text-right text-[13px] sm:px-4 sm:py-4 sm:text-base">
                     <span
                       className={
                         p.stock <= p.lowStockThreshold
