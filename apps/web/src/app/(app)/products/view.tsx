@@ -385,10 +385,10 @@ export function ProductsView({
                         <img
                           src={p.imageUrl}
                           alt={p.name}
-                          className="h-8 w-8 shrink-0 rounded-lg object-cover sm:h-10 sm:w-10"
+                          className="hidden h-10 w-10 shrink-0 rounded-lg object-cover sm:block"
                         />
                       ) : (
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-xs text-neutral-400 sm:h-10 sm:w-10">
+                        <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-xs text-neutral-400 sm:flex">
                           —
                         </div>
                       )}
