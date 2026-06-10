@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { prisma, withTenant } from "@zapstore/db";
 import { auth } from "@/lib/auth";
+import { priceFromCostMargin } from "@/lib/pricing";
 
 export interface ProductInput {
   name: string;
@@ -147,6 +148,71 @@ export async function deleteProductAction(id: string): Promise<ActionResult> {
     });
     revalidatePath("/products");
     return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
+/** Exclui vários produtos de uma vez (seleção em massa). */
+export async function deleteProductsAction(
+  ids: string[],
+): Promise<ActionResult & { deleted?: number }> {
+  try {
+    const tenantId = await requireTenantId();
+    if (!ids.length) return { ok: false, error: "Nenhum produto selecionado." };
+    const r = await withTenant(tenantId, (tx) =>
+      tx.product.deleteMany({ where: { id: { in: ids } } }),
+    );
+    revalidatePath("/products");
+    return { ok: true, deleted: r.count };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
+/** Recalcula o preço de venda de vários produtos pela margem (% sobre a venda),
+ * a partir do CUSTO de cada um. Produtos sem custo são ignorados (skipped). */
+export async function applyMarginToProductsAction(
+  ids: string[],
+  marginPct: number,
+): Promise<ActionResult & { updated?: number; skipped?: number }> {
+  try {
+    const tenantId = await requireTenantId();
+    if (!ids.length) return { ok: false, error: "Nenhum produto selecionado." };
+    if (!Number.isFinite(marginPct) || marginPct < 0 || marginPct >= 100)
+      return { ok: false, error: "Margem inválida — use um valor entre 0 e 99." };
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { roundTo90: true },
+    });
+    const round = tenant?.roundTo90 ?? false;
+
+    const { updated, skipped } = await withTenant(tenantId, async (tx) => {
+      const products = await tx.product.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, costBrl: true },
+      });
+      let updated = 0;
+      let skipped = 0;
+      for (const p of products) {
+        const price = priceFromCostMargin(
+          p.costBrl != null ? Number(p.costBrl) : null,
+          marginPct,
+          round,
+        );
+        if (price == null) {
+          skipped++;
+          continue;
+        }
+        await tx.product.update({ where: { id: p.id }, data: { priceBrl: price } });
+        updated++;
+      }
+      return { updated, skipped };
+    });
+
+    revalidatePath("/products");
+    return { ok: true, updated, skipped };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
   }

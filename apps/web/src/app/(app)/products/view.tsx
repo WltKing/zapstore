@@ -2,10 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AlertTriangle, Pencil, Trash2, Percent, X } from "lucide-react";
 import {
   createProductAction,
   updateProductAction,
   deleteProductAction,
+  deleteProductsAction,
+  applyMarginToProductsAction,
   toggleProductAction,
   type ProductInput,
 } from "@/lib/actions/products";
@@ -82,6 +85,8 @@ export function ProductsView({
   const [editing, setEditing] = useState<ProductRow | "new" | null>(null);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Busca + filtros
   const [query, setQuery] = useState("");
@@ -131,9 +136,64 @@ export function ProductsView({
     });
   };
 
+  // ----- Seleção em massa -----
+  const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selected.has(p.id));
+  const toggleSelect = (id: string) =>
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const toggleSelectAll = () =>
+    setSelected(allFilteredSelected ? new Set() : new Set(filtered.map((p) => p.id)));
+
+  const handleBulkDelete = () => {
+    const n = selected.size;
+    if (!confirm(`Excluir ${n} produto${n > 1 ? "s" : ""} selecionado${n > 1 ? "s" : ""}? Essa ação não pode ser desfeita.`)) return;
+    setError(null);
+    setNotice(null);
+    startTransition(async () => {
+      const r = await deleteProductsAction(Array.from(selected));
+      if (!r.ok) setError(r.error ?? "Erro");
+      else {
+        setNotice(`${r.deleted} produto${(r.deleted ?? 0) > 1 ? "s" : ""} excluído${(r.deleted ?? 0) > 1 ? "s" : ""}.`);
+        setSelected(new Set());
+        router.refresh();
+      }
+    });
+  };
+
+  const handleBulkMargin = () => {
+    const raw = prompt(
+      "Nova margem (%) sobre o preço de venda.\nO preço será recalculado a partir do CUSTO de cada produto (sem custo = não muda).",
+      defaultMarginPct != null ? String(defaultMarginPct) : "",
+    );
+    if (raw === null) return;
+    const pct = Number(raw.replace(",", "."));
+    if (!Number.isFinite(pct) || pct < 0 || pct >= 100) {
+      alert("Margem inválida — use um valor entre 0 e 99.");
+      return;
+    }
+    setError(null);
+    setNotice(null);
+    startTransition(async () => {
+      const r = await applyMarginToProductsAction(Array.from(selected), pct);
+      if (!r.ok) setError(r.error ?? "Erro");
+      else {
+        setNotice(
+          `${r.updated} preço${(r.updated ?? 0) > 1 ? "s" : ""} atualizado${(r.updated ?? 0) > 1 ? "s" : ""} com margem de ${pct}%` +
+            (r.skipped ? ` · ${r.skipped} sem custo (não mudou)` : "") + ".",
+        );
+        setSelected(new Set());
+        router.refresh();
+      }
+    });
+  };
+
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Produtos</h1>
@@ -165,10 +225,14 @@ export function ProductsView({
       {error && (
         <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
       )}
+      {notice && (
+        <p className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{notice}</p>
+      )}
 
       {lowStockItems.length > 0 && (
-        <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          ⚠️ {lowStockItems.length}{" "}
+        <p className="mt-4 flex items-center gap-2 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <AlertTriangle className="h-4 w-4 shrink-0" strokeWidth={2} />
+          {lowStockItems.length}{" "}
           {lowStockItems.length === 1
             ? "produto com estoque baixo"
             : "produtos com estoque baixo"}{" "}
@@ -229,7 +293,41 @@ export function ProductsView({
         {filtered.length} de {initial.length} produto{initial.length === 1 ? "" : "s"}
       </p>
 
-      <section className="mt-3 rounded-2xl bg-white shadow-card">
+      {selected.size > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-neutral-200 bg-brand-soft px-4 py-2.5">
+          <span className="text-sm font-medium">
+            {selected.size} selecionado{selected.size > 1 ? "s" : ""}
+          </span>
+          <button
+            type="button"
+            onClick={handleBulkMargin}
+            disabled={isPending}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
+          >
+            <Percent className="h-4 w-4" strokeWidth={2} />
+            Alterar margem
+          </button>
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            disabled={isPending}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" strokeWidth={2} />
+            Excluir
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className="ml-auto inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-800"
+          >
+            <X className="h-4 w-4" strokeWidth={2} />
+            Limpar
+          </button>
+        </div>
+      )}
+
+      <section className="mt-3 overflow-x-auto rounded-2xl bg-white shadow-card">
         {filtered.length === 0 ? (
           <div className="p-12 text-center">
             <h2 className="text-lg font-semibold">
@@ -245,12 +343,21 @@ export function ProductsView({
           <table className="w-full">
             <thead className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-500">
               <tr>
-                <th className="px-6 py-3 text-left">Produto</th>
-                <th className="px-6 py-3 text-right">Preço</th>
-                <th className="px-6 py-3 text-right">Margem</th>
-                <th className="px-6 py-3 text-right">Estoque</th>
-                <th className="px-6 py-3 text-center">Ativo</th>
-                <th className="px-6 py-3 text-right">Ações</th>
+                <th className="w-10 py-3 pl-4 pr-1">
+                  <input
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    onChange={toggleSelectAll}
+                    title="Selecionar todos"
+                    className="h-4 w-4 rounded border-neutral-300 align-middle"
+                  />
+                </th>
+                <th className="px-3 py-3 text-left sm:px-4">Produto</th>
+                <th className="px-3 py-3 text-right sm:px-4">Preço</th>
+                <th className="px-3 py-3 text-right sm:px-4">Margem</th>
+                <th className="px-3 py-3 text-right sm:px-4">Estoque</th>
+                <th className="px-3 py-3 text-center sm:px-4">Ativo</th>
+                <th className="px-3 py-3 text-right sm:px-4">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -263,17 +370,25 @@ export function ProductsView({
                   }}
                   className="cursor-pointer border-b border-neutral-100 last:border-0 hover:bg-neutral-50"
                 >
-                  <td className="px-6 py-4">
+                  <td className="py-4 pl-4 pr-1" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(p.id)}
+                      onChange={() => toggleSelect(p.id)}
+                      className="h-4 w-4 rounded border-neutral-300 align-middle"
+                    />
+                  </td>
+                  <td className="px-3 py-4 sm:px-4">
                     <div className="flex items-center gap-3">
                       {p.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={p.imageUrl}
                           alt={p.name}
-                          className="h-10 w-10 rounded-lg object-cover"
+                          className="h-10 w-10 shrink-0 rounded-lg object-cover"
                         />
                       ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-neutral-100 text-xs text-neutral-400">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-xs text-neutral-400">
                           —
                         </div>
                       )}
@@ -299,11 +414,11 @@ export function ProductsView({
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-right font-medium">{formatBrl(p.priceBrl)}</td>
-                  <td className="px-6 py-4 text-right text-neutral-600">
+                  <td className="whitespace-nowrap px-3 py-4 text-right font-medium sm:px-4">{formatBrl(p.priceBrl)}</td>
+                  <td className="px-3 py-4 text-right text-neutral-600 sm:px-4">
                     {marginLabel(p.priceBrl, p.costBrl)}
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-3 py-4 text-right sm:px-4">
                     <span
                       className={
                         p.stock <= p.lowStockThreshold
@@ -314,7 +429,7 @@ export function ProductsView({
                       {p.stock}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-3 py-4 text-center sm:px-4">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -333,29 +448,33 @@ export function ProductsView({
                       />
                     </button>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setError(null);
-                        setEditing(p);
-                      }}
-                      className="mr-2 text-sm text-neutral-600 hover:text-neutral-900"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(p.id, p.name);
-                      }}
-                      disabled={isPending}
-                      className="text-sm text-red-600 hover:text-red-700"
-                    >
-                      Excluir
-                    </button>
+                  <td className="px-3 py-4 sm:px-4">
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setError(null);
+                          setEditing(p);
+                        }}
+                        title="Editar"
+                        className="inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700"
+                      >
+                        <Pencil className="h-[18px] w-[18px]" strokeWidth={2} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(p.id, p.name);
+                        }}
+                        disabled={isPending}
+                        title="Excluir"
+                        className="inline-flex items-center justify-center text-neutral-400 hover:text-red-600 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-[18px] w-[18px]" strokeWidth={2} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
