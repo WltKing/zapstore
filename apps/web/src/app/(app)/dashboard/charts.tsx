@@ -260,6 +260,45 @@ export function ProfitWaterfall({ steps }: { steps: WaterfallStep[] }) {
   );
 }
 
+type InOutPoint = { label: string; entradas: number; despesas: number };
+
+/** Barras agrupadas Entrou × Saiu por dia (Caixa). */
+export function CashBars({ data }: { data: InOutPoint[] }) {
+  const hasData = data.some((d) => d.entradas > 0 || d.despesas > 0);
+  return (
+    <div className="mt-4 h-56">
+      {!hasData ? (
+        <Empty>Sem movimento neste mês ainda.</Empty>
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barGap={1}>
+            <XAxis dataKey="label" tick={AXIS} tickLine={false} axisLine={false} minTickGap={16} />
+            <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} tickFormatter={axisBrl} />
+            <Tooltip
+              cursor={{ fill: "rgba(0,0,0,0.04)" }}
+              content={({ active, payload }) =>
+                active && payload?.length ? (
+                  <div className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs shadow-card">
+                    <div className="text-neutral-500">Dia {payload[0].payload.label}</div>
+                    <div className="font-semibold text-emerald-700">
+                      Entrou: {formatBrl(payload[0].payload.entradas)}
+                    </div>
+                    <div className="font-semibold text-red-700">
+                      Saiu: {formatBrl(payload[0].payload.despesas)}
+                    </div>
+                  </div>
+                ) : null
+              }
+            />
+            <Bar dataKey="entradas" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={14} />
+            <Bar dataKey="despesas" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={14} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="flex h-full items-center justify-center text-xs text-neutral-400">{children}</div>;
 }
