@@ -22,13 +22,14 @@
 }
 
 /* Gráficos (recharts) são "focáveis" por acessibilidade e o navegador desenha a
-   moldura preta de foco ao tocar — escondemos o outline neles. */
+   moldura preta de foco ao tocar — escondemos o outline no gráfico e em TODOS os
+   elementos internos (linha, barras, ticks dos eixos também recebem foco). */
 .recharts-wrapper,
+.recharts-wrapper *,
 .recharts-wrapper:focus,
+.recharts-wrapper *:focus,
 .recharts-wrapper:focus-visible,
-.recharts-surface,
-.recharts-surface:focus,
-.recharts-surface:focus-visible {
+.recharts-wrapper *:focus-visible {
   outline: none !important;
 }
 
