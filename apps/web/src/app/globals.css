@@ -21,6 +21,17 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Gráficos (recharts) são "focáveis" por acessibilidade e o navegador desenha a
+   moldura preta de foco ao tocar — escondemos o outline neles. */
+.recharts-wrapper,
+.recharts-wrapper:focus,
+.recharts-wrapper:focus-visible,
+.recharts-surface,
+.recharts-surface:focus,
+.recharts-surface:focus-visible {
+  outline: none !important;
+}
+
 /* Esconde a barra de rolagem (ex.: menu lateral fixo) mantendo o scroll. */
 .no-scrollbar {
   -ms-overflow-style: none;
