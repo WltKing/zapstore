@@ -46,6 +46,7 @@ export default async function OrdersPage() {
     items: o.items as Prisma.JsonArray,
     totalBrl: Number(o.totalBrl),
     paymentMethod: o.paymentMethod,
+    sellerName: o.sellerName,
     notes: o.notes,
     createdAt: o.createdAt.toISOString(),
     fiscalModel: o.fiscalModel,

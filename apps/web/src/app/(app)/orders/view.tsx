@@ -34,6 +34,7 @@ export interface OrderRow {
   items: unknown;
   totalBrl: number;
   paymentMethod: string | null;
+  sellerName: string | null;
   notes: string | null;
   createdAt: string;
   fiscalModel: string | null;
@@ -123,6 +124,7 @@ export function OrdersView({
       if (q) {
         const hit =
           o.customerName.toLowerCase().includes(q) ||
+          (o.sellerName ?? "").toLowerCase().includes(q) ||
           String(o.orderNumber).includes(qd || q) ||
           (!!qd && o.customerPhone.includes(qd));
         if (!hit) return false;
@@ -211,7 +213,7 @@ export function OrdersView({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por cliente, telefone ou nº..."
+          placeholder="Buscar por cliente, vendedor, telefone ou nº..."
           className="min-w-56 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
         <select
@@ -363,6 +365,7 @@ export function OrdersView({
                           <div className="mt-2 space-y-1 text-sm">
                             <div><strong>Telefone:</strong> {o.customerPhone}</div>
                             {o.customerAddress && <div><strong>Endereço:</strong> {o.customerAddress}</div>}
+                            {o.sellerName && <div><strong>Vendedor:</strong> {o.sellerName}</div>}
                             {o.paymentMethod && <div><strong>Pagamento:</strong> {paymentLabel(o.paymentMethod)}</div>}
                             {o.notes && <div><strong>Obs:</strong> {o.notes}</div>}
                           </div>
