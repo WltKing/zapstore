@@ -15,6 +15,12 @@
   --brand-active-fg: #171717;
 }
 
+/* Sem o retângulo escuro do navegador ao tocar (Android/Chrome pinta elementos
+   "clicáveis" inteiros — ex.: gráficos — com um overlay no toque). */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Esconde a barra de rolagem (ex.: menu lateral fixo) mantendo o scroll. */
 .no-scrollbar {
   -ms-overflow-style: none;
