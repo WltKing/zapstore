@@ -354,10 +354,10 @@ export function ProductsView({
                 </th>
                 <th className="px-3 py-3 text-left sm:px-4">Produto</th>
                 <th className="px-3 py-3 text-right sm:px-4">Preço</th>
-                <th className="px-3 py-3 text-right sm:px-4">Margem</th>
+                <th className="hidden px-3 py-3 text-right md:table-cell md:px-4">Margem</th>
                 <th className="px-3 py-3 text-right sm:px-4">Estoque</th>
-                <th className="px-3 py-3 text-center sm:px-4">Ativo</th>
-                <th className="px-3 py-3 text-right sm:px-4">Ações</th>
+                <th className="hidden px-3 py-3 text-center sm:table-cell sm:px-4">Ativo</th>
+                <th className="hidden px-3 py-3 text-right sm:table-cell sm:px-4">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -415,7 +415,7 @@ export function ProductsView({
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-right font-medium sm:px-4">{formatBrl(p.priceBrl)}</td>
-                  <td className="px-3 py-4 text-right text-neutral-600 sm:px-4">
+                  <td className="hidden px-3 py-4 text-right text-neutral-600 md:table-cell md:px-4">
                     {marginLabel(p.priceBrl, p.costBrl)}
                   </td>
                   <td className="px-3 py-4 text-right sm:px-4">
@@ -429,7 +429,7 @@ export function ProductsView({
                       {p.stock}
                     </span>
                   </td>
-                  <td className="px-3 py-4 text-center sm:px-4">
+                  <td className="hidden px-3 py-4 text-center sm:table-cell sm:px-4">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -448,7 +448,7 @@ export function ProductsView({
                       />
                     </button>
                   </td>
-                  <td className="px-3 py-4 sm:px-4">
+                  <td className="hidden px-3 py-4 sm:table-cell sm:px-4">
                     <div className="flex items-center justify-end gap-3">
                       <button
                         type="button"
