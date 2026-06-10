@@ -2,12 +2,22 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil, Trash2 } from "lucide-react";
 import {
   createCustomerAction,
   updateCustomerAction,
   deleteCustomerAction,
   type CustomerInput,
 } from "@/lib/actions/customers";
+
+export interface CustomerLastOrder {
+  id: string;
+  orderNumber: number;
+  status: string;
+  totalBrl: number;
+  createdAt: string;
+  itemsSummary: string;
+}
 
 export interface CustomerRow {
   id: string;
@@ -19,7 +29,24 @@ export interface CustomerRow {
   orderCount: number;
   totalSpentBrl: number;
   lastOrderAt: string | null;
+  lastOrder: CustomerLastOrder | null;
 }
+
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: "Pendente",
+  CONFIRMED: "Confirmado",
+  IN_DELIVERY: "Em entrega",
+  DELIVERED: "Entregue",
+  CANCELED: "Cancelado",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  PENDING: "bg-amber-100 text-amber-800",
+  CONFIRMED: "bg-blue-100 text-blue-800",
+  IN_DELIVERY: "bg-purple-100 text-purple-800",
+  DELIVERED: "bg-emerald-100 text-emerald-800",
+  CANCELED: "bg-neutral-200 text-neutral-600",
+};
 
 function blank(): CustomerInput {
   return { name: "", phone: "", email: "", address: "", notes: "" };
@@ -48,6 +75,7 @@ export function CustomersView({ initial, storeName }: { initial: CustomerRow[]; 
   const [editing, setEditing] = useState<CustomerRow | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -71,8 +99,8 @@ export function CustomersView({ initial, storeName }: { initial: CustomerRow[]; 
   };
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Clientes</h1>
@@ -121,51 +149,32 @@ export function CustomersView({ initial, storeName }: { initial: CustomerRow[]; 
           <table className="w-full">
             <thead className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-500">
               <tr>
-                <th className="px-6 py-3 text-left">Cliente</th>
-                <th className="px-6 py-3 text-left">Telefone</th>
-                <th className="px-6 py-3 text-right">Pedidos</th>
-                <th className="px-6 py-3 text-right">Total gasto</th>
-                <th className="px-6 py-3 text-right">Último</th>
-                <th className="px-6 py-3 text-right">Ações</th>
+                <th className="py-3 pl-4 pr-2 text-left sm:px-4">Cliente</th>
+                <th className="px-2 py-3 text-left sm:px-4">Telefone</th>
+                <th className="hidden px-2 py-3 text-right sm:table-cell sm:px-4">Pedidos</th>
+                <th className="hidden px-2 py-3 text-right md:table-cell md:px-4">Total gasto</th>
+                <th className="hidden px-2 py-3 text-right md:table-cell md:px-4">Último</th>
+                <th className="hidden px-2 py-3 text-right sm:table-cell sm:px-4">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c) => (
-                <tr key={c.id} className="border-b border-neutral-100 last:border-0">
-                  <td className="px-6 py-4">
-                    <div className="font-medium">{c.name}</div>
-                    {c.email && <div className="text-xs text-neutral-500">{c.email}</div>}
-                  </td>
-                  <td className="px-6 py-4 text-neutral-700">{formatPhone(c.phone)}</td>
-                  <td className="px-6 py-4 text-right">{c.orderCount}</td>
-                  <td className="px-6 py-4 text-right font-medium">
-                    {c.totalSpentBrl > 0 ? formatBrl(c.totalSpentBrl) : "—"}
-                  </td>
-                  <td className="px-6 py-4 text-right text-neutral-600">
-                    {formatDate(c.lastOrderAt)}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setError(null);
-                        setEditing(c);
-                      }}
-                      className="mr-2 text-sm text-neutral-600 hover:text-neutral-900"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(c.id, c.name)}
-                      disabled={isPending}
-                      className="text-sm text-red-600 hover:text-red-700"
-                    >
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((c) => {
+                const isOpen = expanded === c.id;
+                return (
+                  <CustomerRowItem
+                    key={c.id}
+                    c={c}
+                    isOpen={isOpen}
+                    isPending={isPending}
+                    onToggle={() => setExpanded(isOpen ? null : c.id)}
+                    onEdit={() => {
+                      setError(null);
+                      setEditing(c);
+                    }}
+                    onDelete={() => handleDelete(c.id, c.name)}
+                  />
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -183,6 +192,146 @@ export function CustomersView({ initial, storeName }: { initial: CustomerRow[]; 
         />
       )}
     </main>
+  );
+}
+
+function CustomerRowItem({
+  c,
+  isOpen,
+  isPending,
+  onToggle,
+  onEdit,
+  onDelete,
+}: {
+  c: CustomerRow;
+  isOpen: boolean;
+  isPending: boolean;
+  onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const lo = c.lastOrder;
+  return (
+    <>
+      <tr
+        onClick={onToggle}
+        className={`cursor-pointer border-b border-neutral-100 last:border-0 hover:bg-neutral-50 ${isOpen ? "bg-neutral-50" : ""}`}
+      >
+        <td className="py-3 pl-4 pr-2 sm:px-4 sm:py-4">
+          <div className="text-[13px] font-medium sm:text-base">{c.name}</div>
+          {c.email && <div className="hidden text-xs text-neutral-500 sm:block">{c.email}</div>}
+        </td>
+        <td className="whitespace-nowrap px-2 py-3 text-[13px] text-neutral-700 sm:px-4 sm:py-4 sm:text-base">
+          {formatPhone(c.phone)}
+        </td>
+        <td className="hidden px-2 py-4 text-right sm:table-cell sm:px-4">{c.orderCount}</td>
+        <td className="hidden px-2 py-4 text-right font-medium md:table-cell md:px-4">
+          {c.totalSpentBrl > 0 ? formatBrl(c.totalSpentBrl) : "—"}
+        </td>
+        <td className="hidden px-2 py-4 text-right text-neutral-600 md:table-cell md:px-4">
+          {formatDate(c.lastOrderAt)}
+        </td>
+        <td className="hidden px-2 py-4 sm:table-cell sm:px-4">
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              title="Editar"
+              className="inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700"
+            >
+              <Pencil className="h-[18px] w-[18px]" strokeWidth={2} />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              disabled={isPending}
+              title="Excluir"
+              className="inline-flex items-center justify-center text-neutral-400 hover:text-red-600 disabled:opacity-50"
+            >
+              <Trash2 className="h-[18px] w-[18px]" strokeWidth={2} />
+            </button>
+          </div>
+        </td>
+      </tr>
+
+      {isOpen && (
+        <tr className="border-b border-neutral-100 last:border-0">
+          <td colSpan={6} className="bg-neutral-50 px-4 py-4 sm:px-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Último pedido
+                </h3>
+                {lo ? (
+                  <div className="mt-2 space-y-1 text-sm">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-neutral-500">#{lo.orderNumber}</span>
+                      <span className="font-medium">{formatBrl(lo.totalBrl)}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_COLORS[lo.status] ?? "bg-neutral-100 text-neutral-600"}`}>
+                        {STATUS_LABELS[lo.status] ?? lo.status}
+                      </span>
+                      <span className="text-xs text-neutral-500">{formatDate(lo.createdAt)}</span>
+                    </div>
+                    {lo.itemsSummary && <div className="text-neutral-600">{lo.itemsSummary}</div>}
+                    <a
+                      href={`/orders/${lo.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-block text-sm font-medium text-neutral-700 underline hover:text-neutral-900"
+                    >
+                      Abrir pedido
+                    </a>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-neutral-500">Nenhum pedido ainda.</p>
+                )}
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Cliente
+                </h3>
+                <div className="mt-2 space-y-1 text-sm">
+                  <div><strong>Pedidos:</strong> {c.orderCount} · <strong>Total gasto:</strong> {c.totalSpentBrl > 0 ? formatBrl(c.totalSpentBrl) : "—"}</div>
+                  {c.email && <div><strong>E-mail:</strong> {c.email}</div>}
+                  {c.address && <div><strong>Endereço:</strong> {c.address}</div>}
+                  {c.notes && <div><strong>Obs:</strong> {c.notes}</div>}
+                </div>
+                <div className="mt-3 flex gap-4 sm:hidden">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-700"
+                  >
+                    <Pencil className="h-4 w-4" strokeWidth={2} />
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
+                    disabled={isPending}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" strokeWidth={2} />
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
