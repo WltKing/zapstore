@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { anticipateReceivablesAction } from "@/lib/actions/receivables";
-import { Landmark } from "lucide-react";
+import { Landmark, ChevronDown } from "lucide-react";
 
 function formatBrl(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -53,14 +53,17 @@ export function AnticipateBox({ total }: { total: number }) {
   if (total <= 0) return null;
 
   return (
-    <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
-      <div className="flex items-center gap-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+    <details className="group mt-4 rounded-2xl bg-white shadow-card">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-4 [&::-webkit-details-marker]:hidden">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
           <Landmark className="h-[18px] w-[18px]" strokeWidth={2} />
         </span>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Antecipar recebíveis</h2>
-      </div>
-      <p className="mt-1 text-sm text-neutral-500">
+        <span className="text-sm font-medium text-neutral-700">Antecipar recebíveis</span>
+        <span className="hidden text-sm text-neutral-400 sm:inline">— {formatBrl(total)} disponível</span>
+        <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-neutral-400 transition group-open:rotate-180" strokeWidth={2} />
+      </summary>
+      <div className="border-t border-neutral-100 px-5 pb-5 pt-4">
+      <p className="text-sm text-neutral-500">
         Você tem <strong>{formatBrl(total)}</strong> a receber. Antecipe tudo ou só uma parte — a taxa
         você digita na hora (varia).
       </p>
@@ -120,6 +123,7 @@ export function AnticipateBox({ total }: { total: number }) {
       )}
       {err && <p className="mt-3 text-sm text-red-700">{err}</p>}
       {done && <p className="mt-3 text-sm text-emerald-700">{done}</p>}
-    </section>
+      </div>
+    </details>
   );
 }

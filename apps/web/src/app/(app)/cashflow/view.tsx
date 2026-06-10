@@ -1,3 +1,4 @@
+import { TrendingUp, TrendingDown } from "lucide-react";
 import { MonthSelect } from "./month-select";
 import { CaixaPdfButton } from "./pdf-button";
 import { AnticipateBox } from "./anticipate-box";
@@ -35,6 +36,9 @@ export function CashflowView({
   recebidoMes,
   despesasMes,
   resultado,
+  recebidoMesAnterior,
+  despesasMesAnterior,
+  resultadoMesAnterior,
   impostoProvisao,
   hasTax,
   chart,
@@ -49,13 +53,15 @@ export function CashflowView({
   recebidoMes: number;
   despesasMes: number;
   resultado: number;
+  recebidoMesAnterior: number;
+  despesasMesAnterior: number;
+  resultadoMesAnterior: number;
   impostoProvisao: number;
   hasTax: boolean;
   chart: DayPoint[];
   movements: Movement[];
 }) {
-  const sobraAposImposto = resultado - impostoProvisao;
-  const showImposto = hasTax && impostoProvisao > 0;
+  const lucroLiquido = resultado - impostoProvisao;
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
@@ -81,25 +87,52 @@ export function CashflowView({
         </div>
       </header>
 
-      {/* Resumo do mês selecionado */}
-      <div className={`mt-6 grid gap-4 sm:grid-cols-2 ${showImposto ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
-        <MiniCard title="Entrou no mês" value={formatBrl(recebidoMes)} tone="green" hint="Recebimentos que caíram no mês" />
-        <MiniCard title="Saiu no mês" value={formatBrl(despesasMes)} tone="red" hint="Despesas pagas" />
+      {/* Todos os números juntos */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <MiniCard
+          title="Entrou no mês"
+          value={formatBrl(recebidoMes)}
+          tone="green"
+          hint="Recebimentos que caíram no mês"
+          delta={{ current: recebidoMes, prev: recebidoMesAnterior, goodWhenUp: true }}
+        />
+        <MiniCard
+          title="Saiu no mês"
+          value={formatBrl(despesasMes)}
+          tone="red"
+          hint="Despesas pagas"
+          delta={{ current: despesasMes, prev: despesasMesAnterior, goodWhenUp: false }}
+        />
         <MiniCard
           title="Resultado de caixa"
           value={formatBrl(resultado)}
           tone={resultado >= 0 ? "green" : "red"}
           hint="Entrou − saiu"
+          delta={{ current: resultado, prev: resultadoMesAnterior, goodWhenUp: true }}
         />
-        {showImposto && (
-          <MiniCard
-            title="Sobra após imposto"
-            value={formatBrl(sobraAposImposto)}
-            tone={sobraAposImposto >= 0 ? "green" : "red"}
-            hint={`Estimado — resultado − provisão de imposto (${formatBrl(impostoProvisao)}). O imposto só sai do caixa quando o DAS é pago; lance como despesa nesse dia.`}
-          />
-        )}
+        <MiniCard
+          title="Lucro líquido (estimado)"
+          value={formatBrl(lucroLiquido)}
+          tone={lucroLiquido >= 0 ? "green" : "red"}
+          hint={
+            hasTax && impostoProvisao > 0
+              ? `Resultado − provisão de imposto (${formatBrl(impostoProvisao)}). O imposto sai do caixa quando o DAS for pago.`
+              : hasTax
+                ? "Sem vendas com nota no mês — igual ao resultado de caixa."
+                : "Configure o imposto estimado em Configurações → Financeiro pra descontar aqui."
+          }
+        />
+        <MiniCard title="Caiu hoje" value={formatBrl(recebidoHoje)} tone="green" hint="Dinheiro que entrou hoje" />
+        <MiniCard
+          title="A receber (futuro)"
+          value={formatBrl(aReceberFuturo)}
+          tone="amber"
+          hint="Líquido que ainda vai cair pelo repasse da maquininha"
+        />
       </div>
+
+      {/* Antecipar recebíveis (linha discreta que expande) */}
+      <AnticipateBox total={aReceberFuturo} />
 
       {/* Gráfico entradas × despesas */}
       <section className="mt-6 rounded-2xl bg-white p-5 shadow-card sm:p-6">
@@ -118,21 +151,6 @@ export function CashflowView({
         </div>
         <CashBars data={chart} />
       </section>
-
-      {/* Agora (não depende do mês selecionado) */}
-      <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-neutral-500">Agora</h2>
-      <div className="mt-3 grid gap-4 sm:grid-cols-2">
-        <MiniCard title="Caiu hoje" value={formatBrl(recebidoHoje)} tone="green" hint="Dinheiro que entrou hoje" />
-        <MiniCard
-          title="A receber (futuro)"
-          value={formatBrl(aReceberFuturo)}
-          tone="amber"
-          hint="Líquido que ainda vai cair pelo repasse da maquininha"
-        />
-      </div>
-
-      {/* Antecipar recebíveis (parcial ou tudo) */}
-      <AnticipateBox total={aReceberFuturo} />
 
       {/* Movimentos */}
       <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-neutral-500">
@@ -166,11 +184,14 @@ function MiniCard({
   value,
   tone,
   hint,
+  delta,
 }: {
   title: string;
   value: string;
   tone: "neutral" | "green" | "red" | "amber";
   hint?: string;
+  /** Comparação com o mês anterior. goodWhenUp: subir é bom (verde) ou ruim (vermelho). */
+  delta?: { current: number; prev: number; goodWhenUp: boolean };
 }) {
   const toneClass =
     tone === "green"
@@ -180,10 +201,25 @@ function MiniCard({
         : tone === "amber"
           ? "text-amber-700"
           : "text-neutral-900";
+
+  let deltaEl: React.ReactNode = null;
+  if (delta && delta.prev !== 0) {
+    const pct = ((delta.current - delta.prev) / Math.abs(delta.prev)) * 100;
+    const up = pct > 0;
+    const good = up === delta.goodWhenUp;
+    deltaEl = (
+      <div className={`mt-1 inline-flex items-center gap-1 text-xs font-medium ${good ? "text-emerald-600" : "text-red-600"}`}>
+        {up ? <TrendingUp className="h-3.5 w-3.5" strokeWidth={2} /> : <TrendingDown className="h-3.5 w-3.5" strokeWidth={2} />}
+        {up ? "+" : ""}{pct.toFixed(0)}% vs mês anterior ({formatBrl(delta.prev)})
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-2xl bg-white p-5 shadow-card">
       <div className="text-xs uppercase tracking-wide text-neutral-500">{title}</div>
       <div className={`mt-1 text-2xl font-bold ${toneClass}`}>{value}</div>
+      {deltaEl}
       {hint && <div className="mt-1 text-xs text-neutral-400">{hint}</div>}
     </div>
   );

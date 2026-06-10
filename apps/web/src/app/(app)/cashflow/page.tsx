@@ -52,6 +52,10 @@ export default async function CashflowPage({
   const todayEnd = new Date(todayStart);
   todayEnd.setDate(todayEnd.getDate() + 1);
 
+  // Mês anterior (pros deltas de comparação nos cards).
+  const prevStart = new Date(start);
+  prevStart.setMonth(prevStart.getMonth() - 1);
+
   // Pedidos desde 13 meses antes do mais antigo entre (mês exibido) e (hoje):
   // cobre parcelas de crédito que ainda caem no mês exibido + o "a receber" atual.
   const anchor = start < todayStart ? start : todayStart;
@@ -74,7 +78,8 @@ export default async function CashflowPage({
         orderBy: { createdAt: "desc" },
       }),
       tx.expense.findMany({
-        where: { paidAt: { gte: start, lt: end } },
+        // Inclui o mês anterior pra comparação nos cards.
+        where: { paidAt: { gte: prevStart, lt: end } },
         select: { category: true, description: true, amountBrl: true, paidAt: true },
         orderBy: { paidAt: "desc" },
       }),
@@ -94,6 +99,7 @@ export default async function CashflowPage({
   let recebidoMes = 0;
   let recebidoHoje = 0;
   let aReceberFuturo = 0;
+  let recebidoMesAnterior = 0;
   const inMovements: Movement[] = [];
 
   const sales = orders.map((o) => ({
@@ -114,6 +120,7 @@ export default async function CashflowPage({
       aReceberFuturo += ev.net;
       continue;
     }
+    if (ev.date >= prevStart && ev.date < start) recebidoMesAnterior += ev.net;
     if (ev.date >= todayStart && ev.date < todayEnd) recebidoHoje += ev.net;
     if (ev.date >= start && ev.date < end) {
       recebidoMes += ev.net;
@@ -128,12 +135,17 @@ export default async function CashflowPage({
     }
   }
 
-  const despesasMes = expenses.reduce((s, e) => s + Number(e.amountBrl), 0);
-  for (const e of expenses) {
+  const monthExpenses = expenses.filter((e) => e.paidAt >= start && e.paidAt < end);
+  const despesasMes = monthExpenses.reduce((s, e) => s + Number(e.amountBrl), 0);
+  const despesasMesAnterior = expenses
+    .filter((e) => e.paidAt >= prevStart && e.paidAt < start)
+    .reduce((s, e) => s + Number(e.amountBrl), 0);
+  for (const e of monthExpenses) {
     const i = Math.floor((new Date(e.paidAt).getTime() - start.getTime()) / dayMs);
     if (i >= 0 && i < days) chart[i].despesas += Number(e.amountBrl);
   }
   const resultado = recebidoMes - despesasMes;
+  const resultadoMesAnterior = recebidoMesAnterior - despesasMesAnterior;
 
   // Imposto: provisão informativa (não é caixa — sai quando o DAS é pago).
   const impostoProvisao =
@@ -145,7 +157,7 @@ export default async function CashflowPage({
 
   const movements: Movement[] = [
     ...inMovements,
-    ...expenses.map((e) => ({
+    ...monthExpenses.map((e) => ({
       date: e.paidAt.toISOString(),
       label: `${e.category}${e.description ? ` — ${e.description}` : ""}`,
       amountBrl: -Number(e.amountBrl),
@@ -164,6 +176,9 @@ export default async function CashflowPage({
       recebidoMes={recebidoMes}
       despesasMes={despesasMes}
       resultado={resultado}
+      recebidoMesAnterior={recebidoMesAnterior}
+      despesasMesAnterior={despesasMesAnterior}
+      resultadoMesAnterior={resultadoMesAnterior}
       impostoProvisao={impostoProvisao}
       hasTax={taxEstimatePct != null}
       chart={chart}
