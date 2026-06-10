@@ -343,7 +343,7 @@ export function ProductsView({
           <table className="w-full">
             <thead className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-500">
               <tr>
-                <th className="w-10 py-3 pl-4 pr-1">
+                <th className="hidden w-10 py-3 pl-4 pr-1 sm:table-cell">
                   <input
                     type="checkbox"
                     checked={allFilteredSelected}
@@ -352,10 +352,10 @@ export function ProductsView({
                     className="h-4 w-4 rounded border-neutral-300 align-middle"
                   />
                 </th>
-                <th className="px-3 py-3 text-left sm:px-4">Produto</th>
-                <th className="px-3 py-3 text-right sm:px-4">Preço</th>
+                <th className="px-2 py-3 text-left sm:px-4">Produto</th>
+                <th className="px-2 py-3 text-right sm:px-4">Preço</th>
                 <th className="hidden px-3 py-3 text-right md:table-cell md:px-4">Margem</th>
-                <th className="px-3 py-3 text-right sm:px-4">Estoque</th>
+                <th className="px-2 py-3 text-right sm:px-4">Estoque</th>
                 <th className="hidden px-3 py-3 text-center sm:table-cell sm:px-4">Ativo</th>
                 <th className="hidden px-3 py-3 text-right sm:table-cell sm:px-4">Ações</th>
               </tr>
@@ -370,7 +370,7 @@ export function ProductsView({
                   }}
                   className="cursor-pointer border-b border-neutral-100 last:border-0 hover:bg-neutral-50"
                 >
-                  <td className="py-4 pl-4 pr-1" onClick={(e) => e.stopPropagation()}>
+                  <td className="hidden py-4 pl-4 pr-1 sm:table-cell" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selected.has(p.id)}
@@ -378,23 +378,23 @@ export function ProductsView({
                       className="h-4 w-4 rounded border-neutral-300 align-middle"
                     />
                   </td>
-                  <td className="px-3 py-4 sm:px-4">
-                    <div className="flex items-center gap-3">
+                  <td className="px-2 py-3 sm:px-4 sm:py-4">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       {p.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={p.imageUrl}
                           alt={p.name}
-                          className="h-10 w-10 shrink-0 rounded-lg object-cover"
+                          className="h-8 w-8 shrink-0 rounded-lg object-cover sm:h-10 sm:w-10"
                         />
                       ) : (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-xs text-neutral-400">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-xs text-neutral-400 sm:h-10 sm:w-10">
                           —
                         </div>
                       )}
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{p.name}</span>
+                          <span className="text-[13px] font-medium sm:text-base">{p.name}</span>
                           {p.kind === "kit" && (
                             <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-indigo-600">
                               Kit
@@ -414,11 +414,11 @@ export function ProductsView({
                       </div>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-right font-medium sm:px-4">{formatBrl(p.priceBrl)}</td>
+                  <td className="whitespace-nowrap px-2 py-3 text-right text-[13px] font-medium sm:px-4 sm:py-4 sm:text-base">{formatBrl(p.priceBrl)}</td>
                   <td className="hidden px-3 py-4 text-right text-neutral-600 md:table-cell md:px-4">
                     {marginLabel(p.priceBrl, p.costBrl)}
                   </td>
-                  <td className="px-3 py-4 text-right sm:px-4">
+                  <td className="px-2 py-3 text-right text-[13px] sm:px-4 sm:py-4 sm:text-base">
                     <span
                       className={
                         p.stock <= p.lowStockThreshold
