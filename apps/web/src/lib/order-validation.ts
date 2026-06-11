@@ -24,6 +24,42 @@ export function nowInSp(): { date: string; time: string } {
   };
 }
 
+/** Capacidade semanal: por dia da semana (0=domingo) × turno. 0 = não entrega; null/ausente = sem limite. */
+export type WeeklyCapacity = Record<string, { morning?: number | null; afternoon?: number | null }>;
+
+const WEEKDAY_LABEL = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
+/** Capacidade configurada pra uma data (YYYY-MM-DD) e turno. null = sem limite. */
+export function capacityFor(
+  weekly: WeeklyCapacity | null | undefined,
+  dateStr: string,
+  shift: "morning" | "afternoon",
+): number | null {
+  if (!weekly) return null;
+  const wd = new Date(dateStr + "T12:00:00").getDay();
+  const v = weekly[String(wd)]?.[shift];
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+/** Erro se a loja não entrega naquele dia/turno (capacidade 0). */
+export function validateDeliveryAvailability(
+  deliveryDate: string | undefined,
+  deliveryShift: string | undefined,
+  weekly: WeeklyCapacity | null | undefined,
+): string | null {
+  if (!deliveryDate || !weekly) return null;
+  const wd = new Date(deliveryDate + "T12:00:00").getDay();
+  const label = WEEKDAY_LABEL[wd];
+  const m = capacityFor(weekly, deliveryDate, "morning");
+  const a = capacityFor(weekly, deliveryDate, "afternoon");
+  if (m === 0 && a === 0) return `A loja não faz entregas no ${label}. Escolha outro dia.`;
+  if (deliveryShift === "morning" && m === 0)
+    return `A loja não entrega no ${label} de manhã. Escolha a tarde ou outro dia.`;
+  if (deliveryShift === "afternoon" && a === 0)
+    return `A loja não entrega no ${label} à tarde. Escolha a manhã ou outro dia.`;
+  return null;
+}
+
 /**
  * Valida o agendamento da entrega: sem data no passado; pra HOJE, respeita o
  * horário de corte de cada turno. Retorna a mensagem de erro ou null.

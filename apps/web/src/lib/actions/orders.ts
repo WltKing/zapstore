@@ -7,22 +7,68 @@ import { auth } from "@/lib/auth";
 import {
   validateOrderInput,
   validateDeliverySchedule,
+  validateDeliveryAvailability,
+  capacityFor,
   DEFAULT_CUTOFFS,
   type DeliveryCutoffs,
+  type WeeklyCapacity,
 } from "@/lib/order-validation";
 
-/** Cortes de entrega configurados na loja (fallback nos padrões). */
-async function getCutoffs(tenantId: string): Promise<DeliveryCutoffs> {
+/** Config de entrega da loja: cortes + capacidade semanal. */
+async function getDeliveryConfig(
+  tenantId: string,
+): Promise<{ cutoffs: DeliveryCutoffs; weekly: WeeklyCapacity | null }> {
   const cfg = await withTenant(tenantId, (tx) =>
     tx.botConfig.findUnique({
       where: { tenantId },
-      select: { morningCutoff: true, afternoonCutoff: true },
+      select: { morningCutoff: true, afternoonCutoff: true, weeklyCapacity: true },
     }),
   );
   return {
-    morning: cfg?.morningCutoff || DEFAULT_CUTOFFS.morning,
-    afternoon: cfg?.afternoonCutoff || DEFAULT_CUTOFFS.afternoon,
+    cutoffs: {
+      morning: cfg?.morningCutoff || DEFAULT_CUTOFFS.morning,
+      afternoon: cfg?.afternoonCutoff || DEFAULT_CUTOFFS.afternoon,
+    },
+    weekly: (cfg?.weeklyCapacity as WeeklyCapacity | null) ?? null,
   };
+}
+
+/** Valida agendamento completo: passado/corte + dia sem entrega + turno lotado. */
+async function validateSchedulingFull(
+  tenantId: string,
+  input: OrderInput,
+  excludeOrderId?: string,
+): Promise<string | null> {
+  const { cutoffs, weekly } = await getDeliveryConfig(tenantId);
+  const schedErr =
+    validateDeliverySchedule(input.deliveryDate, input.deliveryShift, cutoffs) ??
+    validateDeliveryAvailability(input.deliveryDate, input.deliveryShift, weekly);
+  if (schedErr) return schedErr;
+
+  // Lotação: conta entregas já agendadas no mesmo dia/turno.
+  const shift = input.deliveryShift === "morning" || input.deliveryShift === "afternoon" ? input.deliveryShift : null;
+  if (!input.deliveryDate || !shift) return null;
+  const cap = capacityFor(weekly, input.deliveryDate, shift);
+  if (cap == null) return null;
+  const dayStart = new Date(`${input.deliveryDate}T00:00:00`);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  const count = await withTenant(tenantId, (tx) =>
+    tx.order.count({
+      where: {
+        status: { not: "CANCELED" },
+        deliveryType: { not: "pickup" },
+        deliveryShift: shift,
+        deliveryDate: { gte: dayStart, lt: dayEnd },
+        ...(excludeOrderId ? { id: { not: excludeOrderId } } : {}),
+      },
+    }),
+  );
+  if (count >= cap) {
+    const label = shift === "morning" ? "manhã" : "tarde";
+    return `O turno da ${label} desse dia já está lotado (${count}/${cap} entregas). Escolha outro turno ou dia.`;
+  }
+  return null;
 }
 
 async function requireTenantId(): Promise<string> {
@@ -221,11 +267,7 @@ export async function createOrderAction(
     const err = validateOrderInput(input);
     if (err) return { ok: false, error: err };
     if (input.deliveryType !== "pickup") {
-      const schedErr = validateDeliverySchedule(
-        input.deliveryDate,
-        input.deliveryShift,
-        await getCutoffs(tenantId),
-      );
+      const schedErr = await validateSchedulingFull(tenantId, input);
       if (schedErr) return { ok: false, error: schedErr };
     }
 
@@ -279,11 +321,7 @@ export async function updateOrderAction(id: string, input: OrderInput): Promise<
         (input.deliveryDate ?? "") !== prevDate ||
         (input.deliveryShift ?? "") !== (existing?.deliveryShift ?? "");
       if (input.deliveryType !== "pickup" && scheduleChanged) {
-        const schedErr = validateDeliverySchedule(
-          input.deliveryDate,
-          input.deliveryShift,
-          await getCutoffs(tenantId),
-        );
+        const schedErr = await validateSchedulingFull(tenantId, input, id);
         if (schedErr) throw new Error(schedErr);
       }
       const { items, totalBrl } = await buildItemsAndTotal(tx, input);

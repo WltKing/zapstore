@@ -3,7 +3,17 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateOrderStatusAction } from "@/lib/actions/orders";
-import { setDeliveryCapacityAction, setDeliveryCutoffsAction, updateDeliveryAction } from "@/lib/actions/deliveries";
+import { setWeeklyCapacityAction, setDeliveryCutoffsAction, updateDeliveryAction } from "@/lib/actions/deliveries";
+
+export type WeeklyCap = Record<string, { morning: number | null; afternoon: number | null }>;
+
+const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+function emptyWeekly(): WeeklyCap {
+  const w: WeeklyCap = {};
+  for (let i = 0; i <= 6; i++) w[String(i)] = { morning: null, afternoon: null };
+  return w;
+}
 
 export interface DeliveryRow {
   id: string;
@@ -51,12 +61,14 @@ function dayLabel(iso: string): string {
 export function DeliveriesView({
   storeName,
   capacity,
+  weeklyCapacity,
   morningCutoff,
   afternoonCutoff,
   deliveries,
 }: {
   storeName: string;
   capacity: number;
+  weeklyCapacity: WeeklyCap | null;
   morningCutoff: string;
   afternoonCutoff: string;
   deliveries: DeliveryRow[];
@@ -64,16 +76,29 @@ export function DeliveriesView({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [cap, setCap] = useState(capacity);
+  const [weekly, setWeekly] = useState<WeeklyCap>(() => ({ ...emptyWeekly(), ...(weeklyCapacity ?? {}) }));
   const [cutM, setCutM] = useState(morningCutoff);
   const [cutA, setCutA] = useState(afternoonCutoff);
 
-  const saveCapacity = () => {
+  const saveWeekly = () => {
     startTransition(async () => {
-      const r = await setDeliveryCapacityAction(cap);
+      const r = await setWeeklyCapacityAction(weekly);
       if (!r.ok) setError(r.error ?? "Erro");
       else router.refresh();
     });
+  };
+
+  const setCell = (wd: number, shift: "morning" | "afternoon", raw: string) => {
+    const v = raw === "" ? null : Math.max(0, Math.round(Number(raw)));
+    setWeekly((w) => ({ ...w, [String(wd)]: { ...w[String(wd)], [shift]: Number.isFinite(v as number) || v === null ? v : null } }));
+  };
+
+  /** Capacidade total do dia (soma dos turnos definidos); null = sem limite configurado. */
+  const dayCap = (dateValue: string): number | null => {
+    const wd = String(new Date(dateValue + "T12:00:00").getDay());
+    const row = weeklyCapacity?.[wd];
+    if (!row || (row.morning == null && row.afternoon == null)) return capacity > 0 ? capacity : null;
+    return (row.morning ?? 0) + (row.afternoon ?? 0);
   };
 
   const saveCutoffs = () => {
@@ -112,27 +137,55 @@ export function DeliveriesView({
 
       {error && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
-      {/* Capacidade */}
-      <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-card">
-        <span className="text-sm font-medium text-neutral-700">Capacidade por dia:</span>
-        <input
-          type="number"
-          min="0"
-          step="1"
-          value={cap}
-          onChange={(e) => setCap(Number(e.target.value))}
-          className="w-24 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-        />
-        <span className="text-sm text-neutral-500">entregas</span>
-        <button
-          type="button"
-          onClick={saveCapacity}
-          disabled={isPending || cap === capacity}
-          className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-300"
-        >
-          Salvar
-        </button>
-        <span className="text-xs text-neutral-400">0 = sem limite definido</span>
+      {/* Capacidade por dia da semana × turno */}
+      <div className="mt-6 rounded-2xl bg-white p-4 shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-neutral-700">Capacidade de entregas por dia e turno</h2>
+          <button
+            type="button"
+            onClick={saveWeekly}
+            disabled={isPending}
+            className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-300"
+          >
+            Salvar
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-neutral-400">
+          0 = não entrega nesse turno · vazio = sem limite. O pedido bloqueia agendamento em dia/turno sem entrega ou lotado.
+        </p>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {WEEKDAYS.map((label, wd) => (
+            <div key={wd} className="rounded-lg border border-neutral-200 p-2.5">
+              <div className="text-xs font-medium text-neutral-600">{label}</div>
+              <div className="mt-1.5 flex items-center gap-2">
+                <label className="flex min-w-0 flex-1 items-center gap-1 text-xs text-neutral-500">
+                  Manhã
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={weekly[String(wd)]?.morning ?? ""}
+                    onChange={(e) => setCell(wd, "morning", e.target.value)}
+                    placeholder="∞"
+                    className="w-0 min-w-0 flex-1 rounded-lg border border-neutral-300 px-2 py-1 text-sm shadow-card"
+                  />
+                </label>
+                <label className="flex min-w-0 flex-1 items-center gap-1 text-xs text-neutral-500">
+                  Tarde
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={weekly[String(wd)]?.afternoon ?? ""}
+                    onChange={(e) => setCell(wd, "afternoon", e.target.value)}
+                    placeholder="∞"
+                    className="w-0 min-w-0 flex-1 rounded-lg border border-neutral-300 px-2 py-1 text-sm shadow-card"
+                  />
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Horários de corte (agendamento pra HOJE fecha no corte do turno) */}
@@ -176,14 +229,15 @@ export function DeliveriesView({
           <div className="space-y-6">
             {groups.map((g) => {
               const pending = g.items.filter((d) => d.status !== "DELIVERED").length;
-              const over = capacity > 0 && pending > capacity;
+              const cap = dayCap(g.items[0]?.dateValue ?? "");
+              const over = cap != null && cap > 0 && pending > cap;
               return (
                 <div key={g.key}>
                   <div className="mb-2 flex items-center justify-between">
                     <h2 className="text-sm font-semibold capitalize text-neutral-700">{g.label}</h2>
                     <span className={`text-xs font-medium ${over ? "text-red-600" : "text-neutral-500"}`}>
                       {pending} a entregar
-                      {capacity > 0 ? ` / ${capacity}` : ""}
+                      {cap != null && cap > 0 ? ` / ${cap}` : ""}
                       {over ? " · acima da capacidade" : ""}
                     </span>
                   </div>

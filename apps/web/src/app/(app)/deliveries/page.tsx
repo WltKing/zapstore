@@ -40,6 +40,7 @@ export default async function DeliveriesPage() {
     <DeliveriesView
       storeName={tenant.name}
       capacity={tenant.botConfig?.dailyDeliveryCapacity ?? 0}
+      weeklyCapacity={(tenant.botConfig?.weeklyCapacity as never) ?? null}
       morningCutoff={tenant.botConfig?.morningCutoff ?? ""}
       afternoonCutoff={tenant.botConfig?.afternoonCutoff ?? ""}
       deliveries={orders.map((o) => {

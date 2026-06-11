@@ -9,9 +9,12 @@ import { PAYMENT_OPTIONS, paymentHasInstallments } from "@/lib/payments";
 import {
   validateOrderInput,
   validateDeliverySchedule,
+  validateDeliveryAvailability,
+  capacityFor,
   nowInSp,
   DEFAULT_CUTOFFS,
   type DeliveryCutoffs,
+  type WeeklyCapacity,
 } from "@/lib/order-validation";
 import { maskPhone, maskCep, maskCpfCnpj } from "@/lib/format";
 
@@ -69,6 +72,7 @@ export function OrderForm({
   orderNumber,
   fiscalSlot,
   cutoffs = DEFAULT_CUTOFFS,
+  weeklyCapacity = null,
 }: {
   products: ProductOpt[];
   sellers: string[];
@@ -77,6 +81,7 @@ export function OrderForm({
   orderNumber?: number;
   fiscalSlot?: ReactNode;
   cutoffs?: DeliveryCutoffs;
+  weeklyCapacity?: WeeklyCapacity | null;
 }) {
   const router = useRouter();
   // Aplica as máscaras nos valores que vêm crus do banco (só dígitos).
@@ -181,7 +186,8 @@ export function OrderForm({
     const invalid =
       validateOrderInput(form) ??
       (form.deliveryType !== "pickup"
-        ? validateDeliverySchedule(form.deliveryDate, form.deliveryShift, cutoffs)
+        ? validateDeliverySchedule(form.deliveryDate, form.deliveryShift, cutoffs) ??
+          validateDeliveryAvailability(form.deliveryDate, form.deliveryShift, weeklyCapacity)
         : null);
     if (invalid) {
       setError(invalid);
@@ -209,8 +215,11 @@ export function OrderForm({
   // Agendamento: hoje só até o corte de cada turno (hora de Brasília).
   const sp = nowInSp();
   const isToday = form.deliveryDate === sp.date;
-  const morningClosed = isToday && sp.time >= cutoffs.morning;
-  const afternoonClosed = isToday && sp.time >= cutoffs.afternoon;
+  // Turno indisponível: corte de hoje OU dia/turno sem entrega (capacidade 0).
+  const morningOff = !!form.deliveryDate && capacityFor(weeklyCapacity, form.deliveryDate, "morning") === 0;
+  const afternoonOff = !!form.deliveryDate && capacityFor(weeklyCapacity, form.deliveryDate, "afternoon") === 0;
+  const morningClosed = (isToday && sp.time >= cutoffs.morning) || morningOff;
+  const afternoonClosed = (isToday && sp.time >= cutoffs.afternoon) || afternoonOff;
   const needsFiscalAddress = form.invoiceType === "nfe"; // NF-e exige endereço mesmo na retirada
   const showAddress = isDelivery || needsFiscalAddress;
   const isNfe = form.invoiceType === "nfe";
@@ -411,14 +420,16 @@ export function OrderForm({
               <select value={form.deliveryShift} onChange={(e) => set({ deliveryShift: e.target.value })} className={inputClass}>
                 <option value="">—</option>
                 <option value="morning" disabled={morningClosed}>
-                  Manhã{morningClosed ? ` (fechou às ${cutoffs.morning})` : ""}
+                  Manhã{morningOff ? " (não entregamos)" : morningClosed ? ` (fechou às ${cutoffs.morning})` : ""}
                 </option>
                 <option value="afternoon" disabled={afternoonClosed}>
-                  Tarde{afternoonClosed ? ` (fechou às ${cutoffs.afternoon})` : ""}
+                  Tarde{afternoonOff ? " (não entregamos)" : afternoonClosed ? ` (fechou às ${cutoffs.afternoon})` : ""}
                 </option>
               </select>
-              {afternoonClosed && (
-                <p className="mt-1 text-xs text-amber-700">Hoje já fechou pra entrega — escolha outra data.</p>
+              {morningClosed && afternoonClosed && (
+                <p className="mt-1 text-xs text-amber-700">
+                  {morningOff && afternoonOff ? "Não entregamos nesse dia — escolha outra data." : "Esse dia já fechou pra entrega — escolha outra data."}
+                </p>
               )}
             </div>
           </div>

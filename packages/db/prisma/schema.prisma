@@ -213,6 +213,7 @@ model BotConfig {
   dailyDeliveryCapacity Int   @default(0) // entregas/dia (0 = sem limite definido)
   morningCutoff   String? // horário de corte do turno manhã (HH:MM; null = padrão 12:00)
   afternoonCutoff String? // horário de corte do turno tarde (HH:MM; null = padrão 18:00)
+  weeklyCapacity  Json?   // capacidade por dia da semana × turno: { "0".."6": { morning, afternoon } } (0=domingo; 0=não entrega; null=sem limite)
 
   // Prompt customizado pelo lojista
   extraInstructions  String   @default("") @db.Text

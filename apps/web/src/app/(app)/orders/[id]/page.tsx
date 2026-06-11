@@ -42,7 +42,7 @@ export default async function EditOrderPage({
       tx.appointment.findFirst({ where: { orderId: id }, select: { id: true } }),
       tx.botConfig.findUnique({
         where: { tenantId: tenant.id },
-        select: { morningCutoff: true, afternoonCutoff: true },
+        select: { morningCutoff: true, afternoonCutoff: true, weeklyCapacity: true },
       }),
     ]);
     return { order, products, fiscalCfg, professionals, isService: !!apptLink, botCfg };
@@ -105,6 +105,7 @@ export default async function EditOrderPage({
       orderId={order.id}
       orderNumber={order.orderNumber}
       cutoffs={{ morning: botCfg?.morningCutoff || "12:00", afternoon: botCfg?.afternoonCutoff || "18:00" }}
+      weeklyCapacity={(botCfg?.weeklyCapacity as never) ?? null}
       fiscalSlot={
         isService ? (
           <section className="rounded-2xl bg-white p-5 shadow-card">

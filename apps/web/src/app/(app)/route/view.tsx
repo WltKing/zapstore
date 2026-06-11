@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Map, MapPin, Check, GripVertical, Phone, Package, HandCoins, Truck } from "lucide-react";
+import { MapPin, Check, GripVertical, Phone, Package, HandCoins, Truck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -10,13 +10,13 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  useDroppable,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
-  arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -24,6 +24,7 @@ import {
   setRouteStatusAction,
   type RouteStatus,
 } from "@/lib/actions/route";
+import { updateDeliveryAction } from "@/lib/actions/deliveries";
 import { paymentLabel } from "@/lib/payments";
 
 export interface Stop {
@@ -70,19 +71,12 @@ function stopPoint(s: Stop): string {
   return (s.cep || s.address || "").trim();
 }
 
-/** URL do Google Maps com as paradas ativas NA ORDEM da lista (não otimiza sozinho). */
-function mapsRouteUrl(stops: Stop[]): string | null {
-  const pts = stops
-    .filter((s) => !TERMINAL.includes(s.routeStatus))
-    .map(stopPoint)
-    .filter(Boolean)
-    .map(encodeURIComponent);
-  if (pts.length === 0) return null;
-  if (pts.length === 1)
-    return `https://www.google.com/maps/dir/?api=1&destination=${pts[0]}&travelmode=driving`;
-  const destination = pts[pts.length - 1];
-  const waypoints = pts.slice(0, -1).join("%7C");
-  return `https://www.google.com/maps/dir/?api=1&destination=${destination}&waypoints=${waypoints}&travelmode=driving`;
+/** Link de navegação no Maps até a parada. */
+function navUrl(s: Stop): string | null {
+  const p = stopPoint(s);
+  return p
+    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p)}&travelmode=driving`
+    : null;
 }
 
 /** Ordena por turno (manhã → tarde → sem turno) preservando a ordem relativa. */
@@ -91,11 +85,15 @@ function sortByShift(stops: Stop[]): Stop[] {
   return [...stops].sort((a, b) => rank(a) - rank(b));
 }
 
-const SECTIONS: { key: string; label: string; match: (s: Stop) => boolean }[] = [
-  { key: "morning", label: "Manhã", match: (s) => s.shift === "morning" },
-  { key: "afternoon", label: "Tarde", match: (s) => s.shift === "afternoon" },
-  { key: "none", label: "Sem turno definido", match: (s) => !s.shift },
+const SECTIONS: { key: string; label: string; shift: string | null }[] = [
+  { key: "morning", label: "Manhã", shift: "morning" },
+  { key: "afternoon", label: "Tarde", shift: "afternoon" },
+  { key: "none", label: "Sem turno definido", shift: null },
 ];
+
+function sectionOf(s: Stop): string {
+  return s.shift === "morning" ? "morning" : s.shift === "afternoon" ? "afternoon" : "none";
+}
 
 export function RouteView({
   storeName,
@@ -123,6 +121,9 @@ export function RouteView({
   const pendingCount = list.filter((s) => !TERMINAL.includes(s.routeStatus)).length;
   const doneCount = list.filter((s) => s.routeStatus === "delivered").length;
 
+  // Só a PRIMEIRA parada em aberto tem os botões habilitados (rota sequencial).
+  const activeId = list.find((s) => !TERMINAL.includes(s.routeStatus))?.id ?? null;
+
   const persistOrder = (next: Stop[]) => {
     setList(next);
     startTransition(async () => {
@@ -134,25 +135,55 @@ export function RouteView({
     });
   };
 
-  /** Reordena dentro de uma seção (turno) e recompõe a lista global. */
-  const onDragEnd = (sectionKey: string) => (ev: DragEndEvent) => {
+  /** Solta o card: reordena e, se caiu em outra seção, muda o turno do pedido. */
+  const onDragEnd = (ev: DragEndEvent) => {
     const { active, over } = ev;
-    if (!over || active.id === over.id) return;
-    const section = SECTIONS.find((x) => x.key === sectionKey)!;
-    const items = list.filter(section.match);
-    const from = items.findIndex((s) => s.id === active.id);
-    const to = items.findIndex((s) => s.id === over.id);
-    if (from < 0 || to < 0) return;
-    const reordered = arrayMove(items, from, to);
-    // Recompõe na ordem das seções (manhã → tarde → sem turno).
-    const next = SECTIONS.flatMap((sec) =>
-      sec.key === sectionKey ? reordered : list.filter(sec.match),
-    );
+    if (!over) return;
+    const activeStop = list.find((s) => s.id === active.id);
+    if (!activeStop) return;
+    const overId = String(over.id);
+
+    let targetSection: string;
+    let targetIndex: number;
+    if (overId.startsWith("section:")) {
+      targetSection = overId.slice("section:".length);
+      targetIndex = Number.MAX_SAFE_INTEGER; // fim da seção
+    } else {
+      const overStop = list.find((s) => s.id === overId);
+      if (!overStop || overId === active.id) return;
+      targetSection = sectionOf(overStop);
+      targetIndex = list.filter((s) => sectionOf(s) === targetSection && s.id !== active.id).findIndex(
+        (s) => s.id === overId,
+      );
+    }
+
+    const sourceSection = sectionOf(activeStop);
+    const section = SECTIONS.find((x) => x.key === targetSection)!;
+
+    // Recompõe: tira o card da lista, insere na posição-alvo da seção destino.
+    const moved: Stop = { ...activeStop, shift: section.shift };
+    const next = SECTIONS.flatMap((sec) => {
+      const items = list.filter((s) => sectionOf(s) === sec.key && s.id !== active.id);
+      if (sec.key !== targetSection) return items;
+      const idx = Math.min(targetIndex < 0 ? items.length : targetIndex, items.length);
+      return [...items.slice(0, idx), moved, ...items.slice(idx)];
+    });
+
     persistOrder(next);
+    if (sourceSection !== targetSection) {
+      startTransition(async () => {
+        const r = await updateDeliveryAction(activeStop.id, { shift: section.shift });
+        if (!r.ok) {
+          setMsg(r.error ?? "Erro ao mudar o turno");
+          router.refresh();
+        }
+      });
+    }
   };
 
   const setStatus = (id: string, status: RouteStatus) => {
     setMsg(null);
+    const stop = list.find((s) => s.id === id);
     startTransition(async () => {
       const r = await setRouteStatusAction(id, status);
       if (!r.ok) {
@@ -161,18 +192,15 @@ export function RouteView({
       }
       if (r.whatsappError) setMsg(`Status atualizado, mas o WhatsApp falhou: ${r.whatsappError}`);
       else if (r.whatsappSent) setMsg("Cliente avisado no WhatsApp.");
+      // "A caminho" → abre a navegação até a parada automaticamente.
+      if (status === "en_route" && stop) {
+        const url = navUrl(stop);
+        if (url) window.open(url, "_blank", "noopener,noreferrer");
+      }
       router.refresh();
     });
   };
 
-  const mapsAll = mapsRouteUrl(list);
-
-  // Trava sequencial: só pode iniciar uma parada se todas as anteriores estiverem
-  // finalizadas (entregue/pulado/ausente).
-  const canStart = (id: string) => {
-    const i = list.findIndex((s) => s.id === id);
-    return list.slice(0, i).every((s) => TERMINAL.includes(s.routeStatus));
-  };
   const globalIndex = (id: string) => list.findIndex((s) => s.id === id);
 
   return (
@@ -201,24 +229,11 @@ export function RouteView({
         <span className="text-sm text-neutral-500">
           {pendingCount} a entregar · {doneCount} entregue{doneCount === 1 ? "" : "s"}
         </span>
-        <a
-          href={mapsAll ?? "#"}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => {
-            if (!mapsAll) e.preventDefault();
-          }}
-          title="Abre no Google Maps seguindo a ordem da lista"
-          className={`ml-auto rounded-lg px-4 py-2 text-sm font-medium text-white ${
-            mapsAll ? "bg-brand hover:bg-brand-hover" : "cursor-not-allowed bg-neutral-300"
-          }`}
-        >
-          <Map className="mr-1.5 inline h-[18px] w-[18px] align-[-3px]" strokeWidth={2} />Abrir rota no Maps
-        </a>
       </div>
       <p className="mt-2 text-xs text-neutral-400">
-        Arraste as paradas pra definir a ordem — o Maps segue a ordem da lista. No celular, segure o
-        cartão e arraste.
+        Arraste as paradas pra definir a ordem — inclusive entre Manhã e Tarde (muda o turno do
+        pedido). No celular, segure o cartão e arraste. Ao tocar &quot;A caminho&quot;, o Maps abre a
+        navegação até o endereço.
       </p>
 
       {msg && (
@@ -233,35 +248,60 @@ export function RouteView({
           </p>
         </section>
       ) : (
-        SECTIONS.map((section) => {
-          const items = list.filter(section.match);
-          if (items.length === 0) return null;
-          return (
-            <section key={section.key} className="mt-6">
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-                {section.label} <span className="font-normal text-neutral-400">({items.length})</span>
-              </h2>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd(section.key)}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          {SECTIONS.map((section) => {
+            const items = list.filter((s) => sectionOf(s) === section.key);
+            if (items.length === 0 && section.key === "none") return null;
+            return (
+              <SectionList key={section.key} sectionKey={section.key} label={section.label} count={items.length}>
                 <SortableContext items={items.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-                  <ol className="space-y-3">
-                    {items.map((s) => (
-                      <SortableStop
-                        key={s.id}
-                        s={s}
-                        index={globalIndex(s.id)}
-                        isPending={isPending}
-                        canStart={canStart(s.id)}
-                        onStatus={setStatus}
-                      />
-                    ))}
-                  </ol>
+                  {items.map((s) => (
+                    <SortableStop
+                      key={s.id}
+                      s={s}
+                      index={globalIndex(s.id)}
+                      isPending={isPending}
+                      isActive={s.id === activeId}
+                      onStatus={setStatus}
+                    />
+                  ))}
                 </SortableContext>
-              </DndContext>
-            </section>
-          );
-        })
+              </SectionList>
+            );
+          })}
+        </DndContext>
       )}
     </main>
+  );
+}
+
+/** Seção de turno — também é alvo de soltura (permite arrastar pra seção vazia). */
+function SectionList({
+  sectionKey,
+  label,
+  count,
+  children,
+}: {
+  sectionKey: string;
+  label: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: `section:${sectionKey}` });
+  return (
+    <section className="mt-6">
+      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+        {label} <span className="font-normal text-neutral-400">({count})</span>
+      </h2>
+      <ol
+        ref={setNodeRef}
+        className={`space-y-3 rounded-2xl transition ${isOver ? "bg-brand-soft p-2" : ""} ${
+          count === 0 ? "border-2 border-dashed border-neutral-200 p-6 text-center text-xs text-neutral-400" : ""
+        }`}
+      >
+        {count === 0 ? "Arraste uma entrega pra cá" : children}
+      </ol>
+    </section>
   );
 }
 
@@ -269,13 +309,13 @@ function SortableStop({
   s,
   index,
   isPending,
-  canStart,
+  isActive,
   onStatus,
 }: {
   s: Stop;
   index: number;
   isPending: boolean;
-  canStart: boolean;
+  isActive: boolean;
   onStatus: (id: string, status: RouteStatus) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -287,6 +327,7 @@ function SortableStop({
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(point)}`
     : null;
   const phoneDigits = s.customerPhone.replace(/\D/g, "");
+  const lockTitle = isActive ? "" : "Finalize as paradas anteriores primeiro";
 
   return (
     <li
@@ -363,14 +404,14 @@ function SortableStop({
             </div>
           )}
 
-          {/* Ações */}
+          {/* Ações — só a parada ativa (primeira em aberto) tem botões habilitados */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {s.routeStatus === "pending" && (
               <button
                 type="button"
                 onClick={() => onStatus(s.id, "en_route")}
-                disabled={isPending || !canStart}
-                title={canStart ? "" : "Finalize as paradas anteriores primeiro"}
+                disabled={isPending || !isActive}
+                title={lockTitle}
                 className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-neutral-300"
               >
                 <Truck className="mr-1 inline h-4 w-4 align-[-2px]" strokeWidth={2} />A caminho
@@ -380,8 +421,9 @@ function SortableStop({
               <button
                 type="button"
                 onClick={() => onStatus(s.id, "at_door")}
-                disabled={isPending}
-                className="rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-purple-700"
+                disabled={isPending || !isActive}
+                title={lockTitle}
+                className="rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-purple-700 disabled:bg-neutral-300"
               >
                 <MapPin className="mr-1 inline h-4 w-4 align-[-2px]" strokeWidth={2} />Na porta
               </button>
@@ -390,8 +432,9 @@ function SortableStop({
               <button
                 type="button"
                 onClick={() => onStatus(s.id, "delivered")}
-                disabled={isPending}
-                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                disabled={isPending || !isActive}
+                title={lockTitle}
+                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:bg-neutral-300"
               >
                 <Check className="mr-1 inline h-4 w-4 align-[-2px]" strokeWidth={2} />Entregue
               </button>
@@ -401,16 +444,18 @@ function SortableStop({
                 <button
                   type="button"
                   onClick={() => onStatus(s.id, "absent")}
-                  disabled={isPending}
-                  className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
+                  disabled={isPending || !isActive}
+                  title={lockTitle}
+                  className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-40"
                 >
                   Ausente
                 </button>
                 <button
                   type="button"
                   onClick={() => onStatus(s.id, "skipped")}
-                  disabled={isPending}
-                  className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
+                  disabled={isPending || !isActive}
+                  title={lockTitle}
+                  className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100 disabled:opacity-40"
                 >
                   Pular
                 </button>

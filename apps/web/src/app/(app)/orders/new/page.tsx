@@ -48,7 +48,7 @@ export default async function NewOrderPage() {
       tx.professional.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { name: true } }),
       tx.botConfig.findUnique({
         where: { tenantId: tenant.id },
-        select: { morningCutoff: true, afternoonCutoff: true },
+        select: { morningCutoff: true, afternoonCutoff: true, weeklyCapacity: true },
       }),
     ]);
     return { products, professionals, botCfg };
@@ -67,6 +67,7 @@ export default async function NewOrderPage() {
       sellers={sellers}
       initial={BLANK}
       cutoffs={{ morning: botCfg?.morningCutoff || "12:00", afternoon: botCfg?.afternoonCutoff || "18:00" }}
+      weeklyCapacity={(botCfg?.weeklyCapacity as never) ?? null}
     />
   );
 }

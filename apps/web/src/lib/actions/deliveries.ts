@@ -55,6 +55,29 @@ export async function updateDeliveryAction(
   }
 }
 
+/** Salva a capacidade semanal: { "0".."6": { morning, afternoon } } (0=domingo; 0=não entrega; vazio=sem limite). */
+export async function setWeeklyCapacityAction(
+  weekly: Record<string, { morning: number | null; afternoon: number | null }>,
+): Promise<ActionResult> {
+  try {
+    const tenantId = await requireTenantId();
+    const clean: Record<string, { morning: number | null; afternoon: number | null }> = {};
+    for (let wd = 0; wd <= 6; wd++) {
+      const row = weekly[String(wd)];
+      const norm = (v: unknown) =>
+        typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.round(v) : null;
+      clean[String(wd)] = { morning: norm(row?.morning), afternoon: norm(row?.afternoon) };
+    }
+    await withTenant(tenantId, async (tx) => {
+      await tx.botConfig.update({ where: { tenantId }, data: { weeklyCapacity: clean } });
+    });
+    revalidatePath("/deliveries");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
 /** Define os horários de corte por turno (HH:MM; vazio = padrão 12:00/18:00). */
 export async function setDeliveryCutoffsAction(
   morning: string,
