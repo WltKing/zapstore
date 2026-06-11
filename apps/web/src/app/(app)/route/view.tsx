@@ -5,6 +5,7 @@ import { MapPin, Check, GripVertical, Phone, Package, HandCoins, Truck } from "l
 import { useRouter } from "next/navigation";
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
   PointerSensor,
   TouchSensor,
@@ -12,6 +13,7 @@ import {
   useSensors,
   useDroppable,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -108,6 +110,7 @@ export function RouteView({
   const [list, setList] = useState<Stop[]>(() => sortByShift(stops));
   const [isPending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
 
   // Re-sincroniza quando a página recarrega com novos dados.
   useEffect(() => setList(sortByShift(stops)), [stops]);
@@ -135,8 +138,11 @@ export function RouteView({
     });
   };
 
+  const onDragStart = (ev: DragStartEvent) => setDragId(String(ev.active.id));
+
   /** Solta o card: reordena e, se caiu em outra seção, muda o turno do pedido. */
   const onDragEnd = (ev: DragEndEvent) => {
+    setDragId(null);
     const { active, over } = ev;
     if (!over) return;
     const activeStop = list.find((s) => s.id === active.id);
@@ -248,7 +254,13 @@ export function RouteView({
           </p>
         </section>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onDragCancel={() => setDragId(null)}
+        >
           {SECTIONS.map((section) => {
             const items = list.filter((s) => sectionOf(s) === section.key);
             if (items.length === 0 && section.key === "none") return null;
@@ -269,9 +281,33 @@ export function RouteView({
               </SectionList>
             );
           })}
+
+          {/* Clone que segue o cursor o tempo todo (inclusive entre seções). */}
+          <DragOverlay>
+            {dragId ? <DragCard s={list.find((s) => s.id === dragId)!} index={globalIndex(dragId)} /> : null}
+          </DragOverlay>
         </DndContext>
       )}
     </main>
+  );
+}
+
+/** Cartão compacto exibido enquanto arrasta. */
+function DragCard({ s, index }: { s: Stop; index: number }) {
+  return (
+    <div className="rounded-2xl bg-white p-3 shadow-xl ring-2 ring-brand">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
+          {index + 1}
+        </span>
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium">
+            {s.customerName} <span className="font-mono text-xs text-neutral-400">#{s.orderNumber}</span>
+          </div>
+          <div className="truncate text-xs text-neutral-500">{s.address || "Sem endereço"}</div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -338,7 +374,7 @@ function SortableStop({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`rounded-2xl bg-white p-4 shadow-card ${terminal ? "opacity-60" : ""} ${
-        isDragging ? "z-10 ring-2 ring-brand" : ""
+        isDragging ? "opacity-30" : ""
       }`}
     >
       <div className="flex items-start gap-2 sm:gap-3">
