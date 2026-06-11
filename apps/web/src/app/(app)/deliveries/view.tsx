@@ -42,7 +42,7 @@ function formatBrl(v: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 }
 function dayKey(iso: string): string {
-  return new Date(iso).toLocaleDateString("pt-BR");
+  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 function dayLabel(iso: string): string {
   return new Date(iso).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
@@ -88,8 +88,8 @@ export function DeliveriesView({
   });
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Entregas</h1>
@@ -141,7 +141,7 @@ export function DeliveriesView({
                     <span className={`text-xs font-medium ${over ? "text-red-600" : "text-neutral-500"}`}>
                       {pending} a entregar
                       {capacity > 0 ? ` / ${capacity}` : ""}
-                      {over ? " · acima da capacidade ⚠️" : ""}
+                      {over ? " · acima da capacidade" : ""}
                     </span>
                   </div>
                   <ul className="divide-y divide-neutral-100 rounded-2xl bg-white shadow-card">

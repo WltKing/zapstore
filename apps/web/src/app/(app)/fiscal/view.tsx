@@ -115,7 +115,7 @@ export function FiscalView({
 
   if (!isAdmin) {
     return (
-      <main className="mx-auto max-w-2xl px-6 py-12">
+      <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
         <h1 className="text-3xl font-bold tracking-tight">Fiscal</h1>
         <div className="mt-8 rounded-2xl border border-dashed border-neutral-300 bg-white p-10 text-center">
           <div className="text-3xl">🔒</div>
@@ -209,8 +209,8 @@ export function FiscalView({
   };
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Configuração fiscal</h1>
@@ -244,7 +244,7 @@ export function FiscalView({
             Certificado:{" "}
             <strong>
               {initial?.certStatus === "ok"
-                ? `OK${initial.certValidoAte ? ` (válido até ${new Date(initial.certValidoAte).toLocaleDateString("pt-BR")})` : ""}`
+                ? `OK${initial.certValidoAte ? ` (válido até ${new Date(initial.certValidoAte).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })})` : ""}`
                 : initial?.certStatus === "erro"
                   ? "Erro no envio"
                   : "Pendente"}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { Map, MapPin, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   reorderStopsAction,
@@ -118,7 +119,7 @@ export function RouteView({
         return;
       }
       if (r.whatsappError) setMsg(`Status atualizado, mas o WhatsApp falhou: ${r.whatsappError}`);
-      else if (r.whatsappSent) setMsg("Cliente avisado no WhatsApp ✅");
+      else if (r.whatsappSent) setMsg("Cliente avisado no WhatsApp.");
       router.refresh();
     });
   };
@@ -130,8 +131,8 @@ export function RouteView({
   const canStart = (i: number) => list.slice(0, i).every((s) => TERMINAL.includes(s.routeStatus));
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Rota do dia</h1>
@@ -166,7 +167,7 @@ export function RouteView({
             mapsAll ? "bg-brand hover:bg-brand-hover" : "cursor-not-allowed bg-neutral-300"
           }`}
         >
-          🗺️ Abrir rota no Maps
+          <Map className="mr-1.5 inline h-[18px] w-[18px] align-[-3px]" strokeWidth={2} />Abrir rota no Maps
         </a>
       </div>
 
@@ -264,7 +265,7 @@ export function RouteView({
                           disabled={isPending}
                           className="rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-purple-700"
                         >
-                          📍 Na porta
+                          <MapPin className="mr-1 inline h-4 w-4 align-[-2px]" strokeWidth={2} />Na porta
                         </button>
                       )}
                       {(s.routeStatus === "en_route" || s.routeStatus === "at_door") && (
@@ -274,7 +275,7 @@ export function RouteView({
                           disabled={isPending}
                           className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
                         >
-                          ✓ Entregue
+                          <Check className="mr-1 inline h-4 w-4 align-[-2px]" strokeWidth={2} />Entregue
                         </button>
                       )}
                       {!terminal && (

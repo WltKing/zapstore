@@ -63,8 +63,8 @@ export function AgendaView({
   const shiftsOrder = ["morning", "afternoon", ""];
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-12">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Agenda</h1>

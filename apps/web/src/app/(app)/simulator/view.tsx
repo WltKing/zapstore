@@ -62,7 +62,7 @@ export function SimulatorView({
 
   return (
     <main className="mx-auto flex h-screen max-w-3xl flex-col px-6 py-6">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-2xl font-bold tracking-tight">Simulador do bot</h1>

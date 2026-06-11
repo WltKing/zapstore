@@ -26,7 +26,7 @@ export function CaixaPdfButton({
     const rows = movements
       .map(
         (m) =>
-          `<tr><td>${new Date(m.date).toLocaleDateString("pt-BR")}</td><td>${esc(m.label)}</td>` +
+          `<tr><td>${new Date(m.date).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</td><td>${esc(m.label)}</td>` +
           `<td class="r">${m.kind === "in" ? "+" : "−"} ${formatBrlReport(Math.abs(m.amountBrl))}</td></tr>`,
       )
       .join("");

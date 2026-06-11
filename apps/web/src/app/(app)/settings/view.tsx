@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { X, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { updateStoreSettingsAction, updateModulesAction } from "@/lib/actions/settings";
 import { ImageUpload } from "@/components/image-upload";
@@ -130,8 +131,8 @@ export function SettingsView({
     "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
@@ -342,10 +343,11 @@ export function SettingsView({
                   <button
                     type="button"
                     onClick={() => removeCreditRow(i)}
-                    className="ml-auto text-neutral-400 hover:text-red-600"
+                    className="ml-auto inline-flex items-center justify-center text-neutral-400 hover:text-red-600"
                     aria-label="Remover"
+                    title="Remover"
                   >
-                    ✕
+                    <X className="h-4 w-4" strokeWidth={2} />
                   </button>
                 </div>
               ))}
@@ -503,7 +505,12 @@ export function SettingsView({
         </section>
 
         {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
-        {saved && <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Salvo! ✅</p>}
+        {saved && (
+          <p className="inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <CheckCircle2 className="h-4 w-4" strokeWidth={2} />
+            Salvo!
+          </p>
+        )}
 
         <div className="flex justify-end">
           <button

@@ -199,8 +199,8 @@ export function OrderForm({
   const isNfe = form.invoiceType === "nfe";
 
   return (
-    <form onSubmit={submit} className="mx-auto max-w-3xl px-6 py-10 space-y-6">
-      <header className="flex items-center justify-between">
+    <form onSubmit={submit} className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <a href="/orders" className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-800">
             <ArrowLeft className="h-4 w-4" strokeWidth={2} />

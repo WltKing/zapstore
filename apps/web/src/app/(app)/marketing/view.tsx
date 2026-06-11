@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil, Trash2 } from "lucide-react";
 import {
   createSpendAction,
   deleteSpendAction,
@@ -91,8 +92,8 @@ export function MarketingView({
   };
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Marketing</h1>
@@ -207,7 +208,7 @@ export function MarketingView({
                   <span className="font-medium capitalize">{channelLabel(s.channel)}</span>
                   {s.notes && <span className="ml-2 text-xs text-neutral-500">{s.notes}</span>}
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <span className="font-medium">{formatBrl(s.amountBrl)}</span>
                   <button
                     type="button"
@@ -215,17 +216,19 @@ export function MarketingView({
                       setError(null);
                       setEditing(s);
                     }}
-                    className="text-sm text-neutral-600 hover:text-neutral-900"
+                    title="Editar"
+                    className="inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700"
                   >
-                    Editar
+                    <Pencil className="h-[18px] w-[18px]" strokeWidth={2} />
                   </button>
                   <button
                     type="button"
                     onClick={() => remove(s.id)}
                     disabled={isPending}
-                    className="text-sm text-red-600 hover:text-red-700"
+                    title="Excluir"
+                    className="inline-flex items-center justify-center text-neutral-400 hover:text-red-600 disabled:opacity-50"
                   >
-                    Excluir
+                    <Trash2 className="h-[18px] w-[18px]" strokeWidth={2} />
                   </button>
                 </div>
               </li>

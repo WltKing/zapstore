@@ -66,7 +66,7 @@ function formatPhone(phone: string): string {
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("pt-BR");
+  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
 export function CustomersView({ initial, storeName }: { initial: CustomerRow[]; storeName: string }) {

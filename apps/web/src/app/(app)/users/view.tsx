@@ -56,8 +56,8 @@ export function UsersView({
   };
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Usuários</h1>
@@ -125,9 +125,9 @@ export function UsersView({
             <table className="w-full">
               <thead className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-500">
                 <tr>
-                  <th className="px-6 py-3 text-left">Usuário</th>
-                  <th className="px-6 py-3 text-left">Perfil</th>
-                  <th className="px-6 py-3 text-right">Ações</th>
+                  <th className="py-3 pl-4 pr-2 text-left sm:px-4">Usuário</th>
+                  <th className="px-2 py-3 text-left sm:px-4">Perfil</th>
+                  <th className="py-3 pl-2 pr-4 text-right sm:px-4">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -136,7 +136,7 @@ export function UsersView({
                   return (
                     <Fragment key={u.userId}>
                       <tr className="border-b border-neutral-100 last:border-0">
-                        <td className="px-6 py-4">
+                        <td className="py-3 pl-4 pr-2 sm:px-4 sm:py-4">
                           <div className="font-medium">
                             {u.email}
                             {self && (
@@ -149,12 +149,12 @@ export function UsersView({
                             <div className="text-xs text-amber-600">Convite pendente (ainda não acessou)</div>
                           )}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-2 py-3 sm:px-4 sm:py-4">
                           <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-700">
                             {accessLabel(u)}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="py-3 pl-2 pr-4 text-right sm:px-4 sm:py-4">
                           {self ? (
                             <span className="text-xs text-neutral-400">—</span>
                           ) : (

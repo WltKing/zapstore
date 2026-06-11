@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   createAppointmentAction,
@@ -73,7 +74,7 @@ function dayLabel(iso: string): string {
   });
 }
 function dayKey(iso: string): string {
-  return new Date(iso).toLocaleDateString("pt-BR");
+  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
 export function SchedulingView({
@@ -120,8 +121,8 @@ export function SchedulingView({
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      <header className="flex items-center justify-between">
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Agendamentos</h1>
@@ -222,10 +223,11 @@ export function SchedulingView({
                             if (confirm("Excluir este agendamento?")) run(() => deleteAppointmentAction(a.id));
                           }}
                           disabled={isPending}
-                          className="text-sm text-neutral-400 hover:text-red-700"
+                          className="inline-flex items-center justify-center text-neutral-400 hover:text-red-700"
                           aria-label="Excluir"
+                          title="Excluir"
                         >
-                          ✕
+                          <X className="h-4 w-4" strokeWidth={2} />
                         </button>
                       </div>
                     </li>
