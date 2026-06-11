@@ -511,20 +511,20 @@ function KeywordList({
     setDraft("");
   };
   return (
-    <div className="rounded-xl border border-neutral-200 p-4">
-      <h3 className="text-sm font-medium text-neutral-700">{title}</h3>
+    <div className="min-w-0 rounded-xl border border-neutral-200 p-3 sm:p-4">
+      <h3 className="break-words text-sm font-medium text-neutral-700">{title}</h3>
       <div className="mt-2 flex flex-wrap gap-2">
         {list.length === 0 && <span className="text-xs text-neutral-400">Nenhuma frase ainda.</span>}
         {list.map((p) => (
           <span
             key={p}
-            className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-700"
+            className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-700"
           >
-            {p}
+            <span className="min-w-0 break-words">{p}</span>
             <button
               type="button"
               onClick={() => onChange(list.filter((x) => x !== p))}
-              className="text-neutral-400 hover:text-red-600"
+              className="shrink-0 text-neutral-400 hover:text-red-600"
               aria-label="Remover"
             >
               <X className="h-3.5 w-3.5" strokeWidth={2} />
@@ -542,15 +542,17 @@ function KeywordList({
               add();
             }
           }}
-          placeholder="Digite a frase e Enter"
-          className="min-w-0 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          placeholder="Digite a frase..."
+          className="w-0 min-w-0 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
         <button
           type="button"
           onClick={add}
-          className="shrink-0 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+          title="Adicionar"
+          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
         >
-          Adicionar
+          <Plus className="h-4 w-4" strokeWidth={2} />
+          <span className="hidden sm:inline">Adicionar</span>
         </button>
       </div>
     </div>
