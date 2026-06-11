@@ -6,6 +6,7 @@ import { NICHE_TEMPLATES } from "@/lib/niches";
 import { parseCardFees, emptyCardFees } from "@/lib/fees";
 import { parseSettlement } from "@/lib/settlement";
 import { SettingsView } from "./view";
+import { DeliverySettings } from "./delivery-settings";
 
 export default async function SettingsPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -35,6 +36,15 @@ export default async function SettingsPage() {
       niche={tenant.niche ?? "generico"}
       enabledModules={tenant.enabledModules ?? []}
       email={session.user.email}
+      deliverySlot={
+        (tenant.enabledModules ?? []).includes("delivery") ? (
+          <DeliverySettings
+            weeklyCapacity={(tenant.botConfig?.weeklyCapacity as never) ?? null}
+            morningCutoff={tenant.botConfig?.morningCutoff ?? ""}
+            afternoonCutoff={tenant.botConfig?.afternoonCutoff ?? ""}
+          />
+        ) : null
+      }
     />
   );
 }

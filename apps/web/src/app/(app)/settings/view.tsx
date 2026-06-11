@@ -33,6 +33,7 @@ export function SettingsView({
   niche,
   enabledModules,
   email,
+  deliverySlot,
 }: {
   storeName: string;
   brandColor: string | null;
@@ -50,6 +51,7 @@ export function SettingsView({
   niche: string;
   enabledModules: string[];
   email: string;
+  deliverySlot?: React.ReactNode;
 }) {
   const router = useRouter();
   const [name, setName] = useState(storeName);
@@ -522,6 +524,8 @@ export function SettingsView({
           </button>
         </div>
       </form>
+
+      {deliverySlot}
 
       <ModulesSection niche={niche} enabledModules={enabledModules} nicheLabel={nicheLabel} />
     </main>

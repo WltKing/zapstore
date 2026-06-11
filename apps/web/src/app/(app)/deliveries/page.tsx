@@ -41,8 +41,6 @@ export default async function DeliveriesPage() {
       storeName={tenant.name}
       capacity={tenant.botConfig?.dailyDeliveryCapacity ?? 0}
       weeklyCapacity={(tenant.botConfig?.weeklyCapacity as never) ?? null}
-      morningCutoff={tenant.botConfig?.morningCutoff ?? ""}
-      afternoonCutoff={tenant.botConfig?.afternoonCutoff ?? ""}
       deliveries={orders.map((o) => {
         const effective = o.deliveryDate ?? o.scheduledFor ?? o.createdAt;
         return {

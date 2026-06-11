@@ -68,14 +68,16 @@ export async function setRouteStatusAction(
     const order = await withTenant(tenantId, async (tx) => {
       const o = await tx.order.findUnique({
         where: { id: orderId },
-        select: { id: true, customerName: true, customerPhone: true },
+        select: { id: true, customerName: true, customerPhone: true, status: true },
       });
       if (!o) throw new Error("Pedido não encontrado.");
-      const data: { routeStatus: RouteStatus; status?: "IN_DELIVERY" | "DELIVERED" } = {
+      const data: { routeStatus: RouteStatus; status?: "IN_DELIVERY" | "DELIVERED" | "CONFIRMED" } = {
         routeStatus: status,
       };
       if (status === "en_route" || status === "at_door") data.status = "IN_DELIVERY";
-      if (status === "delivered") data.status = "DELIVERED";
+      else if (status === "delivered") data.status = "DELIVERED";
+      // Pulado/ausente/reaberto: se o pedido estava "em rota"/"entregue", volta pra "a entregar".
+      else if (o.status === "IN_DELIVERY" || o.status === "DELIVERED") data.status = "CONFIRMED";
       await tx.order.update({ where: { id: orderId }, data });
       return o;
     });

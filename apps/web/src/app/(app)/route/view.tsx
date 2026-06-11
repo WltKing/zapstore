@@ -287,7 +287,9 @@ function SectionList({
   count: number;
   children: React.ReactNode;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `section:${sectionKey}` });
+  // Só compete pela colisão quando está VAZIA — senão a seção (área grande)
+  // "rouba" o alvo dos cards e o arrasto não acompanha o cursor.
+  const { setNodeRef, isOver } = useDroppable({ id: `section:${sectionKey}`, disabled: count > 0 });
   return (
     <section className="mt-6">
       <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">
@@ -295,8 +297,10 @@ function SectionList({
       </h2>
       <ol
         ref={setNodeRef}
-        className={`space-y-3 rounded-2xl transition ${isOver ? "bg-brand-soft p-2" : ""} ${
-          count === 0 ? "border-2 border-dashed border-neutral-200 p-6 text-center text-xs text-neutral-400" : ""
+        className={`space-y-3 rounded-2xl ${
+          count === 0
+            ? `border-2 border-dashed p-6 text-center text-xs ${isOver ? "border-neutral-400 bg-brand-soft text-neutral-600" : "border-neutral-200 text-neutral-400"}`
+            : ""
         }`}
       >
         {count === 0 ? "Arraste uma entrega pra cá" : children}
