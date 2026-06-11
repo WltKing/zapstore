@@ -72,6 +72,9 @@ export default async function RoutePage({
         scheduledFor: true,
         createdAt: true,
         notes: true,
+        items: true,
+        toReceive: true,
+        paymentMethod: true,
       },
     }),
   );
@@ -94,6 +97,11 @@ export default async function RoutePage({
       routeStatus: o.routeStatus ?? "pending",
       shift: o.deliveryShift ?? null,
       notes: o.notes ?? null,
+      items: (Array.isArray(o.items) ? (o.items as Array<{ name?: string; qty?: number }>) : []).map(
+        (it) => `${it.qty ?? 1}× ${it.name ?? "item"}`,
+      ),
+      toReceive: o.toReceive,
+      paymentMethod: o.paymentMethod,
     }));
 
   return <RouteView storeName={tenant.name} dayKey={key} stops={stops} />;
