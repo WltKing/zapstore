@@ -260,15 +260,31 @@ export function ProfitWaterfall({ steps }: { steps: WaterfallStep[] }) {
   );
 }
 
-type InOutPoint = { label: string; entradas: number; despesas: number };
+type DuoPoint = { label: string; a: number; b: number };
 
-/** Barras agrupadas Entrou × Saiu por dia (Caixa). */
-export function CashBars({ data }: { data: InOutPoint[] }) {
-  const hasData = data.some((d) => d.entradas > 0 || d.despesas > 0);
+/** Barras agrupadas de 2 séries (genérico — Caixa, Marketing...). */
+export function DuoBars({
+  data,
+  aLabel,
+  bLabel,
+  aColor = "#10b981",
+  bColor = "#ef4444",
+  labelPrefix = "",
+  empty = "Sem dados ainda.",
+}: {
+  data: DuoPoint[];
+  aLabel: string;
+  bLabel: string;
+  aColor?: string;
+  bColor?: string;
+  labelPrefix?: string;
+  empty?: string;
+}) {
+  const hasData = data.some((d) => d.a > 0 || d.b > 0);
   return (
     <div className="mt-4 h-56">
       {!hasData ? (
-        <Empty>Sem movimento neste mês ainda.</Empty>
+        <Empty>{empty}</Empty>
       ) : (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barGap={1}>
@@ -279,23 +295,43 @@ export function CashBars({ data }: { data: InOutPoint[] }) {
               content={({ active, payload }) =>
                 active && payload?.length ? (
                   <div className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs shadow-card">
-                    <div className="text-neutral-500">Dia {payload[0].payload.label}</div>
-                    <div className="font-semibold text-emerald-700">
-                      Entrou: {formatBrl(payload[0].payload.entradas)}
+                    <div className="text-neutral-500">
+                      {labelPrefix}
+                      {payload[0].payload.label}
                     </div>
-                    <div className="font-semibold text-red-700">
-                      Saiu: {formatBrl(payload[0].payload.despesas)}
+                    <div className="font-semibold" style={{ color: aColor }}>
+                      {aLabel}: {formatBrl(payload[0].payload.a)}
+                    </div>
+                    <div className="font-semibold" style={{ color: bColor }}>
+                      {bLabel}: {formatBrl(payload[0].payload.b)}
                     </div>
                   </div>
                 ) : null
               }
             />
-            <Bar dataKey="entradas" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={14} />
-            <Bar dataKey="despesas" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={14} />
+            <Bar dataKey="a" fill={aColor} radius={[4, 4, 0, 0]} maxBarSize={14} />
+            <Bar dataKey="b" fill={bColor} radius={[4, 4, 0, 0]} maxBarSize={14} />
           </BarChart>
         </ResponsiveContainer>
       )}
     </div>
+  );
+}
+
+type InOutPoint = { label: string; entradas: number; despesas: number };
+
+/** Barras agrupadas Entrou × Saiu por dia (Caixa). */
+export function CashBars({ data }: { data: InOutPoint[] }) {
+  return (
+    <DuoBars
+      data={data.map((d) => ({ label: d.label, a: d.entradas, b: d.despesas }))}
+      aLabel="Entrou"
+      bLabel="Saiu"
+      aColor="#10b981"
+      bColor="#ef4444"
+      labelPrefix="Dia "
+      empty="Sem movimento neste mês ainda."
+    />
   );
 }
 

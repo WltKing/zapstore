@@ -74,6 +74,7 @@ export default async function EditOrderPage({
     city: order.city ?? "",
     state: order.state ?? "",
     channel: order.channel,
+    leadSource: order.leadSource ?? "",
     sellerName: order.sellerName ?? "",
     invoiceType: order.invoiceType,
     toReceive: order.toReceive,

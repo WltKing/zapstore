@@ -87,6 +87,29 @@ export async function updateSpendAction(id: string, input: SpendInput): Promise<
   }
 }
 
+export interface MarketingKeywordsInput {
+  meta: string[];
+  google: string[];
+}
+
+/** Salva as frases-chave que identificam a origem do lead (Meta/Google). */
+export async function saveMarketingKeywordsAction(
+  input: MarketingKeywordsInput,
+): Promise<ActionResult> {
+  try {
+    const tenantId = await requireTenantId();
+    const clean = (list: string[]) =>
+      [...new Set(list.map((s) => s.trim()).filter((s) => s.length >= 3))].slice(0, 20);
+    const keywords = { meta: clean(input.meta ?? []), google: clean(input.google ?? []) };
+    // tenants é global (sem RLS) — update direto.
+    await prisma.tenant.update({ where: { id: tenantId }, data: { marketingKeywords: keywords } });
+    revalidatePath("/marketing");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
 export async function deleteSpendAction(id: string): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();

@@ -43,6 +43,7 @@ export interface OrderInput {
   city?: string;
   state?: string;
   channel?: string; // "online" | "presencial"
+  leadSource?: string; // "" | "meta" | "google" — origem de marketing (anúncio)
   sellerName?: string;
   invoiceType?: string; // "none" | "nfce" | "nfe"
   toReceive?: boolean;
@@ -123,6 +124,7 @@ function buildOrderData(input: OrderInput) {
     state: input.state?.trim().toUpperCase() || null,
     customerAddress: composeAddress(input),
     channel: input.channel === "online" ? "online" : "presencial",
+    leadSource: input.leadSource === "meta" || input.leadSource === "google" ? input.leadSource : null,
     sellerName: input.sellerName?.trim() || null,
     invoiceType: inv === "nfce" || inv === "nfe" ? inv : "none",
     toReceive: Boolean(input.toReceive),
@@ -161,6 +163,21 @@ async function applyStockDelta(
   }
 }
 
+/** Origem de marketing herdada da conversa do WhatsApp (match por sufixo do telefone). */
+async function inheritLeadSource(tx: Tx, phone: string): Promise<string | null> {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 8) return null;
+  const tail = digits.slice(-8);
+  const convs = await tx.conversation.findMany({
+    where: { leadSource: { not: null } },
+    select: { customerPhone: true, leadSource: true },
+    orderBy: { lastMessageAt: "desc" },
+    take: 200,
+  });
+  const hit = convs.find((c) => c.customerPhone.replace(/\D/g, "").endsWith(tail));
+  return hit?.leadSource ?? null;
+}
+
 /** Cria/atualiza o cliente (chave = telefone) a partir dos dados do pedido. */
 async function upsertCustomerFromOrder(tx: Tx, tenantId: string, input: OrderInput) {
   const phone = input.customerPhone.replace(/\D/g, "");
@@ -194,6 +211,9 @@ export async function createOrderAction(
         orderBy: { orderNumber: "desc" },
       });
       const orderNumber = (last?.orderNumber ?? 0) + 1;
+      const data = buildOrderData(input);
+      // Sem origem informada → tenta herdar da conversa do WhatsApp (frase-chave).
+      if (!data.leadSource) data.leadSource = await inheritLeadSource(tx, input.customerPhone);
       const order = await tx.order.create({
         data: {
           tenantId,
@@ -201,7 +221,7 @@ export async function createOrderAction(
           status: "PENDING",
           items,
           totalBrl,
-          ...buildOrderData(input),
+          ...data,
         },
       });
       return order.id;

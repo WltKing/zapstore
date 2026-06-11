@@ -299,6 +299,16 @@ export function OrderForm({
             </select>
           </div>
         </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Origem (anúncio, opcional)</label>
+            <select value={form.leadSource ?? ""} onChange={(e) => set({ leadSource: e.target.value })} className={inputClass}>
+              <option value="">Não sei / nenhuma</option>
+              <option value="meta">Instagram/Facebook (Meta)</option>
+              <option value="google">Google</option>
+            </select>
+          </div>
+        </div>
         <label className="mt-3 flex items-center gap-2">
           <input type="checkbox" checked={form.toReceive ?? false} onChange={(e) => set({ toReceive: e.target.checked })} className="h-4 w-4 rounded border-neutral-300" />
           <span className="text-sm text-neutral-700">A receber (ex: recebimento na entrega)</span>

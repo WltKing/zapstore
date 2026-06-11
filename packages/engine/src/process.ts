@@ -21,6 +21,30 @@ function startOfMonth(): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
+/** Normaliza pra comparar frase-chave: minúsculas e sem acentos. */
+function normalizeForMatch(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+/** Detecta a origem do lead (meta/google) pela frase-chave configurada pelo lojista. */
+function detectLeadSource(
+  text: string,
+  keywords: unknown,
+): "meta" | "google" | null {
+  if (!keywords || typeof keywords !== "object") return null;
+  const kw = keywords as { meta?: unknown; google?: unknown };
+  const norm = normalizeForMatch(text);
+  const matches = (list: unknown): boolean =>
+    Array.isArray(list) &&
+    list.some((p) => typeof p === "string" && p.trim() && norm.includes(normalizeForMatch(p)));
+  if (matches(kw.meta)) return "meta";
+  if (matches(kw.google)) return "google";
+  return null;
+}
+
 function nowInSaoPaulo(): string {
   return new Intl.DateTimeFormat("pt-BR", {
     timeZone: "America/Sao_Paulo",
@@ -121,6 +145,19 @@ export async function processConversationTurn(input: TurnInput): Promise<TurnRes
     });
   });
 
+  // Origem do lead (marketing): se a conversa ainda não tem origem e a mensagem
+  // contém uma frase-chave configurada (Meta/Google), marca a conversa.
+  let leadSource = conversation.leadSource as "meta" | "google" | null;
+  if (!leadSource) {
+    const detected = detectLeadSource(text, tenant.marketingKeywords);
+    if (detected) {
+      leadSource = detected;
+      await withTenant(tenantId, (tx) =>
+        tx.conversation.update({ where: { id: conversation.id }, data: { leadSource: detected } }),
+      );
+    }
+  }
+
   // 4. Contexto pro prompt.
   const products: ProductInfo[] = await withTenant(tenantId, (tx) =>
     tx.product
@@ -195,7 +232,7 @@ export async function processConversationTurn(input: TurnInput): Promise<TurnRes
   const toolExecutions: ToolExecution[] = [];
   for (const call of response.toolCalls) {
     if (call.name === "criar_pedido") {
-      const r = await handleCriarPedido(tenantId, call.input as unknown as CriarPedidoInput);
+      const r = await handleCriarPedido(tenantId, call.input as unknown as CriarPedidoInput, leadSource);
       toolExecutions.push({
         name: call.name,
         ok: r.ok,

@@ -115,6 +115,7 @@ function onlyDigits(s: string): string {
 export async function handleCriarPedido(
   tenantId: string,
   input: CriarPedidoInput,
+  leadSource: "meta" | "google" | null = null,
 ): Promise<CriarPedidoResult> {
   if (!input.items?.length) return { ok: false, error: "Pedido sem itens" };
 
@@ -160,6 +161,8 @@ export async function handleCriarPedido(
           // O bot é o vendedor online permanente da loja.
           channel: "online",
           sellerName: "Bot",
+          // Origem de marketing detectada na conversa (frase-chave Meta/Google).
+          leadSource,
         },
       });
 
