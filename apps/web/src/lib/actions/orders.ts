@@ -4,7 +4,26 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { prisma, withTenant, type OrderStatus } from "@zapstore/db";
 import { auth } from "@/lib/auth";
-import { validateOrderInput } from "@/lib/order-validation";
+import {
+  validateOrderInput,
+  validateDeliverySchedule,
+  DEFAULT_CUTOFFS,
+  type DeliveryCutoffs,
+} from "@/lib/order-validation";
+
+/** Cortes de entrega configurados na loja (fallback nos padrões). */
+async function getCutoffs(tenantId: string): Promise<DeliveryCutoffs> {
+  const cfg = await withTenant(tenantId, (tx) =>
+    tx.botConfig.findUnique({
+      where: { tenantId },
+      select: { morningCutoff: true, afternoonCutoff: true },
+    }),
+  );
+  return {
+    morning: cfg?.morningCutoff || DEFAULT_CUTOFFS.morning,
+    afternoon: cfg?.afternoonCutoff || DEFAULT_CUTOFFS.afternoon,
+  };
+}
 
 async function requireTenantId(): Promise<string> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -201,6 +220,14 @@ export async function createOrderAction(
     const tenantId = await requireTenantId();
     const err = validateOrderInput(input);
     if (err) return { ok: false, error: err };
+    if (input.deliveryType !== "pickup") {
+      const schedErr = validateDeliverySchedule(
+        input.deliveryDate,
+        input.deliveryShift,
+        await getCutoffs(tenantId),
+      );
+      if (schedErr) return { ok: false, error: schedErr };
+    }
 
     const orderId = await withTenant(tenantId, async (tx) => {
       const { items, totalBrl } = await buildItemsAndTotal(tx, input);
@@ -244,8 +271,21 @@ export async function updateOrderAction(id: string, input: OrderInput): Promise<
     await withTenant(tenantId, async (tx) => {
       const existing = await tx.order.findUnique({
         where: { id },
-        select: { items: true, status: true },
+        select: { items: true, status: true, deliveryDate: true, deliveryShift: true },
       });
+      // Valida o agendamento só se ELE mudou (editar pagamento de pedido antigo não pode travar).
+      const prevDate = existing?.deliveryDate ? existing.deliveryDate.toISOString().slice(0, 10) : "";
+      const scheduleChanged =
+        (input.deliveryDate ?? "") !== prevDate ||
+        (input.deliveryShift ?? "") !== (existing?.deliveryShift ?? "");
+      if (input.deliveryType !== "pickup" && scheduleChanged) {
+        const schedErr = validateDeliverySchedule(
+          input.deliveryDate,
+          input.deliveryShift,
+          await getCutoffs(tenantId),
+        );
+        if (schedErr) throw new Error(schedErr);
+      }
       const { items, totalBrl } = await buildItemsAndTotal(tx, input);
       // Estoque: se o pedido estava "vivo", devolve os itens antigos e dá baixa nos novos.
       if (existing && existing.status !== "CANCELED") {

@@ -55,6 +55,28 @@ export async function updateDeliveryAction(
   }
 }
 
+/** Define os horários de corte por turno (HH:MM; vazio = padrão 12:00/18:00). */
+export async function setDeliveryCutoffsAction(
+  morning: string,
+  afternoon: string,
+): Promise<ActionResult> {
+  try {
+    const tenantId = await requireTenantId();
+    const valid = (s: string) => s === "" || /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
+    if (!valid(morning) || !valid(afternoon)) return { ok: false, error: "Horário inválido (use HH:MM)." };
+    await withTenant(tenantId, async (tx) => {
+      await tx.botConfig.update({
+        where: { tenantId },
+        data: { morningCutoff: morning || null, afternoonCutoff: afternoon || null },
+      });
+    });
+    revalidatePath("/deliveries");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
 /** Define a capacidade diária de entregas (config da loja). */
 export async function setDeliveryCapacityAction(capacity: number): Promise<ActionResult> {
   try {

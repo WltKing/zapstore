@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateOrderStatusAction } from "@/lib/actions/orders";
-import { setDeliveryCapacityAction, updateDeliveryAction } from "@/lib/actions/deliveries";
+import { setDeliveryCapacityAction, setDeliveryCutoffsAction, updateDeliveryAction } from "@/lib/actions/deliveries";
 
 export interface DeliveryRow {
   id: string;
@@ -51,20 +51,34 @@ function dayLabel(iso: string): string {
 export function DeliveriesView({
   storeName,
   capacity,
+  morningCutoff,
+  afternoonCutoff,
   deliveries,
 }: {
   storeName: string;
   capacity: number;
+  morningCutoff: string;
+  afternoonCutoff: string;
   deliveries: DeliveryRow[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [cap, setCap] = useState(capacity);
+  const [cutM, setCutM] = useState(morningCutoff);
+  const [cutA, setCutA] = useState(afternoonCutoff);
 
   const saveCapacity = () => {
     startTransition(async () => {
       const r = await setDeliveryCapacityAction(cap);
+      if (!r.ok) setError(r.error ?? "Erro");
+      else router.refresh();
+    });
+  };
+
+  const saveCutoffs = () => {
+    startTransition(async () => {
+      const r = await setDeliveryCutoffsAction(cutM, cutA);
       if (!r.ok) setError(r.error ?? "Erro");
       else router.refresh();
     });
@@ -119,6 +133,35 @@ export function DeliveriesView({
           Salvar
         </button>
         <span className="text-xs text-neutral-400">0 = sem limite definido</span>
+      </div>
+
+      {/* Horários de corte (agendamento pra HOJE fecha no corte do turno) */}
+      <div className="mt-3 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-card">
+        <span className="text-sm font-medium text-neutral-700">Corte da manhã:</span>
+        <input
+          type="time"
+          value={cutM}
+          onChange={(e) => setCutM(e.target.value)}
+          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+        />
+        <span className="text-sm font-medium text-neutral-700">Corte da tarde:</span>
+        <input
+          type="time"
+          value={cutA}
+          onChange={(e) => setCutA(e.target.value)}
+          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+        />
+        <button
+          type="button"
+          onClick={saveCutoffs}
+          disabled={isPending || (cutM === morningCutoff && cutA === afternoonCutoff)}
+          className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-300"
+        >
+          Salvar
+        </button>
+        <span className="basis-full text-xs text-neutral-400">
+          Depois do corte, o turno daquele dia não aceita mais agendamento no pedido (padrão: manhã 12:00, tarde 18:00).
+        </span>
       </div>
 
       <section className="mt-6">

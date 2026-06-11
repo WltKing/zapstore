@@ -211,6 +211,8 @@ model BotConfig {
   paymentMethods     String[] // ["pix", "cartao", "boleto"]
   acceptsScheduling  Boolean  @default(false)
   dailyDeliveryCapacity Int   @default(0) // entregas/dia (0 = sem limite definido)
+  morningCutoff   String? // horário de corte do turno manhã (HH:MM; null = padrão 12:00)
+  afternoonCutoff String? // horário de corte do turno tarde (HH:MM; null = padrão 18:00)
 
   // Prompt customizado pelo lojista
   extraInstructions  String   @default("") @db.Text

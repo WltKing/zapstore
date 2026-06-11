@@ -38,16 +38,20 @@ export default async function NewOrderPage() {
   const tenant = await getPrimaryTenantForUser(session.user.id);
   if (!tenant) redirect("/onboarding");
 
-  const { products, professionals } = await withTenant(tenant.id, async (tx) => {
-    const [products, professionals] = await Promise.all([
+  const { products, professionals, botCfg } = await withTenant(tenant.id, async (tx) => {
+    const [products, professionals, botCfg] = await Promise.all([
       tx.product.findMany({
         where: { active: true },
         orderBy: { name: "asc" },
         select: { id: true, name: true, priceBrl: true },
       }),
       tx.professional.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { name: true } }),
+      tx.botConfig.findUnique({
+        where: { tenantId: tenant.id },
+        select: { morningCutoff: true, afternoonCutoff: true },
+      }),
     ]);
-    return { products, professionals };
+    return { products, professionals, botCfg };
   });
 
   const links = await prisma.tenantUser.findMany({
@@ -62,6 +66,7 @@ export default async function NewOrderPage() {
       products={products.map((p) => ({ id: p.id, name: p.name, priceBrl: Number(p.priceBrl) }))}
       sellers={sellers}
       initial={BLANK}
+      cutoffs={{ morning: botCfg?.morningCutoff || "12:00", afternoon: botCfg?.afternoonCutoff || "18:00" }}
     />
   );
 }

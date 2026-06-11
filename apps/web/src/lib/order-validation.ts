@@ -3,6 +3,51 @@
 
 import type { OrderInput } from "./actions/orders";
 
+export interface DeliveryCutoffs {
+  morning: string; // HH:MM — depois disso, manhã de HOJE fecha
+  afternoon: string; // HH:MM — depois disso, tarde de HOJE fecha (= dia fecha)
+}
+
+export const DEFAULT_CUTOFFS: DeliveryCutoffs = { morning: "12:00", afternoon: "18:00" };
+
+/** Data (YYYY-MM-DD) e hora (HH:MM) atuais no fuso de Brasília. */
+export function nowInSp(): { date: string; time: string } {
+  const now = new Date();
+  return {
+    date: new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(now),
+    time: new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(now),
+  };
+}
+
+/**
+ * Valida o agendamento da entrega: sem data no passado; pra HOJE, respeita o
+ * horário de corte de cada turno. Retorna a mensagem de erro ou null.
+ */
+export function validateDeliverySchedule(
+  deliveryDate: string | undefined,
+  deliveryShift: string | undefined,
+  cutoffs: DeliveryCutoffs = DEFAULT_CUTOFFS,
+  now: { date: string; time: string } = nowInSp(),
+): string | null {
+  if (!deliveryDate) return null; // obrigatoriedade é tratada em validateOrderInput
+  if (deliveryDate < now.date) return "A data de entrega já passou — escolha hoje ou uma data futura.";
+  if (deliveryDate > now.date) return null; // futuro: qualquer turno vale
+
+  // Entrega pra HOJE: confere o corte do turno.
+  if (deliveryShift === "morning" && now.time >= cutoffs.morning)
+    return `O turno da manhã de hoje já fechou (corte às ${cutoffs.morning}). Escolha a tarde ou outra data.`;
+  if (deliveryShift === "afternoon" && now.time >= cutoffs.afternoon)
+    return `O turno da tarde de hoje já fechou (corte às ${cutoffs.afternoon}). Agende para outro dia.`;
+  if (!deliveryShift && now.time >= cutoffs.afternoon)
+    return `O horário de corte de hoje já passou (${cutoffs.afternoon}). Agende para outro dia.`;
+  return null;
+}
+
 const digits = (s: string | undefined | null) => (s ?? "").replace(/\D/g, "");
 
 /** Campos do destinatário que a NF-e exige e que estão faltando (rótulos amigáveis). */

@@ -29,8 +29,8 @@ export default async function EditOrderPage({
   const tenant = await getPrimaryTenantForUser(session.user.id);
   if (!tenant) redirect("/onboarding");
 
-  const { order, products, fiscalCfg, professionals, isService } = await withTenant(tenant.id, async (tx) => {
-    const [order, products, fiscalCfg, professionals, apptLink] = await Promise.all([
+  const { order, products, fiscalCfg, professionals, isService, botCfg } = await withTenant(tenant.id, async (tx) => {
+    const [order, products, fiscalCfg, professionals, apptLink, botCfg] = await Promise.all([
       tx.order.findUnique({ where: { id } }),
       tx.product.findMany({
         where: { active: true },
@@ -40,8 +40,12 @@ export default async function EditOrderPage({
       tx.fiscalConfig.findUnique({ where: { tenantId: tenant.id } }),
       tx.professional.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { name: true } }),
       tx.appointment.findFirst({ where: { orderId: id }, select: { id: true } }),
+      tx.botConfig.findUnique({
+        where: { tenantId: tenant.id },
+        select: { morningCutoff: true, afternoonCutoff: true },
+      }),
     ]);
-    return { order, products, fiscalCfg, professionals, isService: !!apptLink };
+    return { order, products, fiscalCfg, professionals, isService: !!apptLink, botCfg };
   });
   if (!order || order.tenantId !== tenant.id) notFound();
 
@@ -100,6 +104,7 @@ export default async function EditOrderPage({
       initial={initial}
       orderId={order.id}
       orderNumber={order.orderNumber}
+      cutoffs={{ morning: botCfg?.morningCutoff || "12:00", afternoon: botCfg?.afternoonCutoff || "18:00" }}
       fiscalSlot={
         isService ? (
           <section className="rounded-2xl bg-white p-5 shadow-card">

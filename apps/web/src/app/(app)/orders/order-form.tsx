@@ -6,7 +6,13 @@ import { ArrowLeft, Printer, Plus, CheckCircle2, X } from "lucide-react";
 import { createOrderAction, updateOrderAction, type OrderInput } from "@/lib/actions/orders";
 import { lookupCepAction, searchCepAction } from "@/lib/actions/cep";
 import { PAYMENT_OPTIONS, paymentHasInstallments } from "@/lib/payments";
-import { validateOrderInput } from "@/lib/order-validation";
+import {
+  validateOrderInput,
+  validateDeliverySchedule,
+  nowInSp,
+  DEFAULT_CUTOFFS,
+  type DeliveryCutoffs,
+} from "@/lib/order-validation";
 import { maskPhone, maskCep, maskCpfCnpj } from "@/lib/format";
 
 function Req() {
@@ -62,6 +68,7 @@ export function OrderForm({
   orderId,
   orderNumber,
   fiscalSlot,
+  cutoffs = DEFAULT_CUTOFFS,
 }: {
   products: ProductOpt[];
   sellers: string[];
@@ -69,6 +76,7 @@ export function OrderForm({
   orderId?: string;
   orderNumber?: number;
   fiscalSlot?: ReactNode;
+  cutoffs?: DeliveryCutoffs;
 }) {
   const router = useRouter();
   // Aplica as máscaras nos valores que vêm crus do banco (só dígitos).
@@ -170,7 +178,11 @@ export function OrderForm({
     e.preventDefault();
     setError(null);
     setSaved(false);
-    const invalid = validateOrderInput(form);
+    const invalid =
+      validateOrderInput(form) ??
+      (form.deliveryType !== "pickup"
+        ? validateDeliverySchedule(form.deliveryDate, form.deliveryShift, cutoffs)
+        : null);
     if (invalid) {
       setError(invalid);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -194,6 +206,11 @@ export function OrderForm({
   };
 
   const isDelivery = form.deliveryType !== "pickup";
+  // Agendamento: hoje só até o corte de cada turno (hora de Brasília).
+  const sp = nowInSp();
+  const isToday = form.deliveryDate === sp.date;
+  const morningClosed = isToday && sp.time >= cutoffs.morning;
+  const afternoonClosed = isToday && sp.time >= cutoffs.afternoon;
   const needsFiscalAddress = form.invoiceType === "nfe"; // NF-e exige endereço mesmo na retirada
   const showAddress = isDelivery || needsFiscalAddress;
   const isNfe = form.invoiceType === "nfe";
@@ -387,15 +404,22 @@ export function OrderForm({
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-neutral-700">Data de entrega<Req /></label>
-              <input type="date" value={form.deliveryDate} onChange={(e) => set({ deliveryDate: e.target.value })} className={inputClass} />
+              <input type="date" min={sp.date} value={form.deliveryDate} onChange={(e) => set({ deliveryDate: e.target.value })} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-neutral-700">Turno</label>
               <select value={form.deliveryShift} onChange={(e) => set({ deliveryShift: e.target.value })} className={inputClass}>
                 <option value="">—</option>
-                <option value="morning">Manhã</option>
-                <option value="afternoon">Tarde</option>
+                <option value="morning" disabled={morningClosed}>
+                  Manhã{morningClosed ? ` (fechou às ${cutoffs.morning})` : ""}
+                </option>
+                <option value="afternoon" disabled={afternoonClosed}>
+                  Tarde{afternoonClosed ? ` (fechou às ${cutoffs.afternoon})` : ""}
+                </option>
               </select>
+              {afternoonClosed && (
+                <p className="mt-1 text-xs text-amber-700">Hoje já fechou pra entrega — escolha outra data.</p>
+              )}
             </div>
           </div>
         )}
