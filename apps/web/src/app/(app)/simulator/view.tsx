@@ -61,7 +61,7 @@ export function SimulatorView({
   };
 
   return (
-    <main className="mx-auto flex h-screen max-w-3xl flex-col px-6 py-6">
+    <main className="mx-auto flex h-screen max-w-3xl flex-col px-4 py-4 sm:px-6 sm:py-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-neutral-500">{storeName}</p>
@@ -149,12 +149,12 @@ export function SimulatorView({
           onChange={(e) => setInput(e.target.value)}
           placeholder="Manda uma mensagem como se fosse um cliente..."
           disabled={isPending}
-          className="flex-1 rounded-lg border border-neutral-300 px-4 py-2.5 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-neutral-50"
+          className="min-w-0 flex-1 rounded-lg border border-neutral-300 px-4 py-2.5 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:bg-neutral-50"
         />
         <button
           type="submit"
           disabled={isPending || !input.trim()}
-          className="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
+          className="shrink-0 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
         >
           Enviar
         </button>
