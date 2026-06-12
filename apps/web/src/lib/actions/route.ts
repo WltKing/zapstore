@@ -71,13 +71,13 @@ export async function setRouteStatusAction(
         select: { id: true, customerName: true, customerPhone: true, status: true },
       });
       if (!o) throw new Error("Pedido não encontrado.");
-      const data: { routeStatus: RouteStatus; status?: "IN_DELIVERY" | "DELIVERED" | "CONFIRMED" } = {
+      const data: { routeStatus: RouteStatus; status?: "IN_DELIVERY" | "DELIVERED" | "PENDING" } = {
         routeStatus: status,
       };
       if (status === "en_route" || status === "at_door") data.status = "IN_DELIVERY";
       else if (status === "delivered") data.status = "DELIVERED";
-      // Pulado/ausente/reaberto: se o pedido estava "em rota"/"entregue", volta pra "a entregar".
-      else if (o.status === "IN_DELIVERY" || o.status === "DELIVERED") data.status = "CONFIRMED";
+      // Pulado/ausente/reaberto: o pedido volta pro INÍCIO do fluxo de entrega.
+      else if (o.status === "IN_DELIVERY" || o.status === "DELIVERED") data.status = "PENDING";
       await tx.order.update({ where: { id: orderId }, data });
       return o;
     });

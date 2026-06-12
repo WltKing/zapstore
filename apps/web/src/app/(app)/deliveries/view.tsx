@@ -180,12 +180,12 @@ function DeliveryItem({ d, overdue = false }: { d: DeliveryRow; overdue?: boolea
   };
 
   return (
-    <li className="px-5 py-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <span className="font-mono text-sm text-neutral-500">#{d.orderNumber}</span>
-          <div>
-            <div className="font-medium">
+    <li className="px-4 py-4 sm:px-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
+          <span className="shrink-0 font-mono text-sm text-neutral-500">#{d.orderNumber}</span>
+          <div className="min-w-0">
+            <div className="text-[13px] font-medium sm:text-base">
               {d.customerName}
               <span className="ml-2 text-xs font-normal text-neutral-500">{formatBrl(d.totalBrl)}</span>
             </div>
@@ -194,7 +194,7 @@ function DeliveryItem({ d, overdue = false }: { d: DeliveryRow; overdue?: boolea
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 pl-8 sm:pl-0">
           <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[d.status]}`}>
             {STATUS_LABELS[d.status] ?? d.status}
           </span>
