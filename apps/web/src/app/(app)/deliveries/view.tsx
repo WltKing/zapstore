@@ -43,13 +43,6 @@ const NEXT: Record<string, { status: string; label: string } | null> = {
 function formatBrl(v: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 }
-function dayKey(iso: string): string {
-  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
-}
-function dayLabel(iso: string): string {
-  return new Date(iso).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
-}
-
 export function DeliveriesView({
   storeName,
   capacity,
@@ -61,14 +54,16 @@ export function DeliveriesView({
   weeklyCapacity: WeeklyCap | null;
   deliveries: DeliveryRow[];
 }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
   // Atrasadas: dia da entrega anterior a hoje (fuso SP) e ainda não entregue.
   const todaySp = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
   const isOverdue = (d: DeliveryRow) => d.dateValue < todaySp && d.status !== "DELIVERED";
-  const overdueCount = deliveries.filter(isOverdue).length;
+  const overdue = deliveries.filter(isOverdue);
+  const overdueCount = overdue.length;
+
+  // Dia selecionado (padrão: hoje).
+  const [day, setDay] = useState(todaySp);
+  const dayItems = deliveries.filter((d) => d.dateValue === day);
+  const dayPending = dayItems.filter((d) => d.status !== "DELIVERED").length;
 
   /** Capacidade total do dia (soma dos turnos definidos); null = sem limite configurado. */
   const dayCap = (dateValue: string): number | null => {
@@ -77,23 +72,8 @@ export function DeliveriesView({
     if (!row || (row.morning == null && row.afternoon == null)) return capacity > 0 ? capacity : null;
     return (row.morning ?? 0) + (row.afternoon ?? 0);
   };
-
-  // Agrupa por dia de entrega, ordena por data ascendente.
-  const groups: { key: string; label: string; items: DeliveryRow[] }[] = [];
-  for (const d of deliveries) {
-    const k = dayKey(d.deliveryDate);
-    let g = groups.find((x) => x.key === k);
-    if (!g) {
-      g = { key: k, label: dayLabel(d.deliveryDate), items: [] };
-      groups.push(g);
-    }
-    g.items.push(d);
-  }
-  groups.sort((a, b) => {
-    const da = a.items[0]?.deliveryDate ?? "";
-    const db = b.items[0]?.deliveryDate ?? "";
-    return da < db ? -1 : 1;
-  });
+  const dayCapacity = dayCap(day);
+  const dayOver = dayCapacity != null && dayCapacity > 0 && dayPending > dayCapacity;
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
@@ -103,8 +83,6 @@ export function DeliveriesView({
           <h1 className="text-3xl font-bold tracking-tight">Entregas</h1>
         </div>
         </header>
-
-      {error && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
       {overdueCount > 0 && (
         <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
@@ -121,47 +99,50 @@ export function DeliveriesView({
         <a href="/settings" className="underline hover:text-neutral-700">Configurações → Entregas</a>.
       </p>
 
-      <section className="mt-6">
-        {deliveries.length === 0 ? (
+      {/* Atrasadas (sempre visíveis, independente do dia selecionado) */}
+      {overdue.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-red-700">
+            Atrasadas ({overdue.length})
+          </h2>
+          <ul className="divide-y divide-neutral-100 rounded-2xl border border-red-200 bg-white shadow-card">
+            {overdue.map((d) => (
+              <DeliveryItem key={d.id} d={d} overdue />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Entregas do dia selecionado */}
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        <label className="text-sm text-neutral-500">Dia:</label>
+        <input
+          type="date"
+          value={day}
+          onChange={(e) => setDay(e.target.value)}
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+        />
+        <span className={`text-xs font-medium ${dayOver ? "text-red-600" : "text-neutral-500"}`}>
+          {dayPending} a entregar
+          {dayCapacity != null && dayCapacity > 0 ? ` / ${dayCapacity}` : ""}
+          {dayOver ? " · acima da capacidade" : ""}
+        </span>
+      </div>
+
+      <section className="mt-3">
+        {dayItems.length === 0 ? (
           <div className="rounded-2xl bg-white p-12 text-center shadow-card">
-            <h2 className="text-lg font-semibold">Nenhuma entrega pendente</h2>
+            <h2 className="text-lg font-semibold">Nenhuma entrega neste dia</h2>
             <p className="mt-1 text-sm text-neutral-500">
-              Pedidos com endereço aparecem aqui pra você organizar a rota.
+              Pedidos com entrega aparecem aqui no dia marcado.
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {groups.map((g) => {
-              const pending = g.items.filter((d) => d.status !== "DELIVERED").length;
-              const cap = dayCap(g.items[0]?.dateValue ?? "");
-              const over = cap != null && cap > 0 && pending > cap;
-              const late = (g.items[0]?.dateValue ?? "") < todaySp && pending > 0;
-              return (
-                <div key={g.key}>
-                  <div className="mb-2 flex items-center justify-between">
-                    <h2 className={`text-sm font-semibold capitalize ${late ? "text-red-700" : "text-neutral-700"}`}>
-                      {g.label}
-                      {late && (
-                        <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium normal-case text-red-700">
-                          Atrasado
-                        </span>
-                      )}
-                    </h2>
-                    <span className={`text-xs font-medium ${over ? "text-red-600" : "text-neutral-500"}`}>
-                      {pending} a entregar
-                      {cap != null && cap > 0 ? ` / ${cap}` : ""}
-                      {over ? " · acima da capacidade" : ""}
-                    </span>
-                  </div>
-                  <ul className="divide-y divide-neutral-100 rounded-2xl bg-white shadow-card">
-                    {g.items.map((d) => (
-                      <DeliveryItem key={d.id} d={d} />
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
+          <ul className="divide-y divide-neutral-100 rounded-2xl bg-white shadow-card">
+            {dayItems.map((d) => (
+              <DeliveryItem key={d.id} d={d} />
+            ))}
+          </ul>
         )}
       </section>
     </main>
@@ -174,7 +155,7 @@ const SHIFT_OPTIONS = [
   { value: "afternoon", label: "Tarde" },
 ];
 
-function DeliveryItem({ d }: { d: DeliveryRow }) {
+function DeliveryItem({ d, overdue = false }: { d: DeliveryRow; overdue?: boolean }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [managing, setManaging] = useState(false);
@@ -228,15 +209,29 @@ function DeliveryItem({ d }: { d: DeliveryRow }) {
           <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[d.status]}`}>
             {STATUS_LABELS[d.status] ?? d.status}
           </span>
-          {next && (
-            <button
-              type="button"
-              onClick={advance}
-              disabled={isPending}
-              className="rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
-            >
-              {next.label}
-            </button>
+          {/* Atrasada não avança o fluxo: primeiro remarca (ou dá baixa se já foi feita). */}
+          {overdue ? (
+            d.status !== "DELIVERED" && (
+              <button
+                type="button"
+                onClick={() => run(() => updateOrderStatusAction(d.id, "DELIVERED" as never))}
+                disabled={isPending}
+                className="rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+              >
+                Já foi entregue
+              </button>
+            )
+          ) : (
+            next && (
+              <button
+                type="button"
+                onClick={advance}
+                disabled={isPending}
+                className="rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-hover disabled:bg-neutral-400"
+              >
+                {next.label}
+              </button>
+            )
           )}
           <button
             type="button"
