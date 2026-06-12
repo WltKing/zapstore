@@ -51,6 +51,8 @@ export interface FiscalConfigInput {
   habilitaNfe: boolean;
   cscNfceProd?: string;
   idTokenNfceProd?: string;
+  // A empresa já emitiu notas antes (em outro sistema)? Se sim, numeração é obrigatória.
+  emitiuAntes?: boolean;
   // Numeração (strings no form; convertidas pra int ou null)
   serieNfeHomolog?: string;
   proxNumNfeHomolog?: string;
@@ -91,6 +93,16 @@ export async function saveFiscalConfigAction(input: FiscalConfigInput): Promise<
     if (input.habilitaNfce && (!input.cscNfceProd?.trim() || !input.idTokenNfceProd?.trim())) {
       return { ok: false, error: "Pra emitir NFC-e, informe o CSC e o ID do token (gerados no site da SEFAZ do seu estado)." };
     }
+    // Já emitiu antes → numeração obrigatória pros documentos habilitados (senão a SEFAZ rejeita por nº repetido).
+    const emitiuAntes = Boolean(input.emitiuAntes);
+    if (emitiuAntes) {
+      if (input.habilitaNfce && (toIntOrNull(input.serieNfceProd) == null || toIntOrNull(input.proxNumNfceProd) == null)) {
+        return { ok: false, error: "Informe a série e o próximo número da NFC-e (empresa que já emitiu antes)." };
+      }
+      if (input.habilitaNfe && (toIntOrNull(input.serieNfeProd) == null || toIntOrNull(input.proxNumNfeProd) == null)) {
+        return { ok: false, error: "Informe a série e o próximo número da NF-e (empresa que já emitiu antes)." };
+      }
+    }
     // Sem ambiente de teste pro lojista: emissão sempre em produção.
     const ambiente = "producao";
 
@@ -117,12 +129,12 @@ export async function saveFiscalConfigAction(input: FiscalConfigInput): Promise<
       idTokenNfceProd: input.idTokenNfceProd?.trim() || null,
       serieNfeHomolog: toIntOrNull(input.serieNfeHomolog),
       proxNumNfeHomolog: toIntOrNull(input.proxNumNfeHomolog),
-      serieNfeProd: toIntOrNull(input.serieNfeProd),
-      proxNumNfeProd: toIntOrNull(input.proxNumNfeProd),
+      serieNfeProd: emitiuAntes ? toIntOrNull(input.serieNfeProd) : null,
+      proxNumNfeProd: emitiuAntes ? toIntOrNull(input.proxNumNfeProd) : null,
       serieNfceHomolog: toIntOrNull(input.serieNfceHomolog),
       proxNumNfceHomolog: toIntOrNull(input.proxNumNfceHomolog),
-      serieNfceProd: toIntOrNull(input.serieNfceProd),
-      proxNumNfceProd: toIntOrNull(input.proxNumNfceProd),
+      serieNfceProd: emitiuAntes ? toIntOrNull(input.serieNfceProd) : null,
+      proxNumNfceProd: emitiuAntes ? toIntOrNull(input.proxNumNfceProd) : null,
     };
 
     const saved = await withTenant(tenantId, async (tx) => {

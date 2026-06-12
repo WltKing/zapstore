@@ -68,6 +68,7 @@ function blank(): FiscalConfigInput {
     habilitaNfe: true,
     cscNfceProd: "",
     idTokenNfceProd: "",
+    emitiuAntes: false,
     serieNfeHomolog: "",
     proxNumNfeHomolog: "",
     serieNfeProd: "",
@@ -101,6 +102,8 @@ function toInput(d: FiscalConfigData): FiscalConfigInput {
     habilitaNfe: d.habilitaNfe,
     cscNfceProd: d.cscNfceProd ?? "",
     idTokenNfceProd: d.idTokenNfceProd ?? "",
+    emitiuAntes:
+      d.serieNfceProd != null || d.proxNumNfceProd != null || d.serieNfeProd != null || d.proxNumNfeProd != null,
     serieNfeHomolog: d.serieNfeHomolog != null ? String(d.serieNfeHomolog) : "",
     proxNumNfeHomolog: d.proxNumNfeHomolog != null ? String(d.proxNumNfeHomolog) : "",
     serieNfeProd: d.serieNfeProd != null ? String(d.serieNfeProd) : "",
@@ -374,44 +377,73 @@ export function FiscalView({
           </div>
         )}
 
-        <details className="mt-3 rounded-lg border border-neutral-200 p-3">
-          <summary className="cursor-pointer text-sm font-medium text-neutral-700">
-            Numeração das notas (se a empresa já emitiu antes)
-          </summary>
-          <p className="mt-2 text-sm text-neutral-500">
-            Se essa empresa <strong>já emitia notas em outro sistema</strong>, informe a série e o{" "}
-            <strong>próximo número</strong> de cada documento pra continuar a sequência — senão a
-            SEFAZ rejeita por número repetido. Empresa nova: deixe em branco (começa do 1).
-          </p>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg bg-neutral-50 p-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">NFC-e</h3>
-              <div className="mt-2 grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600">Série</label>
-                  <input type="number" min="1" value={form.serieNfceProd} onChange={(e) => set({ serieNfceProd: e.target.value })} className={input} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600">Próximo número</label>
-                  <input type="number" min="1" value={form.proxNumNfceProd} onChange={(e) => set({ proxNumNfceProd: e.target.value })} className={input} />
-                </div>
-              </div>
-            </div>
-            <div className="rounded-lg bg-neutral-50 p-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">NF-e</h3>
-              <div className="mt-2 grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600">Série</label>
-                  <input type="number" min="1" value={form.serieNfeProd} onChange={(e) => set({ serieNfeProd: e.target.value })} className={input} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600">Próximo número</label>
-                  <input type="number" min="1" value={form.proxNumNfeProd} onChange={(e) => set({ proxNumNfeProd: e.target.value })} className={input} />
-                </div>
-              </div>
-            </div>
+        <div className="mt-3 rounded-lg border border-neutral-200 p-3">
+          <h3 className="text-sm font-medium text-neutral-700">
+            Essa empresa já emitiu notas fiscais antes (em outro sistema)?
+          </h3>
+          <div className="mt-2 flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 text-sm text-neutral-700">
+              <input
+                type="radio"
+                name="emitiu-antes"
+                checked={!form.emitiuAntes}
+                onChange={() => set({ emitiuAntes: false })}
+              />
+              Não, é a primeira vez (começa do nº 1)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-neutral-700">
+              <input
+                type="radio"
+                name="emitiu-antes"
+                checked={!!form.emitiuAntes}
+                onChange={() => set({ emitiuAntes: true })}
+              />
+              Sim, já emitiu
+            </label>
           </div>
-        </details>
+
+          {form.emitiuAntes && (
+            <>
+              <p className="mt-3 text-sm text-neutral-500">
+                Informe a série e o <strong>próximo número</strong> de cada documento pra continuar a
+                sequência — senão a SEFAZ rejeita por número repetido. Esses dados aparecem na última
+                nota emitida no sistema antigo.
+              </p>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                {form.habilitaNfce && (
+                  <div className="rounded-lg bg-neutral-50 p-3">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">NFC-e</h4>
+                    <div className="mt-2 grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-600">Série<Req /></label>
+                        <input type="number" min="1" value={form.serieNfceProd} onChange={(e) => set({ serieNfceProd: e.target.value })} className={input} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-600">Próximo número<Req /></label>
+                        <input type="number" min="1" value={form.proxNumNfceProd} onChange={(e) => set({ proxNumNfceProd: e.target.value })} className={input} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {form.habilitaNfe && (
+                  <div className="rounded-lg bg-neutral-50 p-3">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">NF-e</h4>
+                    <div className="mt-2 grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-600">Série<Req /></label>
+                        <input type="number" min="1" value={form.serieNfeProd} onChange={(e) => set({ serieNfeProd: e.target.value })} className={input} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-600">Próximo número<Req /></label>
+                        <input type="number" min="1" value={form.proxNumNfeProd} onChange={(e) => set({ proxNumNfeProd: e.target.value })} className={input} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="mt-4 flex justify-end">
           <button
