@@ -88,6 +88,21 @@ export async function getTenantStats(tenantId: string) {
     });
     const lowStockCount = activeProducts.filter((p) => p.stock <= p.lowStockThreshold).length;
 
+    // Entregas atrasadas: dia efetivo (deliveryDate ?? scheduledFor ?? createdAt)
+    // anterior a hoje e pedido ainda não entregue. Mesma regra do board /deliveries.
+    const openDeliveries = await tx.order.findMany({
+      where: {
+        status: { in: ["PENDING", "CONFIRMED", "IN_DELIVERY"] },
+        deliveryType: { not: "pickup" },
+      },
+      select: { deliveryDate: true, scheduledFor: true, createdAt: true },
+      take: 500,
+    });
+    const overdueDeliveryCount = openDeliveries.filter((o) => {
+      const d = o.deliveryDate ?? o.scheduledFor ?? o.createdAt;
+      return d < todayStart;
+    }).length;
+
     const recentOrders = await tx.order.findMany({
       where: { status: { not: "CANCELED" }, createdAt: { gte: since14 } },
       select: { totalBrl: true, createdAt: true },
@@ -122,6 +137,7 @@ export async function getTenantStats(tenantId: string) {
       monthSalesBrl,
       monthExpensesBrl,
       lowStockCount,
+      overdueDeliveryCount,
       salesByDay,
     };
   });

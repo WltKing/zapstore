@@ -164,6 +164,18 @@ export default async function DashboardPage({
           </div>
         ) : null)}
 
+      {/* Entregas atrasadas (dias anteriores sem finalizar) */}
+      {isCurrentMonth && has("delivery") && stats.overdueDeliveryCount > 0 && (
+        <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+          <strong>
+            {stats.overdueDeliveryCount} entrega{stats.overdueDeliveryCount > 1 ? "s" : ""} atrasada
+            {stats.overdueDeliveryCount > 1 ? "s" : ""}
+          </strong>{" "}
+          de dias anteriores sem finalizar — entregue, remarque ou marque como entregue se já foi
+          feita. <a href="/deliveries" className="underline">Ver entregas →</a>
+        </div>
+      )}
+
       {/* Núcleo de KPIs do mês */}
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">

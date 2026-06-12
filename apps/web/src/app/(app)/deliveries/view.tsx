@@ -65,6 +65,11 @@ export function DeliveriesView({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  // Atrasadas: dia da entrega anterior a hoje (fuso SP) e ainda não entregue.
+  const todaySp = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+  const isOverdue = (d: DeliveryRow) => d.dateValue < todaySp && d.status !== "DELIVERED";
+  const overdueCount = deliveries.filter(isOverdue).length;
+
   /** Capacidade total do dia (soma dos turnos definidos); null = sem limite configurado. */
   const dayCap = (dateValue: string): number | null => {
     const wd = String(new Date(dateValue + "T12:00:00").getDay());
@@ -101,6 +106,16 @@ export function DeliveriesView({
 
       {error && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
+      {overdueCount > 0 && (
+        <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+          <strong>
+            {overdueCount} entrega{overdueCount > 1 ? "s" : ""} atrasada{overdueCount > 1 ? "s" : ""}
+          </strong>{" "}
+          de dias anteriores sem finalizar (destacadas abaixo). Entregue, remarque pelo
+          &quot;Gerenciar&quot;, ou marque como entregue se já foi feita.
+        </div>
+      )}
+
       <p className="mt-4 text-xs text-neutral-400">
         Capacidade por dia/turno e horários de corte ficam em{" "}
         <a href="/settings" className="underline hover:text-neutral-700">Configurações → Entregas</a>.
@@ -120,10 +135,18 @@ export function DeliveriesView({
               const pending = g.items.filter((d) => d.status !== "DELIVERED").length;
               const cap = dayCap(g.items[0]?.dateValue ?? "");
               const over = cap != null && cap > 0 && pending > cap;
+              const late = (g.items[0]?.dateValue ?? "") < todaySp && pending > 0;
               return (
                 <div key={g.key}>
                   <div className="mb-2 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold capitalize text-neutral-700">{g.label}</h2>
+                    <h2 className={`text-sm font-semibold capitalize ${late ? "text-red-700" : "text-neutral-700"}`}>
+                      {g.label}
+                      {late && (
+                        <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium normal-case text-red-700">
+                          Atrasado
+                        </span>
+                      )}
+                    </h2>
                     <span className={`text-xs font-medium ${over ? "text-red-600" : "text-neutral-500"}`}>
                       {pending} a entregar
                       {cap != null && cap > 0 ? ` / ${cap}` : ""}
