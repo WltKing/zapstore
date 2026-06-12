@@ -115,6 +115,10 @@ function toInput(d: FiscalConfigData): FiscalConfigInput {
 const input =
   "mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 
+function Req() {
+  return <span className="text-red-500" aria-hidden>{" *"}</span>;
+}
+
 export function FiscalView({
   storeName,
   isAdmin,
@@ -226,8 +230,8 @@ export function FiscalView({
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Configuração fiscal</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            Emissão de NFC-e e NF-e. Comece em <strong>homologação</strong> (teste) e só
-            depois mude pra produção.
+            Emissão de NFC-e e NF-e. Preencha os dados da empresa, envie o certificado e pronto —
+            as notas saem valendo.
           </p>
         </div>
         </header>
@@ -261,9 +265,6 @@ export function FiscalView({
                   : "Pendente"}
             </strong>
           </span>
-          <span>
-            Ambiente: <strong className="capitalize">{initial?.ambiente ?? form.ambiente}</strong>
-          </span>
         </div>
       </section>
 
@@ -272,15 +273,15 @@ export function FiscalView({
         <h2 className="font-semibold">Dados da empresa (emitente)</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-neutral-700">CNPJ</label>
+            <label className="block text-sm font-medium text-neutral-700">CNPJ<Req /></label>
             <input value={form.cnpj} onChange={(e) => set({ cnpj: e.target.value })} placeholder="00.000.000/0000-00" className={input} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Inscrição estadual</label>
+            <label className="block text-sm font-medium text-neutral-700">Inscrição estadual<Req /></label>
             <input value={form.inscricaoEstadual} onChange={(e) => set({ inscricaoEstadual: e.target.value })} placeholder="ISENTO se não tiver" className={input} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Razão social</label>
+            <label className="block text-sm font-medium text-neutral-700">Razão social<Req /></label>
             <input value={form.razaoSocial} onChange={(e) => set({ razaoSocial: e.target.value })} className={input} />
           </div>
           <div>
@@ -307,19 +308,19 @@ export function FiscalView({
         <h2 className="font-semibold">Endereço</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div>
-            <label className="block text-sm font-medium text-neutral-700">CEP</label>
+            <label className="block text-sm font-medium text-neutral-700">CEP<Req /></label>
             <input value={form.cep} onChange={(e) => set({ cep: e.target.value })} onBlur={lookupCep} placeholder="00000-000" className={input} />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-neutral-700">Logradouro</label>
+            <label className="block text-sm font-medium text-neutral-700">Logradouro<Req /></label>
             <input value={form.logradouro} onChange={(e) => set({ logradouro: e.target.value })} className={input} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Número</label>
+            <label className="block text-sm font-medium text-neutral-700">Número<Req /></label>
             <input value={form.numero} onChange={(e) => set({ numero: e.target.value })} className={input} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Bairro</label>
+            <label className="block text-sm font-medium text-neutral-700">Bairro<Req /></label>
             <input value={form.bairro} onChange={(e) => set({ bairro: e.target.value })} className={input} />
           </div>
           <div>
@@ -327,15 +328,15 @@ export function FiscalView({
             <input value={form.complemento} onChange={(e) => set({ complemento: e.target.value })} className={input} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Município</label>
+            <label className="block text-sm font-medium text-neutral-700">Município<Req /></label>
             <input value={form.municipio} onChange={(e) => set({ municipio: e.target.value })} className={input} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">UF</label>
+            <label className="block text-sm font-medium text-neutral-700">UF<Req /></label>
             <input value={form.uf} onChange={(e) => set({ uf: e.target.value })} maxLength={2} className={input} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Cód. município (IBGE)</label>
+            <label className="block text-sm font-medium text-neutral-700">Cód. município (IBGE)<Req /></label>
             <input value={form.codigoMunicipio} onChange={(e) => set({ codigoMunicipio: e.target.value })} className={input} />
           </div>
         </div>
@@ -345,13 +346,6 @@ export function FiscalView({
       <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
         <h2 className="font-semibold">Emissão</h2>
         <div className="mt-4 flex flex-wrap items-center gap-6">
-          <div>
-            <label className="block text-sm font-medium text-neutral-700">Ambiente</label>
-            <select value={form.ambiente} onChange={(e) => set({ ambiente: e.target.value })} className={input}>
-              <option value="homologacao">Homologação (teste)</option>
-              <option value="producao">Produção (nota real)</option>
-            </select>
-          </div>
           <label className="flex items-center gap-2 text-sm text-neutral-700">
             <input type="checkbox" checked={form.habilitaNfce} onChange={(e) => set({ habilitaNfce: e.target.checked })} className="h-4 w-4 rounded border-neutral-300" />
             Habilitar NFC-e
@@ -361,24 +355,24 @@ export function FiscalView({
             Habilitar NF-e
           </label>
         </div>
-        <details className="mt-4 rounded-lg border border-neutral-200 p-3">
-          <summary className="cursor-pointer text-sm font-medium text-neutral-700">
-            CSC da NFC-e (só pra produção)
-          </summary>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium text-neutral-600">CSC (token)</label>
-              <input value={form.cscNfceProd} onChange={(e) => set({ cscNfceProd: e.target.value })} className={input} />
+        {form.habilitaNfce && (
+          <div className="mt-4 rounded-lg border border-neutral-200 p-3">
+            <h3 className="text-sm font-medium text-neutral-700">CSC da NFC-e</h3>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-neutral-600">CSC (token)<Req /></label>
+                <input value={form.cscNfceProd} onChange={(e) => set({ cscNfceProd: e.target.value })} className={input} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-600">ID do token CSC<Req /></label>
+                <input value={form.idTokenNfceProd} onChange={(e) => set({ idTokenNfceProd: e.target.value })} className={input} />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-neutral-600">ID do token CSC</label>
-              <input value={form.idTokenNfceProd} onChange={(e) => set({ idTokenNfceProd: e.target.value })} className={input} />
-            </div>
+            <p className="mt-2 text-xs text-neutral-400">
+              Obrigatório pra emitir NFC-e — gerado no site da SEFAZ do seu estado.
+            </p>
           </div>
-          <p className="mt-2 text-xs text-neutral-400">
-            Gerado no site da SEFAZ do seu estado. Necessário só pra emitir NFC-e em produção.
-          </p>
-        </details>
+        )}
 
         <details className="mt-3 rounded-lg border border-neutral-200 p-3">
           <summary className="cursor-pointer text-sm font-medium text-neutral-700">
@@ -394,20 +388,12 @@ export function FiscalView({
               <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">NFC-e</h3>
               <div className="mt-2 grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-neutral-600">Série (produção)</label>
+                  <label className="block text-xs font-medium text-neutral-600">Série</label>
                   <input type="number" min="1" value={form.serieNfceProd} onChange={(e) => set({ serieNfceProd: e.target.value })} className={input} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-neutral-600">Próximo nº (produção)</label>
+                  <label className="block text-xs font-medium text-neutral-600">Próximo número</label>
                   <input type="number" min="1" value={form.proxNumNfceProd} onChange={(e) => set({ proxNumNfceProd: e.target.value })} className={input} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600">Série (teste)</label>
-                  <input type="number" min="1" value={form.serieNfceHomolog} onChange={(e) => set({ serieNfceHomolog: e.target.value })} className={input} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600">Próximo nº (teste)</label>
-                  <input type="number" min="1" value={form.proxNumNfceHomolog} onChange={(e) => set({ proxNumNfceHomolog: e.target.value })} className={input} />
                 </div>
               </div>
             </div>
@@ -415,20 +401,12 @@ export function FiscalView({
               <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">NF-e</h3>
               <div className="mt-2 grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-neutral-600">Série (produção)</label>
+                  <label className="block text-xs font-medium text-neutral-600">Série</label>
                   <input type="number" min="1" value={form.serieNfeProd} onChange={(e) => set({ serieNfeProd: e.target.value })} className={input} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-neutral-600">Próximo nº (produção)</label>
+                  <label className="block text-xs font-medium text-neutral-600">Próximo número</label>
                   <input type="number" min="1" value={form.proxNumNfeProd} onChange={(e) => set({ proxNumNfeProd: e.target.value })} className={input} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600">Série (teste)</label>
-                  <input type="number" min="1" value={form.serieNfeHomolog} onChange={(e) => set({ serieNfeHomolog: e.target.value })} className={input} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-600">Próximo nº (teste)</label>
-                  <input type="number" min="1" value={form.proxNumNfeHomolog} onChange={(e) => set({ proxNumNfeHomolog: e.target.value })} className={input} />
                 </div>
               </div>
             </div>

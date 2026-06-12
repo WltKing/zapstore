@@ -79,7 +79,20 @@ export async function saveFiscalConfigAction(input: FiscalConfigInput): Promise<
     const cnpj = onlyDigits(input.cnpj);
     if (cnpj.length !== 14) return { ok: false, error: "CNPJ inválido (14 dígitos)." };
     if (!input.razaoSocial.trim()) return { ok: false, error: "Informe a razão social." };
-    const ambiente = input.ambiente === "producao" ? "producao" : "homologacao";
+    // Campos exigidos pra emissão (SEFAZ rejeita sem eles).
+    if (!input.inscricaoEstadual?.trim()) return { ok: false, error: "Informe a inscrição estadual (ou ISENTO)." };
+    if (onlyDigits(input.cep).length !== 8) return { ok: false, error: "Informe o CEP da empresa." };
+    if (!input.logradouro?.trim()) return { ok: false, error: "Informe o logradouro (rua/avenida)." };
+    if (!input.numero?.trim()) return { ok: false, error: "Informe o número do endereço." };
+    if (!input.bairro?.trim()) return { ok: false, error: "Informe o bairro." };
+    if (!input.municipio?.trim()) return { ok: false, error: "Informe o município." };
+    if (onlyDigits(input.codigoMunicipio).length !== 7) return { ok: false, error: "Informe o código IBGE do município (7 dígitos — preenchido pelo CEP)." };
+    if ((input.uf ?? "").trim().length !== 2) return { ok: false, error: "Informe a UF." };
+    if (input.habilitaNfce && (!input.cscNfceProd?.trim() || !input.idTokenNfceProd?.trim())) {
+      return { ok: false, error: "Pra emitir NFC-e, informe o CSC e o ID do token (gerados no site da SEFAZ do seu estado)." };
+    }
+    // Sem ambiente de teste pro lojista: emissão sempre em produção.
+    const ambiente = "producao";
 
     const data = {
       cnpj,
