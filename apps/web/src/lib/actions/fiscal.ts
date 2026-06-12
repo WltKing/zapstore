@@ -51,10 +51,25 @@ export interface FiscalConfigInput {
   habilitaNfe: boolean;
   cscNfceProd?: string;
   idTokenNfceProd?: string;
+  // Numeração (strings no form; convertidas pra int ou null)
+  serieNfeHomolog?: string;
+  proxNumNfeHomolog?: string;
+  serieNfeProd?: string;
+  proxNumNfeProd?: string;
+  serieNfceHomolog?: string;
+  proxNumNfceHomolog?: string;
+  serieNfceProd?: string;
+  proxNumNfceProd?: string;
 }
 
 function onlyDigits(s: string | undefined): string {
   return (s ?? "").replace(/\D/g, "");
+}
+
+/** "31" → 31; vazio/inválido → null. */
+function toIntOrNull(s: string | undefined): number | null {
+  const n = parseInt((s ?? "").trim(), 10);
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
 /** Salva os dados da empresa/ambiente (sem mexer no certificado). */
@@ -87,15 +102,34 @@ export async function saveFiscalConfigAction(input: FiscalConfigInput): Promise<
       habilitaNfe: input.habilitaNfe,
       cscNfceProd: input.cscNfceProd?.trim() || null,
       idTokenNfceProd: input.idTokenNfceProd?.trim() || null,
+      serieNfeHomolog: toIntOrNull(input.serieNfeHomolog),
+      proxNumNfeHomolog: toIntOrNull(input.proxNumNfeHomolog),
+      serieNfeProd: toIntOrNull(input.serieNfeProd),
+      proxNumNfeProd: toIntOrNull(input.proxNumNfeProd),
+      serieNfceHomolog: toIntOrNull(input.serieNfceHomolog),
+      proxNumNfceHomolog: toIntOrNull(input.proxNumNfceHomolog),
+      serieNfceProd: toIntOrNull(input.serieNfceProd),
+      proxNumNfceProd: toIntOrNull(input.proxNumNfceProd),
     };
 
-    await withTenant(tenantId, async (tx) => {
-      await tx.fiscalConfig.upsert({
+    const saved = await withTenant(tenantId, async (tx) => {
+      return tx.fiscalConfig.upsert({
         where: { tenantId },
         create: { tenantId, ...data },
         update: data,
       });
     });
+
+    // Empresa já cadastrada no emissor → propaga os dados (CSC, numeração, endereço...).
+    if (saved.focusEmpresaId) {
+      const res = await updateEmpresa(saved.focusEmpresaId, empresaPayloadFromConfig(saved));
+      if (!res.ok) {
+        return {
+          ok: false,
+          error: `Dados salvos, mas o emissor recusou a atualização: ${focusErrorMessage(res.data)}`,
+        };
+      }
+    }
 
     revalidatePath("/fiscal");
     return { ok: true };
@@ -122,6 +156,16 @@ function empresaPayloadFromConfig(cfg: {
   uf: string | null;
   habilitaNfce: boolean;
   habilitaNfe: boolean;
+  cscNfceProd?: string | null;
+  idTokenNfceProd?: string | null;
+  serieNfeHomolog?: number | null;
+  proxNumNfeHomolog?: number | null;
+  serieNfeProd?: number | null;
+  proxNumNfeProd?: number | null;
+  serieNfceHomolog?: number | null;
+  proxNumNfceHomolog?: number | null;
+  serieNfceProd?: number | null;
+  proxNumNfceProd?: number | null;
 }): EmpresaPayload {
   return {
     nome: cfg.razaoSocial,
@@ -140,6 +184,17 @@ function empresaPayloadFromConfig(cfg: {
     uf: cfg.uf ?? undefined,
     habilita_nfe: cfg.habilitaNfe,
     habilita_nfce: cfg.habilitaNfce,
+    // CSC/token do NFC-e (produção) e numeração — só vão se preenchidos.
+    csc_nfce_producao: cfg.cscNfceProd ?? undefined,
+    id_token_nfce_producao: cfg.idTokenNfceProd ?? undefined,
+    serie_nfe_homologacao: cfg.serieNfeHomolog ?? undefined,
+    proximo_numero_nfe_homologacao: cfg.proxNumNfeHomolog ?? undefined,
+    serie_nfe_producao: cfg.serieNfeProd ?? undefined,
+    proximo_numero_nfe_producao: cfg.proxNumNfeProd ?? undefined,
+    serie_nfce_homologacao: cfg.serieNfceHomolog ?? undefined,
+    proximo_numero_nfce_homologacao: cfg.proxNumNfceHomolog ?? undefined,
+    serie_nfce_producao: cfg.serieNfceProd ?? undefined,
+    proximo_numero_nfce_producao: cfg.proxNumNfceProd ?? undefined,
   };
 }
 

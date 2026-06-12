@@ -31,6 +31,14 @@ export interface FiscalConfigData {
   habilitaNfe: boolean;
   cscNfceProd: string | null;
   idTokenNfceProd: string | null;
+  serieNfeHomolog: number | null;
+  proxNumNfeHomolog: number | null;
+  serieNfeProd: number | null;
+  proxNumNfeProd: number | null;
+  serieNfceHomolog: number | null;
+  proxNumNfceHomolog: number | null;
+  serieNfceProd: number | null;
+  proxNumNfceProd: number | null;
   certStatus: string | null;
   certCnpj: string | null;
   certValidoAte: string | null;
@@ -60,6 +68,14 @@ function blank(): FiscalConfigInput {
     habilitaNfe: true,
     cscNfceProd: "",
     idTokenNfceProd: "",
+    serieNfeHomolog: "",
+    proxNumNfeHomolog: "",
+    serieNfeProd: "",
+    proxNumNfeProd: "",
+    serieNfceHomolog: "",
+    proxNumNfceHomolog: "",
+    serieNfceProd: "",
+    proxNumNfceProd: "",
   };
 }
 
@@ -85,6 +101,14 @@ function toInput(d: FiscalConfigData): FiscalConfigInput {
     habilitaNfe: d.habilitaNfe,
     cscNfceProd: d.cscNfceProd ?? "",
     idTokenNfceProd: d.idTokenNfceProd ?? "",
+    serieNfeHomolog: d.serieNfeHomolog != null ? String(d.serieNfeHomolog) : "",
+    proxNumNfeHomolog: d.proxNumNfeHomolog != null ? String(d.proxNumNfeHomolog) : "",
+    serieNfeProd: d.serieNfeProd != null ? String(d.serieNfeProd) : "",
+    proxNumNfeProd: d.proxNumNfeProd != null ? String(d.proxNumNfeProd) : "",
+    serieNfceHomolog: d.serieNfceHomolog != null ? String(d.serieNfceHomolog) : "",
+    proxNumNfceHomolog: d.proxNumNfceHomolog != null ? String(d.proxNumNfceHomolog) : "",
+    serieNfceProd: d.serieNfceProd != null ? String(d.serieNfceProd) : "",
+    proxNumNfceProd: d.proxNumNfceProd != null ? String(d.proxNumNfceProd) : "",
   };
 }
 
@@ -354,6 +378,61 @@ export function FiscalView({
           <p className="mt-2 text-xs text-neutral-400">
             Gerado no site da SEFAZ do seu estado. Necessário só pra emitir NFC-e em produção.
           </p>
+        </details>
+
+        <details className="mt-3 rounded-lg border border-neutral-200 p-3">
+          <summary className="cursor-pointer text-sm font-medium text-neutral-700">
+            Numeração das notas (se a empresa já emitiu antes)
+          </summary>
+          <p className="mt-2 text-sm text-neutral-500">
+            Se essa empresa <strong>já emitia notas em outro sistema</strong>, informe a série e o{" "}
+            <strong>próximo número</strong> de cada documento pra continuar a sequência — senão a
+            SEFAZ rejeita por número repetido. Empresa nova: deixe em branco (começa do 1).
+          </p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg bg-neutral-50 p-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">NFC-e</h3>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600">Série (produção)</label>
+                  <input type="number" min="1" value={form.serieNfceProd} onChange={(e) => set({ serieNfceProd: e.target.value })} className={input} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600">Próximo nº (produção)</label>
+                  <input type="number" min="1" value={form.proxNumNfceProd} onChange={(e) => set({ proxNumNfceProd: e.target.value })} className={input} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600">Série (teste)</label>
+                  <input type="number" min="1" value={form.serieNfceHomolog} onChange={(e) => set({ serieNfceHomolog: e.target.value })} className={input} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600">Próximo nº (teste)</label>
+                  <input type="number" min="1" value={form.proxNumNfceHomolog} onChange={(e) => set({ proxNumNfceHomolog: e.target.value })} className={input} />
+                </div>
+              </div>
+            </div>
+            <div className="rounded-lg bg-neutral-50 p-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">NF-e</h3>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600">Série (produção)</label>
+                  <input type="number" min="1" value={form.serieNfeProd} onChange={(e) => set({ serieNfeProd: e.target.value })} className={input} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600">Próximo nº (produção)</label>
+                  <input type="number" min="1" value={form.proxNumNfeProd} onChange={(e) => set({ proxNumNfeProd: e.target.value })} className={input} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600">Série (teste)</label>
+                  <input type="number" min="1" value={form.serieNfeHomolog} onChange={(e) => set({ serieNfeHomolog: e.target.value })} className={input} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-600">Próximo nº (teste)</label>
+                  <input type="number" min="1" value={form.proxNumNfeHomolog} onChange={(e) => set({ proxNumNfeHomolog: e.target.value })} className={input} />
+                </div>
+              </div>
+            </div>
+          </div>
         </details>
 
         <div className="mt-4 flex justify-end">

@@ -72,6 +72,18 @@ export interface EmpresaPayload {
   uf?: string;
   habilita_nfe?: boolean;
   habilita_nfce?: boolean;
+  // CSC da NFC-e (produção) — exigido pela SEFAZ pra emitir em produção
+  csc_nfce_producao?: string;
+  id_token_nfce_producao?: string;
+  // Numeração (migração de outro sistema): série + próximo número por documento/ambiente
+  serie_nfe_homologacao?: number;
+  proximo_numero_nfe_homologacao?: number;
+  serie_nfe_producao?: number;
+  proximo_numero_nfe_producao?: number;
+  serie_nfce_homologacao?: number;
+  proximo_numero_nfce_homologacao?: number;
+  serie_nfce_producao?: number;
+  proximo_numero_nfce_producao?: number;
   arquivo_certificado_base64?: string;
   senha_certificado?: string;
   arquivo_logo_base64?: string;

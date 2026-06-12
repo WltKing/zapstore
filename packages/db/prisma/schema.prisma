@@ -588,6 +588,16 @@ model FiscalConfig {
   // CSC da NFC-e (produção) — fornecido pela SEFAZ do estado
   cscNfceProd       String?
   idTokenNfceProd   String?
+
+  // Numeração das notas (migração de outro sistema: série + PRÓXIMO número por documento/ambiente)
+  serieNfeHomolog     Int?
+  proxNumNfeHomolog   Int?
+  serieNfeProd        Int?
+  proxNumNfeProd      Int?
+  serieNfceHomolog    Int?
+  proxNumNfceHomolog  Int?
+  serieNfceProd       Int?
+  proxNumNfceProd     Int?
   cfopPadrao        String? // CFOP de venda padrão (ex: 5102)
   csosnPadrao       String? // CSOSN padrão p/ Simples (ex: 102)
 
