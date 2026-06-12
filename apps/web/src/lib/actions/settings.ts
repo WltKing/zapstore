@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { parseCardFees, type CardFees } from "@/lib/fees";
 import { parseSettlement, type SettlementConfig } from "@/lib/settlement";
 import { sanitizeModules } from "@/lib/modules";
+import { syncFiscalLogoForTenant } from "./fiscal";
 
 async function requireTenantId(): Promise<string> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -84,6 +85,12 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
       salesGoal = input.salesGoalBrl;
     }
 
+    // Logo anterior (pra saber se mudou e sincronizar com a nota fiscal).
+    const prev = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { logoUrl: true },
+    });
+
     // tenants é tabela global (sem RLS); atualizamos só a loja do próprio usuário.
     await prisma.tenant.update({
       where: { id: tenantId },
@@ -102,6 +109,17 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
         salesGoalBrl: salesGoal,
       },
     });
+
+    // Logo mudou → atualiza automaticamente a logo da nota fiscal (best-effort:
+    // falha aqui não derruba o salvamento das configurações).
+    const newLogo = input.logoUrl?.trim() || null;
+    if (newLogo && newLogo !== prev?.logoUrl) {
+      try {
+        await syncFiscalLogoForTenant(tenantId);
+      } catch {
+        // sem fiscal configurado ou emissor fora do ar — ignora
+      }
+    }
 
     revalidatePath("/settings");
     revalidatePath("/dashboard");

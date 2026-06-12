@@ -6,7 +6,6 @@ import {
   saveFiscalConfigAction,
   uploadCertificateAction,
   linkExistingEmpresaAction,
-  syncFiscalLogoAction,
   type FiscalConfigInput,
 } from "@/lib/actions/fiscal";
 import { lookupCepAction } from "@/lib/actions/cep";
@@ -167,25 +166,13 @@ export function FiscalView({
     });
   };
 
-  const syncLogo = () => {
-    setMsg(null);
-    startTransition(async () => {
-      const r = await syncFiscalLogoAction();
-      if (!r.ok) setMsg({ kind: "err", text: r.error ?? "Erro ao enviar logo" });
-      else {
-        setMsg({ kind: "ok", text: "Logo enviada pro Focus! Aparece nas próximas notas ✅" });
-        router.refresh();
-      }
-    });
-  };
-
   const linkExisting = () => {
     setMsg(null);
     startTransition(async () => {
       const r = await linkExistingEmpresaAction();
-      if (!r.ok) setMsg({ kind: "err", text: r.error ?? "Erro ao vincular" });
+      if (!r.ok) setMsg({ kind: "err", text: r.error ?? "Erro ao recuperar o cadastro" });
       else {
-        setMsg({ kind: "ok", text: "Empresa vinculada do Focus! Emissão ativada ✅" });
+        setMsg({ kind: "ok", text: "Cadastro recuperado! Emissão ativada ✅" });
         router.refresh();
       }
     });
@@ -215,7 +202,7 @@ export function FiscalView({
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Configuração fiscal</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            Emissão de NFC-e e NF-e via Focus NFe. Comece em <strong>homologação</strong> (teste) e só
+            Emissão de NFC-e e NF-e. Comece em <strong>homologação</strong> (teste) e só
             depois mude pra produção.
           </p>
         </div>
@@ -385,8 +372,9 @@ export function FiscalView({
       <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
         <h2 className="font-semibold">Certificado digital A1</h2>
         <p className="mt-1 text-sm text-neutral-500">
-          Envie o arquivo <strong>.pfx</strong> (ou .p12) + a senha. Ele vai direto pro Focus NFe — o
-          sistema <strong>não guarda</strong> o arquivo nem a senha. Salve os dados da empresa antes.
+          Envie o arquivo <strong>.pfx</strong> (ou .p12) + a senha. Ele vai direto pro emissor de
+          notas — o sistema <strong>não guarda</strong> o arquivo nem a senha. Salve os dados da
+          empresa antes.
         </p>
         <div className="mt-4 flex flex-wrap items-end gap-3">
           <div>
@@ -430,11 +418,11 @@ export function FiscalView({
 
         <details className="mt-5 border-t border-neutral-100 pt-4">
           <summary className="cursor-pointer text-xs text-neutral-400 hover:text-neutral-600">
-            Já uso o Focus com essa empresa? (migração)
+            Essa empresa já emitiu notas pelo nosso sistema antes?
           </summary>
           <p className="mt-2 text-sm text-neutral-500">
-            Se essa empresa <strong>já está cadastrada no Focus</strong> (com certificado), vincule sem
-            reenviar o arquivo — o sistema puxa os tokens pelo CNPJ.
+            Se essa empresa <strong>já foi cadastrada aqui antes</strong> (certificado já enviado),
+            recupere o cadastro sem reenviar o arquivo — buscamos pelo CNPJ.
           </p>
           <button
             type="button"
@@ -442,27 +430,15 @@ export function FiscalView({
             disabled={isPending}
             className="mt-2 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
           >
-            Vincular empresa já cadastrada no Focus
+            Recuperar cadastro da empresa
           </button>
         </details>
       </section>
 
-      {/* Logo no DANFE */}
-      <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
-        <h2 className="font-semibold">Logo no cupom/DANFE</h2>
-        <p className="mt-1 text-sm text-neutral-500">
-          Usa a <strong>logo da loja</strong> (subida em Configurações → Identidade visual) na nota
-          fiscal. Envie depois de cadastrar/vincular a empresa. PNG até 200×200 fica melhor.
-        </p>
-        <button
-          type="button"
-          onClick={syncLogo}
-          disabled={isPending}
-          className="mt-3 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
-        >
-          Enviar logo da loja pro Focus
-        </button>
-      </section>
+      <p className="mt-4 text-xs text-neutral-400">
+        A logo da loja (Configurações → Identidade visual) é aplicada automaticamente no
+        cupom/DANFE das notas.
+      </p>
     </main>
   );
 }

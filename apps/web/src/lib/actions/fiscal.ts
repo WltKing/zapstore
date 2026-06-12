@@ -148,15 +148,14 @@ function empresaPayloadFromConfig(cfg: {
  * DANFE/cupom daquela empresa. Busca a imagem do R2 no servidor (sem CORS) e
  * manda como arquivo_logo_base64 no update da empresa.
  */
-export async function syncFiscalLogoAction(): Promise<ActionResult> {
+export async function syncFiscalLogoForTenant(tenantId: string): Promise<ActionResult> {
   try {
-    const tenantId = await requireAdminTenant();
     const [cfg, tenant] = await Promise.all([
       withTenant(tenantId, (tx) => tx.fiscalConfig.findUnique({ where: { tenantId } })),
       prisma.tenant.findUnique({ where: { id: tenantId }, select: { logoUrl: true } }),
     ]);
-    if (!cfg?.focusEmpresaId) return { ok: false, error: "Cadastre/vincule a empresa no Focus primeiro." };
-    if (!tenant?.logoUrl) return { ok: false, error: "Suba a logo da loja em Configurações → Identidade visual primeiro." };
+    if (!cfg?.focusEmpresaId) return { ok: false, error: "Empresa fiscal ainda não cadastrada." };
+    if (!tenant?.logoUrl) return { ok: false, error: "Loja sem logo cadastrada." };
 
     const resp = await fetch(tenant.logoUrl, { cache: "no-store" });
     if (!resp.ok) return { ok: false, error: "Não consegui baixar a logo da loja." };
@@ -165,9 +164,18 @@ export async function syncFiscalLogoAction(): Promise<ActionResult> {
     const payload: EmpresaPayload = { ...empresaPayloadFromConfig(cfg), arquivo_logo_base64: b64 };
     const res = await updateEmpresa(cfg.focusEmpresaId, payload);
     if (!res.ok) return { ok: false, error: focusErrorMessage(res.data) };
-
-    revalidatePath("/fiscal");
     return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
+export async function syncFiscalLogoAction(): Promise<ActionResult> {
+  try {
+    const tenantId = await requireAdminTenant();
+    const r = await syncFiscalLogoForTenant(tenantId);
+    if (r.ok) revalidatePath("/fiscal");
+    return r;
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
   }
@@ -187,7 +195,7 @@ export async function linkExistingEmpresaAction(): Promise<ActionResult> {
     if (!found?.id) {
       return {
         ok: false,
-        error: "Empresa não encontrada no Focus com esse CNPJ. Envie o certificado pra cadastrar.",
+        error: "Não encontramos um cadastro anterior dessa empresa pelo CNPJ. Envie o certificado pra cadastrar.",
       };
     }
 
