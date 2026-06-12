@@ -2,12 +2,13 @@
 // arquivos de server actions só podem exportar funções async — constantes
 // exportadas de lá viram referências de action e quebram no client.
 
-export const ROLES = ["ADMIN", "OPERATOR", "FINANCIAL", "DELIVERY"] as const;
+export const ROLES = ["ADMIN", "MANAGER", "OPERATOR", "FINANCIAL", "DELIVERY"] as const;
 export type Role = (typeof ROLES)[number];
 
 export const ROLE_LABELS: Record<Role, string> = {
-  ADMIN: "Administrador",
-  OPERATOR: "Operador",
+  ADMIN: "Administrador (dono)",
+  MANAGER: "Gerente",
+  OPERATOR: "Vendedor / Atendente",
   FINANCIAL: "Financeiro",
-  DELIVERY: "Entregador",
+  DELIVERY: "Entregador / Motorista",
 };

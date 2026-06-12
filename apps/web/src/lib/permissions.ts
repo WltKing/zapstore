@@ -52,9 +52,11 @@ export const AREA_LABELS: Record<Area, string> = {
   settings: "Configurações",
 };
 
-/** Presets por perfil pronto. ADMIN = tudo. */
+/** Presets por perfil pronto. ADMIN = tudo; GERENTE = opera tudo, mas não mexe
+ * em usuários/configurações/assinatura (acesso e setup são do dono). */
 export const ROLE_PERMISSIONS: Record<Role, Area[]> = {
   ADMIN: [...AREAS],
+  MANAGER: AREAS.filter((a) => !["users", "settings", "billing"].includes(a)),
   OPERATOR: ["dashboard", "orders", "products", "customers", "agenda", "scheduling", "services", "simulator"],
   FINANCIAL: ["dashboard", "orders", "cashflow", "expenses", "billing"],
   DELIVERY: ["dashboard", "route", "deliveries", "agenda"],

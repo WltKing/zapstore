@@ -169,6 +169,7 @@ model TenantUser {
 
 enum TenantRole {
   ADMIN
+  MANAGER
   OPERATOR
   FINANCIAL
   DELIVERY

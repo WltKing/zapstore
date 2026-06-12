@@ -205,10 +205,12 @@ export function UsersView({
           </section>
 
           <p className="mt-4 text-xs text-neutral-500">
-            <strong>Perfis prontos:</strong> Administrador (tudo, inclui equipe e assinatura) ·
-            Operador (pedidos, produtos, clientes, agenda) · Financeiro (caixa, despesas, assinatura)
-            · Entregador (rota, entregas, agenda). Ou escolha <strong>Personalizado</strong> e marque
-            exatamente as áreas que a pessoa pode acessar.
+            <strong>Perfis prontos:</strong> Administrador — dono, tudo ·
+            Gerente — opera tudo, menos usuários/configurações/assinatura ·
+            Vendedor/Atendente — pedidos, produtos, clientes, agenda ·
+            Financeiro — caixa, despesas, assinatura ·
+            Entregador/Motorista — rota e entregas. Ou escolha{" "}
+            <strong>Personalizado</strong> e marque exatamente as áreas que a pessoa pode acessar.
           </p>
         </>
       )}

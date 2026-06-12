@@ -590,8 +590,8 @@ function ModulesSection({
     <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
       <h2 className="font-semibold">Funções do sistema</h2>
       <p className="mt-1 text-sm text-neutral-500">
-        Ligue só o que sua loja usa. O ramo do negócio (<strong>{nicheLabel}</strong>) é definido no
-        cadastro e não muda — mas as funções abaixo você ajusta quando quiser.
+        Ligue só o que sua loja usa — você ajusta quando quiser. O ramo (<strong>{nicheLabel}</strong>)
+        só personaliza o atendente do WhatsApp, não muda as funções.
       </p>
 
       <div className="mt-4 space-y-3">

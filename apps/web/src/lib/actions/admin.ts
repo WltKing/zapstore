@@ -5,7 +5,6 @@ import { prisma, setPlatformSetting } from "@zapstore/db";
 import { getSuperAdminSession } from "@/lib/super-admin";
 import { PLATFORM_KEYS } from "@/lib/platform-keys";
 import { NICHE_TEMPLATES } from "@/lib/niches";
-import { defaultEnabledModules } from "@/lib/modules";
 
 export interface ActionResult {
   ok: boolean;
@@ -34,8 +33,8 @@ export async function savePlatformSettingAction(key: string, value: string): Pro
   }
 }
 
-/** Troca o nicho de uma loja (manutenção/teste). Só super-admin — pro lojista é travado.
- * Re-resolve os módulos pro novo nicho (mantém os válidos, força os "core", tira os "off"). */
+/** Troca o RAMO de uma loja (correção/manutenção). Só super-admin.
+ * Ramo é informativo (personaliza o bot) — NÃO mexe nas funções da loja. */
 export async function setTenantNicheAction(tenantId: string, niche: string): Promise<ActionResult> {
   try {
     const session = await getSuperAdminSession();
@@ -48,10 +47,9 @@ export async function setTenantNicheAction(tenantId: string, niche: string): Pro
     });
     if (!tenant) return { ok: false, error: "Loja não encontrada." };
 
-    // Reseta pro layout padrão do nicho (não arrasta o estado anterior).
     await prisma.tenant.update({
       where: { id: tenantId },
-      data: { niche, enabledModules: defaultEnabledModules(niche) },
+      data: { niche },
     });
 
     revalidatePath("/admin");
