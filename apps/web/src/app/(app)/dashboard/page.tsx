@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras, getReceivables } from "@/lib/tenant";
 import { NICHE_TEMPLATES } from "@/lib/niches";
-import { isCoreModule } from "@/lib/modules";
+import { isServiceLed } from "@/lib/modules";
 import { AreaTrend, Bars, DonutChart, HBars } from "./charts";
 import { MonthSelect } from "../cashflow/month-select";
 import {
@@ -91,7 +91,7 @@ export default async function DashboardPage({
   const modules = tenant.enabledModules ?? [];
   const has = (m: string) => modules.includes(m);
   // Negócio de serviço (estética/salão): terminologia "Serviço/Profissional" (pelo nicho).
-  const serviceLed = isCoreModule(tenant.niche, "scheduling");
+  const serviceLed = isServiceLed(tenant.enabledModules ?? [], tenant.primaryFocus);
 
   const quota = tenant.subscription?.messageQuota ?? DEFAULT_QUOTA;
   const used = stats.messagesUsedThisMonth ?? 0;

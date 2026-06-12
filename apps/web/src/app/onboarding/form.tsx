@@ -41,18 +41,22 @@ export function OnboardingForm() {
   const [moduleAnswers, setModuleAnswers] = useState<Record<ModuleId, boolean>>(
     defaultModuleAnswers("colchoes_moveis"),
   );
+  const [primaryFocus, setPrimaryFocus] = useState<"products" | "scheduling">("products");
 
+  // Trocar o ramo só ajusta defaults de comunicação (pagamento/bot) — NÃO mexe nas funções.
   const handleNicheChange = (id: NicheId) => {
     setNiche(id);
     const tpl = NICHE_TEMPLATES[id];
     setPaymentMethods(tpl.defaultPaymentMethods);
-    setModuleAnswers(defaultModuleAnswers(id));
     if (!botName) setBotName(tpl.defaultBotName);
   };
 
-  const questions = askModules(niche);
   const setAnswer = (m: ModuleId, value: boolean) =>
     setModuleAnswers((prev) => ({ ...prev, [m]: value }));
+
+  const sellsProducts = moduleAnswers.products;
+  const hasScheduling = moduleAnswers.scheduling;
+  const bothAxes = sellsProducts && hasScheduling;
 
   const togglePayment = (method: string) => {
     setPaymentMethods((prev) =>
@@ -67,12 +71,17 @@ export function OnboardingForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const answeredYes = questions.filter((m) => moduleAnswers[m]);
+    if (!sellsProducts && !hasScheduling) {
+      setError("Marque pelo menos uma atividade: vender produtos ou atender com hora marcada.");
+      return;
+    }
+    const answeredYes = askModules(niche).filter((m) => moduleAnswers[m]);
     const enabledModules = resolveEnabledModules(niche, answeredYes);
     startTransition(async () => {
       const result = await createTenantAction({
         storeName,
         niche,
+        primaryFocus: bothAxes ? primaryFocus : sellsProducts ? "products" : "scheduling",
         botName,
         businessHoursOpen: open,
         businessHoursClose: close,
@@ -90,41 +99,81 @@ export function OnboardingForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-8">
-      {/* Nicho */}
+      {/* O que a loja faz (define as funções) */}
       <section className="rounded-2xl bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">Que tipo de negócio é o seu?</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {Object.values(NICHE_TEMPLATES).map((tpl) => (
-            <button
-              type="button"
-              key={tpl.id}
-              onClick={() => handleNicheChange(tpl.id)}
-              className={`rounded-xl border p-4 text-left transition ${
-                niche === tpl.id
-                  ? "border-neutral-900 bg-neutral-900 text-white"
-                  : "border-neutral-200 bg-white hover:border-neutral-400"
-              }`}
-            >
-              <div className="font-medium">{tpl.label}</div>
-              <div
-                className={`mt-1 text-xs ${niche === tpl.id ? "text-neutral-300" : "text-neutral-500"}`}
-              >
-                {tpl.description}
-              </div>
-            </button>
-          ))}
+        <h2 className="text-lg font-semibold">O que sua loja faz?</h2>
+        <p className="mt-1 text-xs text-neutral-500">
+          Pode marcar as duas. Isso monta o sistema com as funções certas — e dá pra mudar depois
+          nas Configurações.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setAnswer("products", !sellsProducts)}
+            className={`rounded-xl border p-4 text-left transition ${
+              sellsProducts
+                ? "border-neutral-900 bg-neutral-900 text-white"
+                : "border-neutral-200 bg-white hover:border-neutral-400"
+            }`}
+          >
+            <div className="font-medium">🛒 Vendo produtos</div>
+            <div className={`mt-1 text-xs ${sellsProducts ? "text-neutral-300" : "text-neutral-500"}`}>
+              Catálogo, estoque e vendas (colchões, móveis, moda, pet, alimentação...)
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setAnswer("scheduling", !hasScheduling)}
+            className={`rounded-xl border p-4 text-left transition ${
+              hasScheduling
+                ? "border-neutral-900 bg-neutral-900 text-white"
+                : "border-neutral-200 bg-white hover:border-neutral-400"
+            }`}
+          >
+            <div className="font-medium">📅 Atendo com hora marcada</div>
+            <div className={`mt-1 text-xs ${hasScheduling ? "text-neutral-300" : "text-neutral-500"}`}>
+              Agenda, serviços e profissionais (salão, estética, clínica, banho e tosa...)
+            </div>
+          </button>
         </div>
-      </section>
 
-      {/* Perguntas que ligam módulos do nicho */}
-      {questions.length > 0 && (
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Como seu negócio funciona?</h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            Isso liga só as funções que você usa. Dá pra mudar depois nas Configurações.
-          </p>
-          <div className="mt-4 space-y-3">
-            {questions.map((m) => (
+        {/* Atividade principal — só quando faz as duas coisas */}
+        {bothAxes && (
+          <div className="mt-4 rounded-xl border border-neutral-200 p-4">
+            <div className="text-sm font-medium text-neutral-900">
+              Qual é a atividade principal da loja?
+            </div>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              O sistema prioriza essa atividade no menu e nos relatórios.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <label className="flex items-center gap-2 text-sm text-neutral-700">
+                <input
+                  type="radio"
+                  name="primary-focus"
+                  checked={primaryFocus === "products"}
+                  onChange={() => setPrimaryFocus("products")}
+                />
+                Vendas de produtos
+              </label>
+              <label className="flex items-center gap-2 text-sm text-neutral-700">
+                <input
+                  type="radio"
+                  name="primary-focus"
+                  checked={primaryFocus === "scheduling"}
+                  onChange={() => setPrimaryFocus("scheduling")}
+                />
+                Serviços agendados
+              </label>
+            </div>
+          </div>
+        )}
+
+        {/* Sub-perguntas */}
+        <div className="mt-4 space-y-3">
+          {(["delivery", "fiscal"] as ModuleId[])
+            .filter((m) => m !== "delivery" || sellsProducts)
+            .map((m) => (
               <div
                 key={m}
                 className="flex items-center justify-between gap-4 rounded-xl border border-neutral-200 p-4"
@@ -155,9 +204,28 @@ export function OnboardingForm() {
                 </div>
               </div>
             ))}
-          </div>
-        </section>
-      )}
+        </div>
+      </section>
+
+      {/* Ramo (informativo: personaliza o bot e a comunicação) */}
+      <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold">Qual é o seu ramo?</h2>
+        <p className="mt-1 text-xs text-neutral-500">
+          Usamos pra personalizar o atendente do WhatsApp pro seu segmento — não muda as funções.
+        </p>
+        <select
+          value={niche}
+          onChange={(e) => handleNicheChange(e.target.value as NicheId)}
+          className="mt-3 block w-full rounded-lg border border-neutral-300 px-3 py-2 text-neutral-900 shadow-sm focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
+        >
+          {Object.values(NICHE_TEMPLATES).map((tpl) => (
+            <option key={tpl.id} value={tpl.id}>
+              {tpl.label}
+            </option>
+          ))}
+        </select>
+        <p className="mt-2 text-xs text-neutral-400">{selectedNiche.description}</p>
+      </section>
 
       {/* Loja */}
       <section className="rounded-2xl bg-white p-6 shadow-sm">

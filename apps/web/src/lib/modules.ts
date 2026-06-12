@@ -43,18 +43,20 @@ export const UNIVERSAL_AREAS: Area[] = [
 ];
 
 /**
- * Como cada nicho trata cada módulo:
- *   "core"     = sempre ligado (identidade do nicho) — não pergunta, não desliga
- *   "ask"      = pergunta no cadastro; depois o lojista liga/desliga nas Configurações
- *   "optional" = não pergunta no cadastro, vem DESLIGADO; o lojista liga nas Configurações
- *   "off"      = não faz sentido nesse nicho → escondido
+ * Como o sistema trata cada módulo (IGUAL pra todo ramo — o ramo é informativo,
+ * quem decide as funções é o lojista):
+ *   "ask"      = pergunta no cadastro; depois liga/desliga nas Configurações
+ *   "optional" = não pergunta no cadastro, vem DESLIGADO; liga nas Configurações
+ * Regra de ouro: pelo menos UM dos eixos (products | scheduling) sempre ligado.
  */
 export type NicheModuleMode = "core" | "ask" | "optional" | "off";
 
-export const NICHE_MODULES: Record<NicheId, Record<ModuleId, NicheModuleMode>> = {
-  colchoes_moveis: { products: "core", delivery: "ask", scheduling: "off", fiscal: "ask", goal: "optional" },
-  estetica: { products: "ask", delivery: "off", scheduling: "core", fiscal: "ask", goal: "optional" },
-  generico: { products: "ask", delivery: "ask", scheduling: "ask", fiscal: "ask", goal: "optional" },
+const MODULE_MODES: Record<ModuleId, NicheModuleMode> = {
+  products: "ask",
+  delivery: "ask",
+  scheduling: "ask",
+  fiscal: "ask",
+  goal: "optional",
 };
 
 export const MODULE_LABELS: Record<ModuleId, string> = {
@@ -74,40 +76,40 @@ export const MODULE_QUESTIONS: Record<ModuleId, { question: string; hint: string
   goal: { question: "", hint: "" }, // optional: não aparece no cadastro
 };
 
-function nicheConfig(niche: string | null | undefined): Record<ModuleId, NicheModuleMode> {
-  return NICHE_MODULES[(niche as NicheId)] ?? NICHE_MODULES.generico;
+/** Módulos perguntados no cadastro (igual pra todo ramo). */
+export function askModules(_niche?: string | null): ModuleId[] {
+  return MODULE_IDS.filter((m) => MODULE_MODES[m] === "ask");
 }
 
-/** Módulos sempre ligados nesse nicho. */
-export function coreModules(niche: string | null | undefined): ModuleId[] {
-  const cfg = nicheConfig(niche);
-  return MODULE_IDS.filter((m) => cfg[m] === "core");
+/** Módulos que o lojista pode ligar/desligar nas Configurações. */
+export function configurableModules(_niche?: string | null): ModuleId[] {
+  return MODULE_IDS;
 }
 
-/** Módulos perguntados no cadastro nesse nicho. */
-export function askModules(niche: string | null | undefined): ModuleId[] {
-  const cfg = nicheConfig(niche);
-  return MODULE_IDS.filter((m) => cfg[m] === "ask");
+/** Compat: nada é "core" por ramo — a trava agora é "pelo menos um eixo ligado". */
+export function isCoreModule(_niche: string | null | undefined, _m: ModuleId): boolean {
+  return false;
 }
 
-/** Módulos que o lojista pode ligar/desligar nas Configurações (core + ask; "off" fica de fora). */
-export function configurableModules(niche: string | null | undefined): ModuleId[] {
-  const cfg = nicheConfig(niche);
-  return MODULE_IDS.filter((m) => cfg[m] !== "off");
-}
-
-/** True se o módulo é "core" (ligado e não-desligável) nesse nicho. */
-export function isCoreModule(niche: string | null | undefined, m: ModuleId): boolean {
-  return nicheConfig(niche)[m] === "core";
+/** Resolve a lista final de módulos ligados a partir das respostas do cadastro. */
+export function resolveEnabledModules(_niche: string | null | undefined, answeredYes: ModuleId[]): ModuleId[] {
+  return MODULE_IDS.filter((m) => MODULE_MODES[m] === "ask" && answeredYes.includes(m));
 }
 
 /**
- * Resolve a lista final de módulos ligados a partir do nicho + respostas do cadastro.
- * answeredYes = módulos "ask" que o lojista respondeu "sim".
+ * O sistema é "puxado por serviços"? Define a priorização do menu e a terminologia
+ * (Serviços/Profissional vs Produtos/Vendedor). Quando a loja faz os DOIS, vale a
+ * atividade principal escolhida pelo lojista (Tenant.primaryFocus).
  */
-export function resolveEnabledModules(niche: string | null | undefined, answeredYes: ModuleId[]): ModuleId[] {
-  const cfg = nicheConfig(niche);
-  return MODULE_IDS.filter((m) => cfg[m] === "core" || (cfg[m] === "ask" && answeredYes.includes(m)));
+export function isServiceLed(
+  enabledModules: string[],
+  primaryFocus?: string | null,
+): boolean {
+  const hasScheduling = enabledModules.includes("scheduling");
+  if (!hasScheduling) return false;
+  const hasProducts = enabledModules.includes("products");
+  if (!hasProducts) return true;
+  return primaryFocus === "scheduling";
 }
 
 /** Resposta padrão de cada módulo "ask" pra um nicho (usado no cadastro e na troca de nicho). */
@@ -122,26 +124,23 @@ export function defaultModuleAnswers(niche: string | null | undefined): Record<M
   };
 }
 
-/** Layout padrão do nicho: core + módulos "ask" com resposta padrão "sim".
- * Usado quando o super-admin troca o nicho (reseta pro layout limpo daquele nicho). */
+/** Layout padrão do ramo: módulos "ask" com resposta padrão "sim" (sugestão do template).
+ * Usado quando o super-admin troca o ramo (reseta pro layout sugerido). */
 export function defaultEnabledModules(niche: string | null | undefined): ModuleId[] {
-  const cfg = nicheConfig(niche);
   const defaults = defaultModuleAnswers(niche);
-  return MODULE_IDS.filter((m) => cfg[m] === "core" || (cfg[m] === "ask" && defaults[m]));
+  return MODULE_IDS.filter((m) => MODULE_MODES[m] === "ask" && defaults[m]);
 }
 
 /**
- * Sanitiza uma lista vinda das Configurações: mantém só módulos válidos pro nicho
- * (não-"off") e garante que os "core" estejam sempre presentes.
+ * Sanitiza uma lista vinda das Configurações: só módulos válidos e garante a
+ * regra de ouro — pelo menos UM dos eixos (products | scheduling) ligado.
  */
-export function sanitizeModules(niche: string | null | undefined, requested: string[]): ModuleId[] {
-  const cfg = nicheConfig(niche);
-  const set = new Set<ModuleId>(coreModules(niche));
+export function sanitizeModules(_niche: string | null | undefined, requested: string[]): ModuleId[] {
+  const set = new Set<ModuleId>();
   for (const r of requested) {
-    if ((MODULE_IDS as string[]).includes(r) && cfg[r as ModuleId] !== "off") {
-      set.add(r as ModuleId);
-    }
+    if ((MODULE_IDS as string[]).includes(r)) set.add(r as ModuleId);
   }
+  if (!set.has("products") && !set.has("scheduling")) set.add("products");
   return MODULE_IDS.filter((m) => set.has(m));
 }
 

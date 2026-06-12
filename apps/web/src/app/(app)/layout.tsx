@@ -4,7 +4,7 @@ import { prisma } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
 import { effectivePermissions, areaForPath } from "@/lib/permissions";
-import { allowedAreasForModules, isCoreModule } from "@/lib/modules";
+import { allowedAreasForModules, isServiceLed } from "@/lib/modules";
 import { isSuperAdminEmail } from "@/lib/super-admin";
 import { brandCssVars } from "@/lib/theme";
 import { NICHE_TEMPLATES } from "@/lib/niches";
@@ -31,7 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const nicheAreas = allowedAreasForModules(modules);
   // Negócio "de serviço" (estética/salão): o nicho tem agenda como ESSENCIAL → menu com
   // agenda em destaque SEMPRE, mesmo que também venda produto.
-  const serviceLed = isCoreModule(tenant.niche, "scheduling");
+  const serviceLed = isServiceLed(tenant.enabledModules ?? [], tenant.primaryFocus);
 
   // Acesso efetivo = (permissão do usuário) E (módulo do nicho ligado).
   const allowed = permAllowed.filter((a) => nicheAreas.has(a));

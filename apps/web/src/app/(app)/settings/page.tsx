@@ -35,6 +35,7 @@ export default async function SettingsPage() {
       nicheLabel={nicheLabel}
       niche={tenant.niche ?? "generico"}
       enabledModules={tenant.enabledModules ?? []}
+      primaryFocus={tenant.primaryFocus ?? null}
       email={session.user.email}
       deliverySlot={
         (tenant.enabledModules ?? []).includes("delivery") ? (

@@ -131,7 +131,10 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
 
 /** Liga/desliga módulos do nicho (Produtos, Entrega, Fiscal...). O nicho é travado;
  * sanitizeModules mantém só módulos válidos pro nicho e força os "core" ligados. */
-export async function updateModulesAction(modules: string[]): Promise<ActionResult> {
+export async function updateModulesAction(
+  modules: string[],
+  primaryFocus?: string,
+): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
     const tenant = await prisma.tenant.findUnique({
@@ -139,9 +142,11 @@ export async function updateModulesAction(modules: string[]): Promise<ActionResu
       select: { niche: true },
     });
     const clean = sanitizeModules(tenant?.niche ?? null, modules);
+    const focus =
+      primaryFocus === "scheduling" || primaryFocus === "products" ? primaryFocus : undefined;
     await prisma.tenant.update({
       where: { id: tenantId },
-      data: { enabledModules: clean },
+      data: { enabledModules: clean, ...(focus ? { primaryFocus: focus } : {}) },
     });
     revalidatePath("/settings");
     revalidatePath("/dashboard");

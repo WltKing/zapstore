@@ -9,7 +9,7 @@ import type { CardFees } from "@/lib/fees";
 import { CREDIT_MODE_LABELS, type CreditMode, type SettlementConfig } from "@/lib/settlement";
 import {
   configurableModules,
-  isCoreModule,
+
   MODULE_LABELS,
   type ModuleId,
 } from "@/lib/modules";
@@ -32,6 +32,7 @@ export function SettingsView({
   nicheLabel,
   niche,
   enabledModules,
+  primaryFocus: primaryFocusProp,
   email,
   deliverySlot,
 }: {
@@ -50,6 +51,7 @@ export function SettingsView({
   nicheLabel: string;
   niche: string;
   enabledModules: string[];
+  primaryFocus: string | null;
   email: string;
   deliverySlot?: React.ReactNode;
 }) {
@@ -527,32 +529,40 @@ export function SettingsView({
 
       {deliverySlot}
 
-      <ModulesSection niche={niche} enabledModules={enabledModules} nicheLabel={nicheLabel} />
+      <ModulesSection niche={niche} enabledModules={enabledModules} nicheLabel={nicheLabel} primaryFocus={primaryFocusProp} />
     </main>
   );
 }
 
-/** Liga/desliga as funções do sistema conforme o nicho (que é travado). */
+/** Liga/desliga as funções do sistema (regra: pelo menos um eixo — produtos ou agenda). */
 function ModulesSection({
   niche,
   enabledModules,
   nicheLabel,
+  primaryFocus,
 }: {
   niche: string;
   enabledModules: string[];
   nicheLabel: string;
+  primaryFocus: string | null;
 }) {
   const router = useRouter();
   const configurable = configurableModules(niche);
   const [active, setActive] = useState<Set<ModuleId>>(
     () => new Set(enabledModules.filter((m): m is ModuleId => configurable.includes(m as ModuleId))),
   );
+  const [focus, setFocus] = useState(primaryFocus === "scheduling" ? "scheduling" : "products");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  // Último eixo ligado não desliga (a loja precisa vender produtos OU agendar).
+  const isLastAxis = (m: ModuleId) =>
+    (m === "products" && active.has("products") && !active.has("scheduling")) ||
+    (m === "scheduling" && active.has("scheduling") && !active.has("products"));
+
   const toggle = (m: ModuleId) => {
-    if (isCoreModule(niche, m)) return; // core não desliga
+    if (isLastAxis(m)) return;
     setActive((prev) => {
       const next = new Set(prev);
       if (next.has(m)) next.delete(m);
@@ -565,7 +575,7 @@ function ModulesSection({
     setError(null);
     setSaved(false);
     startTransition(async () => {
-      const res = await updateModulesAction([...active]);
+      const res = await updateModulesAction([...active], focus);
       if (!res.ok) setError(res.error ?? "Erro");
       else {
         setSaved(true);
@@ -586,24 +596,26 @@ function ModulesSection({
 
       <div className="mt-4 space-y-3">
         {configurable.map((m) => {
-          const core = isCoreModule(niche, m);
-          const on = active.has(m) || core;
+          const locked = isLastAxis(m);
+          const on = active.has(m);
           return (
             <div key={m} className="flex items-center justify-between gap-4 rounded-xl border border-neutral-200 p-4">
               <div className="min-w-0">
                 <div className="text-sm font-medium text-neutral-900">{MODULE_LABELS[m]}</div>
-                {core && (
-                  <div className="text-xs text-neutral-400">Essencial pro seu ramo — sempre ligado.</div>
+                {locked && (
+                  <div className="text-xs text-neutral-400">
+                    A loja precisa de pelo menos uma atividade (produtos ou agenda).
+                  </div>
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => toggle(m)}
-                disabled={core}
+                disabled={locked}
                 aria-pressed={on}
                 className={`inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${
                   on ? "bg-emerald-500" : "bg-neutral-300"
-                } ${core ? "cursor-not-allowed opacity-60" : ""}`}
+                } ${locked ? "cursor-not-allowed opacity-60" : ""}`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
@@ -615,6 +627,26 @@ function ModulesSection({
           );
         })}
       </div>
+
+      {/* Atividade principal — quando vende E agenda */}
+      {active.has("products") && active.has("scheduling") && (
+        <div className="mt-4 rounded-xl border border-neutral-200 p-4">
+          <div className="text-sm font-medium text-neutral-900">Atividade principal</div>
+          <p className="mt-0.5 text-xs text-neutral-500">
+            O sistema prioriza essa atividade no menu e nos relatórios.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 text-sm text-neutral-700">
+              <input type="radio" name="settings-focus" checked={focus === "products"} onChange={() => setFocus("products")} />
+              Vendas de produtos
+            </label>
+            <label className="flex items-center gap-2 text-sm text-neutral-700">
+              <input type="radio" name="settings-focus" checked={focus === "scheduling"} onChange={() => setFocus("scheduling")} />
+              Serviços agendados
+            </label>
+          </div>
+        </div>
+      )}
 
       {error && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
       {saved && (

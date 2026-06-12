@@ -10,6 +10,7 @@ import { sanitizeModules } from "@/lib/modules";
 export interface OnboardingInput {
   storeName: string;
   niche: NicheId;
+  primaryFocus?: string; // "products" | "scheduling" — atividade principal (prioriza menu)
   botName: string;
   businessHoursOpen: string; // "08:00"
   businessHoursClose: string; // "18:00"
@@ -82,6 +83,7 @@ export async function createTenantAction(input: OnboardingInput): Promise<Onboar
         slug,
         name: input.storeName.trim(),
         niche: input.niche,
+        primaryFocus: input.primaryFocus === "scheduling" ? "scheduling" : "products",
         enabledModules: sanitizeModules(input.niche, input.enabledModules ?? []),
         status: "TRIAL",
         users: {
