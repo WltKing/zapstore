@@ -237,9 +237,12 @@ export function RouteView({
         </span>
       </div>
       <p className="mt-2 text-xs text-neutral-400">
-        Arraste as paradas pra definir a ordem — inclusive entre Manhã e Tarde (muda o turno do
-        pedido). No celular, segure o cartão e arraste. Ao tocar &quot;A caminho&quot;, o Maps abre a
-        navegação até o endereço.
+        <span className="sm:hidden">Segure e arraste pra ordenar (vale entre turnos). &quot;A caminho&quot; abre o Maps.</span>
+        <span className="hidden sm:inline">
+          Arraste as paradas pra definir a ordem — inclusive entre Manhã e Tarde (muda o turno do
+          pedido). No celular, segure o cartão e arraste. Ao tocar &quot;A caminho&quot;, o Maps abre a
+          navegação até o endereço.
+        </span>
       </p>
 
       {msg && (
@@ -373,7 +376,7 @@ function SortableStop({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`rounded-2xl bg-white p-4 shadow-card ${terminal ? "opacity-60" : ""} ${
+      className={`rounded-2xl bg-white p-3 shadow-card sm:p-4 ${terminal ? "opacity-60" : ""} ${
         isDragging ? "opacity-30" : ""
       }`}
     >
