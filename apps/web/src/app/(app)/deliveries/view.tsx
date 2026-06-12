@@ -58,7 +58,6 @@ export function DeliveriesView({
   const todaySp = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
   const isOverdue = (d: DeliveryRow) => d.dateValue < todaySp && d.status !== "DELIVERED";
   const overdue = deliveries.filter(isOverdue);
-  const overdueCount = overdue.length;
 
   // Dia selecionado (padrão: hoje).
   const [day, setDay] = useState(todaySp);
@@ -83,16 +82,6 @@ export function DeliveriesView({
           <h1 className="text-3xl font-bold tracking-tight">Entregas</h1>
         </div>
         </header>
-
-      {overdueCount > 0 && (
-        <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
-          <strong>
-            {overdueCount} entrega{overdueCount > 1 ? "s" : ""} atrasada{overdueCount > 1 ? "s" : ""}
-          </strong>{" "}
-          de dias anteriores sem finalizar (destacadas abaixo). Entregue, remarque pelo
-          &quot;Gerenciar&quot;, ou marque como entregue se já foi feita.
-        </div>
-      )}
 
       <p className="mt-4 text-xs text-neutral-400">
         Capacidade por dia/turno e horários de corte ficam em{" "}
