@@ -239,10 +239,11 @@ export function UsersView({
 
           <p className="mt-4 text-xs text-neutral-500">
             <strong>Perfis prontos:</strong> Administrador — o dono, vê e faz tudo ·
-            Gerente — opera tudo, menos usuários, configurações e o financeiro da empresa. Pra
-            qualquer outro caso (vendedor, financeiro, entregador…), escolha{" "}
-            <strong>Personalizado</strong>: comece por um modelo e marque exatamente as áreas que a
-            pessoa pode acessar.
+            Gerente — opera tudo (pedidos, produtos, clientes, agenda, entregas), menos o
+            financeiro da empresa, configurações, usuários e o bot. Pra outros casos (vendedor,
+            entregador…), escolha <strong>Personalizado</strong> e marque as áreas que a pessoa pode
+            acessar. <strong>Caixa, despesas, marketing, fiscal, assinatura, configurações e bot são
+            exclusivos do dono</strong> — não aparecem aqui.
           </p>
         </>
       )}

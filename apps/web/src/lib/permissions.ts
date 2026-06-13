@@ -74,13 +74,33 @@ export const PRESET_ROLES: Role[] = ["ADMIN", "MANAGER"];
  * dono ajusta depois. Reaproveitam os presets antigos como ponto de partida. */
 export const CUSTOM_TEMPLATES: { key: string; label: string; areas: Area[] }[] = [
   { key: "seller", label: "Vendedor / Atendente", areas: ROLE_PERMISSIONS.OPERATOR },
-  { key: "financial", label: "Financeiro", areas: ROLE_PERMISSIONS.FINANCIAL },
   { key: "delivery", label: "Entregador / Motorista", areas: ROLE_PERMISSIONS.DELIVERY },
 ];
 
-/** Áreas que SÓ o dono (ADMIN) acessa, independente de perfil/personalização:
- * configuração do bot, simulador e WhatsApp são o "coração" do atendimento. */
-export const ADMIN_ONLY_AREAS: Area[] = ["bot", "simulator", "whatsapp"];
+/**
+ * REGRA ÚNICA de sensibilidade: áreas que SÓ o dono (ADMIN) acessa — nem perfil
+ * pronto nem Personalizado liberam. effectivePermissions remove tudo isto pra
+ * quem não é ADMIN (some do menu + trava a rota), num lugar só.
+ *   - Coração do atendimento: bot, simulador, WhatsApp.
+ *   - Financeiro da empresa (decisão do dono: exclusivo): caixa, despesas,
+ *     marketing, assinatura, fiscal.
+ *   - Controle/segurança do negócio: usuários e configurações (senha de gestão,
+ *     taxas da maquininha, identidade).
+ * Obs.: faturamento/lucro/custo/margem também são só-do-dono, tratados na própria
+ * tela (dashboard usa showFinance; produtos não enviam custo a não-admin).
+ */
+export const ADMIN_ONLY_AREAS: Area[] = [
+  "bot",
+  "simulator",
+  "whatsapp",
+  "cashflow",
+  "expenses",
+  "marketing",
+  "billing",
+  "fiscal",
+  "users",
+  "settings",
+];
 
 export function isArea(v: string): v is Area {
   return (AREAS as readonly string[]).includes(v);
