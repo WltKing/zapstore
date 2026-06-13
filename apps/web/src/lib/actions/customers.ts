@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { prisma, withTenant } from "@zapstore/db";
 import { auth } from "@/lib/auth";
+import { requireManagementPin } from "@/lib/management";
 
 export interface CustomerInput {
   name: string;
@@ -71,15 +72,25 @@ export async function createCustomerAction(input: CustomerInput): Promise<Action
   }
 }
 
-export async function updateCustomerAction(id: string, input: CustomerInput): Promise<ActionResult> {
+export async function updateCustomerAction(
+  id: string,
+  input: CustomerInput,
+  pin?: string,
+): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
+    const guard = await requireManagementPin(tenantId, pin);
+    if (!guard.ok) return { ok: false, error: guard.error };
     const err = validateCustomer(input);
     if (err) return { ok: false, error: err };
 
     const phone = normalizePhone(input.phone);
 
     await withTenant(tenantId, async (tx) => {
+      // Telefone antigo do cliente (chave que liga o histórico de pedidos).
+      const prev = await tx.customer.findUnique({ where: { id }, select: { phone: true } });
+      const oldPhone = prev ? normalizePhone(prev.phone) : "";
+
       await tx.customer.update({
         where: { id },
         data: {
@@ -90,9 +101,24 @@ export async function updateCustomerAction(id: string, input: CustomerInput): Pr
           notes: input.notes?.trim() || null,
         },
       });
+
+      // Mudou o número? O histórico (casado por telefone) acompanha o cliente:
+      // repontamos os pedidos do número antigo pro novo. Sem isso, o histórico
+      // "sumiria" (na verdade ficaria preso ao número antigo).
+      if (oldPhone && phone && oldPhone !== phone) {
+        const orders = await tx.order.findMany({
+          where: { status: { not: "CANCELED" } },
+          select: { id: true, customerPhone: true },
+        });
+        const toMove = orders.filter((o) => normalizePhone(o.customerPhone ?? "") === oldPhone).map((o) => o.id);
+        if (toMove.length > 0) {
+          await tx.order.updateMany({ where: { id: { in: toMove } }, data: { customerPhone: phone } });
+        }
+      }
     });
 
     revalidatePath("/customers");
+    revalidatePath("/orders");
     return { ok: true };
   } catch (e) {
     if (e instanceof Error && e.message.includes("Unique constraint")) {
@@ -102,9 +128,11 @@ export async function updateCustomerAction(id: string, input: CustomerInput): Pr
   }
 }
 
-export async function deleteCustomerAction(id: string): Promise<ActionResult> {
+export async function deleteCustomerAction(id: string, pin?: string): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
+    const guard = await requireManagementPin(tenantId, pin, { deletion: true });
+    if (!guard.ok) return { ok: false, error: guard.error };
     await withTenant(tenantId, async (tx) => {
       await tx.customer.delete({ where: { id } });
     });

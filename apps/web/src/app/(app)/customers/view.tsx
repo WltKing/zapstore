@@ -9,6 +9,8 @@ import {
   deleteCustomerAction,
   type CustomerInput,
 } from "@/lib/actions/customers";
+import { callWithPin } from "@/lib/with-pin";
+import { useAccess } from "@/lib/access-context";
 
 export interface CustomerLastOrder {
   id: string;
@@ -71,6 +73,7 @@ function formatDate(iso: string | null): string {
 
 export function CustomersView({ initial, storeName }: { initial: CustomerRow[]; storeName: string }) {
   const router = useRouter();
+  const { canDelete } = useAccess();
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState<CustomerRow | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +95,7 @@ export function CustomersView({ initial, storeName }: { initial: CustomerRow[]; 
   const handleDelete = (id: string, name: string) => {
     if (!confirm(`Excluir "${name}"? Essa acao nao pode ser desfeita.`)) return;
     startTransition(async () => {
-      const res = await deleteCustomerAction(id);
+      const res = await callWithPin((pin) => deleteCustomerAction(id, pin));
       if (!res.ok) setError(res.error ?? "Erro");
       else router.refresh();
     });
@@ -166,6 +169,7 @@ export function CustomersView({ initial, storeName }: { initial: CustomerRow[]; 
                     c={c}
                     isOpen={isOpen}
                     isPending={isPending}
+                    canDelete={canDelete}
                     onToggle={() => setExpanded(isOpen ? null : c.id)}
                     onEdit={() => {
                       setError(null);
@@ -199,6 +203,7 @@ function CustomerRowItem({
   c,
   isOpen,
   isPending,
+  canDelete,
   onToggle,
   onEdit,
   onDelete,
@@ -206,6 +211,7 @@ function CustomerRowItem({
   c: CustomerRow;
   isOpen: boolean;
   isPending: boolean;
+  canDelete: boolean;
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -244,18 +250,20 @@ function CustomerRowItem({
             >
               <Pencil className="h-[18px] w-[18px]" strokeWidth={2} />
             </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              disabled={isPending}
-              title="Excluir"
-              className="inline-flex items-center justify-center text-neutral-400 hover:text-red-600 disabled:opacity-50"
-            >
-              <Trash2 className="h-[18px] w-[18px]" strokeWidth={2} />
-            </button>
+            {canDelete && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                disabled={isPending}
+                title="Excluir"
+                className="inline-flex items-center justify-center text-neutral-400 hover:text-red-600 disabled:opacity-50"
+              >
+                <Trash2 className="h-[18px] w-[18px]" strokeWidth={2} />
+              </button>
+            )}
           </div>
         </td>
       </tr>
@@ -313,18 +321,20 @@ function CustomerRowItem({
                     <Pencil className="h-4 w-4" strokeWidth={2} />
                     Editar
                   </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete();
-                    }}
-                    disabled={isPending}
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" strokeWidth={2} />
-                    Excluir
-                  </button>
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete();
+                      }}
+                      disabled={isPending}
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" strokeWidth={2} />
+                      Excluir
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -365,7 +375,7 @@ function CustomerDialog({
     setError(null);
     startTransition(async () => {
       const res = editingId
-        ? await updateCustomerAction(editingId, form)
+        ? await callWithPin((pin) => updateCustomerAction(editingId, form, pin))
         : await createCustomerAction(form);
       if (!res.ok) setError(res.error ?? "Erro");
       else onSaved();

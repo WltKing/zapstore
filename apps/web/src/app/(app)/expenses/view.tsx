@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, TrendingUp, TrendingDown, Tag, Hash } from "lucide-react";
+import { useAccess } from "@/lib/access-context";
 import {
   createExpenseAction,
   deleteExpenseAction,
@@ -65,6 +66,7 @@ function dateInput(iso: string): string {
 
 export function ExpensesView({ storeName, expenses }: { storeName: string; expenses: ExpenseRow[] }) {
   const router = useRouter();
+  const { canDelete } = useAccess();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<ExpenseRow | "new" | null>(null);
@@ -335,15 +337,17 @@ export function ExpensesView({ storeName, expenses }: { storeName: string; expen
                       >
                         <Pencil className="h-[18px] w-[18px]" strokeWidth={2} />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => remove(e.id, e.category)}
-                        disabled={isPending}
-                        title="Excluir"
-                        className="inline-flex items-center justify-center text-neutral-400 hover:text-red-600 disabled:opacity-50"
-                      >
-                        <Trash2 className="h-[18px] w-[18px]" strokeWidth={2} />
-                      </button>
+                      {canDelete && (
+                        <button
+                          type="button"
+                          onClick={() => remove(e.id, e.category)}
+                          disabled={isPending}
+                          title="Excluir"
+                          className="inline-flex items-center justify-center text-neutral-400 hover:text-red-600 disabled:opacity-50"
+                        >
+                          <Trash2 className="h-[18px] w-[18px]" strokeWidth={2} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

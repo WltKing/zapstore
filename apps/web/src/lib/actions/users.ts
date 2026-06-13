@@ -29,12 +29,30 @@ function isValidRole(role: string): role is Role {
   return (ROLES as readonly string[]).includes(role);
 }
 
-export async function inviteUserAction(input: { email: string; role: string }): Promise<ActionResult> {
+export async function inviteUserAction(input: {
+  email: string;
+  role: string;
+  permissions?: string[] | null;
+}): Promise<ActionResult> {
   try {
     const { tenantId } = await requireAdmin();
     const email = input.email.trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, error: "E-mail inválido." };
-    if (!isValidRole(input.role)) return { ok: false, error: "Papel inválido." };
+
+    // Personalizado (role "CUSTOM"): base OPERATOR + a lista de áreas marcadas.
+    const custom = input.role === "CUSTOM";
+    let role: Role;
+    let permissions: string[] = [];
+    if (custom) {
+      const areas = Array.from(new Set((input.permissions ?? []).filter((p) => isArea(p))));
+      if (!areas.includes("dashboard")) areas.unshift("dashboard");
+      if (areas.length <= 1) return { ok: false, error: "Marque ao menos uma área pro perfil personalizado." };
+      role = "OPERATOR";
+      permissions = areas;
+    } else {
+      if (!isValidRole(input.role)) return { ok: false, error: "Papel inválido." };
+      role = input.role as Role;
+    }
 
     // Acha o usuário por email; se não existir, pré-cria (o Better-Auth reaproveita
     // no primeiro magic link). users é tabela global (sem RLS).
@@ -47,8 +65,8 @@ export async function inviteUserAction(input: { email: string; role: string }): 
 
     await prisma.tenantUser.upsert({
       where: { tenantId_userId: { tenantId, userId: user.id } },
-      create: { tenantId, userId: user.id, role: input.role as Role },
-      update: { role: input.role as Role },
+      create: { tenantId, userId: user.id, role, permissions },
+      update: { role, permissions },
     });
 
     revalidatePath("/users");

@@ -66,6 +66,18 @@ export const ROLE_PERMISSIONS: Record<Role, Area[]> = {
   DELIVERY: ["dashboard", "route", "deliveries", "agenda"],
 };
 
+/** Perfis prontos oferecidos na interface: só os 2 padrões (dono e gerente).
+ * Os antigos (Vendedor/Financeiro/Entregador) viram MODELOS do Personalizado. */
+export const PRESET_ROLES: Role[] = ["ADMIN", "MANAGER"];
+
+/** Modelos de partida pro perfil Personalizado: marcam um conjunto de áreas que o
+ * dono ajusta depois. Reaproveitam os presets antigos como ponto de partida. */
+export const CUSTOM_TEMPLATES: { key: string; label: string; areas: Area[] }[] = [
+  { key: "seller", label: "Vendedor / Atendente", areas: ROLE_PERMISSIONS.OPERATOR },
+  { key: "financial", label: "Financeiro", areas: ROLE_PERMISSIONS.FINANCIAL },
+  { key: "delivery", label: "Entregador / Motorista", areas: ROLE_PERMISSIONS.DELIVERY },
+];
+
 export function isArea(v: string): v is Area {
   return (AREAS as readonly string[]).includes(v);
 }

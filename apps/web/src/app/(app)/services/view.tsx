@@ -1,6 +1,7 @@
 "use client";
 
 import { callWithPin } from "@/lib/with-pin";
+import { useAccess } from "@/lib/access-context";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createServiceAction, updateServiceAction, deleteServiceAction } from "@/lib/actions/scheduling";
@@ -20,6 +21,7 @@ function formatBrl(v: number): string {
 
 export function ServicesView({ services }: { services: ServiceRow[] }) {
   const router = useRouter();
+  const { canDelete } = useAccess();
   const [isPending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<ServiceRow | "new" | null>(null);
@@ -85,17 +87,19 @@ export function ServicesView({ services }: { services: ServiceRow[] }) {
                   >
                     <Pencil className="h-4 w-4" strokeWidth={2} />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirm(`Excluir o serviço "${s.name}"?`)) run(() => callWithPin((pin) => deleteServiceAction(s.id, pin)));
-                    }}
-                    disabled={isPending}
-                    className="text-neutral-400 hover:text-red-700"
-                    aria-label="Excluir"
-                  >
-                    <Trash2 className="h-4 w-4" strokeWidth={2} />
-                  </button>
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Excluir o serviço "${s.name}"?`)) run(() => callWithPin((pin) => deleteServiceAction(s.id, pin)));
+                      }}
+                      disabled={isPending}
+                      className="text-neutral-400 hover:text-red-700"
+                      aria-label="Excluir"
+                    >
+                      <Trash2 className="h-4 w-4" strokeWidth={2} />
+                    </button>
+                  )}
                 </div>
               </li>
             ))}

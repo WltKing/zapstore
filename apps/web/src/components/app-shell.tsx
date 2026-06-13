@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Menu, CircleUser, LogOut } from "lucide-react";
 import { Sidebar } from "./sidebar";
+import { AccessProvider } from "@/lib/access-context";
 
 /** Casca do app: menu lateral + barra superior (com o ☰ dentro, estilo mobile limpo). */
 export function AppShell({
@@ -13,6 +14,7 @@ export function AppShell({
   serviceLed,
   nicheLabel,
   userName,
+  role,
   children,
 }: {
   storeName: string;
@@ -22,11 +24,13 @@ export function AppShell({
   serviceLed?: boolean;
   nicheLabel: string;
   userName: string;
+  role: string;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
 
   return (
+    <AccessProvider role={role}>
     <div className="flex min-h-screen bg-neutral-50">
       <Sidebar
         storeName={storeName}
@@ -73,5 +77,6 @@ export function AppShell({
         <div className="min-w-0 flex-1 overflow-x-hidden">{children}</div>
       </div>
     </div>
+    </AccessProvider>
   );
 }

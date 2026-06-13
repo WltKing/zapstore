@@ -14,6 +14,7 @@ import {
 } from "@/lib/actions/products";
 import { ImageUpload } from "@/components/image-upload";
 import { callWithPin } from "@/lib/with-pin";
+import { useAccess } from "@/lib/access-context";
 import { NfeImportDialog } from "@/components/nfe-import-dialog";
 import { priceFromCostMargin } from "@/lib/pricing";
 
@@ -82,6 +83,7 @@ export function ProductsView({
   roundTo90: boolean;
 }) {
   const router = useRouter();
+  const { canDelete } = useAccess();
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState<ProductRow | "new" | null>(null);
   const [importing, setImporting] = useState(false);
@@ -308,15 +310,17 @@ export function ProductsView({
             <Percent className="h-4 w-4" strokeWidth={2} />
             Alterar margem
           </button>
-          <button
-            type="button"
-            onClick={handleBulkDelete}
-            disabled={isPending}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-          >
-            <Trash2 className="h-4 w-4" strokeWidth={2} />
-            Excluir
-          </button>
+          {canDelete && (
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={isPending}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" strokeWidth={2} />
+              Excluir
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setSelected(new Set())}
@@ -463,18 +467,20 @@ export function ProductsView({
                       >
                         <Pencil className="h-[18px] w-[18px]" strokeWidth={2} />
                       </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(p.id, p.name);
-                        }}
-                        disabled={isPending}
-                        title="Excluir"
-                        className="inline-flex items-center justify-center text-neutral-400 hover:text-red-600 disabled:opacity-50"
-                      >
-                        <Trash2 className="h-[18px] w-[18px]" strokeWidth={2} />
-                      </button>
+                      {canDelete && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(p.id, p.name);
+                          }}
+                          disabled={isPending}
+                          title="Excluir"
+                          className="inline-flex items-center justify-center text-neutral-400 hover:text-red-600 disabled:opacity-50"
+                        >
+                          <Trash2 className="h-[18px] w-[18px]" strokeWidth={2} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

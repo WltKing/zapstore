@@ -54,6 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         serviceLed={serviceLed}
         nicheLabel={NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Loja"}
         userName={session.user.name?.trim() || session.user.email.split("@")[0]}
+        role={link?.role ?? "OPERATOR"}
       >
         {children}
       </AppShell>

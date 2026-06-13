@@ -157,6 +157,68 @@ export async function getTenantStats(tenantId: string) {
   };
 }
 
+/** Normaliza um nome de vendedor pra casar (sem acento, minúsculo, sem espaços extras). */
+function normName(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Meta inteligente do VENDEDOR (não-admin): quanto ELE já vendeu no mês e uma meta
+ * automática = média das vendas dele nos 3 meses anteriores (só meses com venda).
+ * Casa os pedidos pelo `sellerName` (nome escolhido no pedido) com o nome do usuário.
+ * Retorna null se não houver vendas dele em nenhum dos 4 meses (some pra quem não vende).
+ */
+export async function getSellerGoal(tenantId: string, candidatesRaw: string[], ref: Date = new Date()) {
+  // O nome do vendedor no pedido pode ser o nome OU o e-mail (o formulário oferece
+  // `nome || email`). Casamos contra todos os candidatos do usuário logado.
+  const targets = new Set(candidatesRaw.map(normName).filter(Boolean));
+  if (targets.size === 0) return null;
+
+  const monthStart = new Date(ref.getFullYear(), ref.getMonth(), 1);
+  const monthEnd = new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
+  const since3 = new Date(ref.getFullYear(), ref.getMonth() - 3, 1); // 3 meses anteriores
+
+  const orders = await withTenant(tenantId, (tx) =>
+    tx.order.findMany({
+      where: { status: { not: "CANCELED" }, createdAt: { gte: since3, lt: monthEnd } },
+      select: { totalBrl: true, sellerName: true, createdAt: true },
+    }),
+  );
+
+  const mine = orders.filter((o) => targets.has(normName(o.sellerName ?? "")));
+  if (mine.length === 0) return null;
+
+  let mySalesBrl = 0;
+  let myOrderCount = 0;
+  const priorMonths = [0, 0, 0]; // 3 meses anteriores (since3 → mês-1)
+  for (const o of mine) {
+    const total = Number(o.totalBrl);
+    const d = new Date(o.createdAt);
+    if (d >= monthStart) {
+      mySalesBrl += total;
+      myOrderCount++;
+    } else {
+      const idx = (d.getFullYear() - since3.getFullYear()) * 12 + (d.getMonth() - since3.getMonth());
+      if (idx >= 0 && idx < 3) priorMonths[idx] += total;
+    }
+  }
+  const withSales = priorMonths.filter((t) => t > 0);
+  const goalBrl = withSales.length > 0 ? withSales.reduce((a, b) => a + b, 0) / withSales.length : 0;
+
+  // Projeção (run-rate) só no mês corrente.
+  const now = new Date();
+  const isCurrentMonth = now.getFullYear() === ref.getFullYear() && now.getMonth() === ref.getMonth();
+  const daysInMonth = new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate();
+  const projected = isCurrentMonth && now.getDate() > 0 ? (mySalesBrl / now.getDate()) * daysInMonth : mySalesBrl;
+
+  return { mySalesBrl, myOrderCount, goalBrl, projected, hasGoal: goalBrl > 0 };
+}
+
 /** "A receber" (líquido) com base no repasse da maquininha + antecipação. */
 export async function getReceivables(tenantId: string) {
   const tenant = await prisma.tenant.findUnique({

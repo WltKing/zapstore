@@ -14,6 +14,7 @@ import { deleteOrderAction, updateOrderStatusAction } from "@/lib/actions/orders
 import { printReport, esc, formatBrlReport } from "@/lib/print-report";
 import { paymentLabel } from "@/lib/payments";
 import { callWithPin } from "@/lib/with-pin";
+import { useAccess } from "@/lib/access-context";
 import { RowFiscal, type RowFiscalConfig } from "./row-fiscal";
 
 interface OrderItem {
@@ -97,6 +98,7 @@ export function OrdersView({
   showType?: boolean;
 }) {
   const router = useRouter();
+  const { canDelete } = useAccess();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -396,15 +398,17 @@ export function OrdersView({
                             Cancelar
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => remove(o.id, o.orderNumber)}
-                          disabled={isPending}
-                          className="ml-auto inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" strokeWidth={2} />
-                          Excluir
-                        </button>
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => remove(o.id, o.orderNumber)}
+                            disabled={isPending}
+                            className="ml-auto inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" strokeWidth={2} />
+                            Excluir
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}

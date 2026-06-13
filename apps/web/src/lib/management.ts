@@ -3,7 +3,7 @@
 //
 // Regras (valem QUANDO a loja tem senha definida; sem senha = comportamento livre):
 //   EDIÇÃO   → dono (ADMIN) ou Gerente (MANAGER), com a senha
-//   EXCLUSÃO → só o dono (ADMIN), com a senha
+//   EXCLUSÃO → dono (ADMIN) ou Gerente (MANAGER), com a senha
 
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { headers } from "next/headers";
@@ -55,10 +55,13 @@ export async function requireManagementPin(
   });
   const role = link?.role;
 
-  if (opts.deletion) {
-    if (role !== "ADMIN") return { ok: false, error: "Só o dono pode excluir registros." };
-  } else if (role !== "ADMIN" && role !== "MANAGER") {
-    return { ok: false, error: "Só o dono ou o gerente podem alterar registros." };
+  if (role !== "ADMIN" && role !== "MANAGER") {
+    return {
+      ok: false,
+      error: opts.deletion
+        ? "Só o dono ou o gerente podem excluir registros."
+        : "Só o dono ou o gerente podem alterar registros.",
+    };
   }
 
   if (!pin || !verifyPin(pin, tenant.managementPinHash)) {

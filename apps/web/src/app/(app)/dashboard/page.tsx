@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@zapstore/db";
 import { auth } from "@/lib/auth";
-import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras, getReceivables } from "@/lib/tenant";
+import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras, getReceivables, getSellerGoal } from "@/lib/tenant";
 import { NICHE_TEMPLATES } from "@/lib/niches";
 import { isServiceLed } from "@/lib/modules";
 import { AreaTrend, Bars, DonutChart, HBars } from "./charts";
@@ -101,6 +101,14 @@ export default async function DashboardPage({
   // Negócio de serviço (estética/salão): terminologia "Serviço/Profissional" (pelo nicho).
   const serviceLed = isServiceLed(tenant.enabledModules ?? [], tenant.primaryFocus);
 
+  // Meta individual do vendedor: só pra quem NÃO é dono e tem vendas próprias (casadas
+  // pelo nome). Dá ao vendedor um painel com a própria meta inteligente (média 3 meses).
+  const sellerCandidates = [session.user.name ?? "", session.user.email, session.user.email.split("@")[0]];
+  const sellerGoal = !showFinance ? await getSellerGoal(tenant.id, sellerCandidates, ref) : null;
+  const myGoalBrl = sellerGoal?.goalBrl ?? 0;
+  const myGoalPct =
+    sellerGoal && myGoalBrl > 0 ? Math.min(100, Math.round((sellerGoal.mySalesBrl / myGoalBrl) * 100)) : 0;
+
   const quota = tenant.subscription?.messageQuota ?? DEFAULT_QUOTA;
   const used = stats.messagesUsedThisMonth ?? 0;
   const pct = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
@@ -183,6 +191,58 @@ export default async function DashboardPage({
           de dias anteriores sem finalizar — entregue, remarque ou marque como entregue se já foi
           feita. <a href="/deliveries" className="underline">Ver entregas →</a>
         </div>
+      )}
+
+      {/* Minha meta (vendedor não-admin): vendas próprias + meta inteligente (média 3 meses) */}
+      {sellerGoal && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+            {isCurrentMonth ? "Minhas vendas este mês" : `Minhas vendas — ${monthName}`}
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card title="Você vendeu" value={formatBrl(sellerGoal.mySalesBrl)} icon={TrendingUp} tint="green" />
+            <Card title="Vendas fechadas" value={String(sellerGoal.myOrderCount)} icon={ShoppingCart} tint="blue" />
+            {sellerGoal.hasGoal && (
+              <Card title="Sua meta do mês" value={formatBrl(myGoalBrl)} icon={Wallet} tint="violet" />
+            )}
+          </div>
+          {sellerGoal.hasGoal && (
+            <div className="mt-4 rounded-2xl bg-white p-6 shadow-card">
+              <div className="flex items-baseline justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Sua meta</h3>
+                  <p className="text-xs text-neutral-400">Automática — média das suas vendas dos últimos 3 meses</p>
+                </div>
+                <span className="text-sm font-bold text-neutral-900">
+                  {formatBrl(sellerGoal.mySalesBrl)}
+                  <span className="font-normal text-neutral-400"> de {formatBrl(myGoalBrl)}</span>
+                </span>
+              </div>
+              <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-neutral-100">
+                <div
+                  className={`h-full ${myGoalPct >= 100 ? "bg-emerald-500" : "bg-brand"}`}
+                  style={{ width: `${myGoalPct}%` }}
+                />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500">
+                <span>
+                  <strong className={myGoalPct >= 100 ? "text-emerald-700" : "text-neutral-700"}>{myGoalPct}%</strong> da meta
+                  {myGoalBrl - sellerGoal.mySalesBrl > 0 && <> · faltam {formatBrl(myGoalBrl - sellerGoal.mySalesBrl)}</>}
+                </span>
+                {isCurrentMonth && (
+                  <span>
+                    Projeção: <strong>{formatBrl(sellerGoal.projected)}</strong>{" "}
+                    {sellerGoal.projected >= myGoalBrl ? (
+                      <span className="text-emerald-700">— nesse ritmo você bate a meta 🎯</span>
+                    ) : (
+                      <span className="text-amber-700">— nesse ritmo fecha abaixo</span>
+                    )}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
       )}
 
       {/* Núcleo de KPIs do mês — financeiro: só o dono */}

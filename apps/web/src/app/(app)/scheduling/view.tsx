@@ -1,6 +1,7 @@
 "use client";
 
 import { callWithPin } from "@/lib/with-pin";
+import { useAccess } from "@/lib/access-context";
 import { useState, useTransition } from "react";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -90,6 +91,7 @@ export function SchedulingView({
   appointments: AppointmentRow[];
 }) {
   const router = useRouter();
+  const { canDelete } = useAccess();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [newAppt, setNewAppt] = useState(false);
@@ -218,18 +220,20 @@ export function SchedulingView({
                             </button>
                           </>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (confirm("Excluir este agendamento?")) run(() => callWithPin((pin) => deleteAppointmentAction(a.id, pin)));
-                          }}
-                          disabled={isPending}
-                          className="inline-flex items-center justify-center text-neutral-400 hover:text-red-700"
-                          aria-label="Excluir"
-                          title="Excluir"
-                        >
-                          <X className="h-4 w-4" strokeWidth={2} />
-                        </button>
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Excluir este agendamento?")) run(() => callWithPin((pin) => deleteAppointmentAction(a.id, pin)));
+                            }}
+                            disabled={isPending}
+                            className="inline-flex items-center justify-center text-neutral-400 hover:text-red-700"
+                            aria-label="Excluir"
+                            title="Excluir"
+                          >
+                            <X className="h-4 w-4" strokeWidth={2} />
+                          </button>
+                        )}
                       </div>
                     </li>
                   ))}
