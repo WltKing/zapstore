@@ -238,6 +238,11 @@ export async function applyMarginToProductsAction(
 export async function toggleProductAction(id: string, active: boolean): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
+    // Ativar/desativar produto é decisão de gestão: só dono ou gerente.
+    const role = await getCurrentRole(tenantId);
+    if (role !== "ADMIN" && role !== "MANAGER") {
+      return { ok: false, error: "Só o dono ou o gerente podem ativar/desativar produtos." };
+    }
     await withTenant(tenantId, async (tx) => {
       await tx.product.update({ where: { id }, data: { active } });
     });

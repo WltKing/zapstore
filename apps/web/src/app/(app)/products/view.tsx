@@ -86,7 +86,7 @@ export function ProductsView({
   isOwner: boolean;
 }) {
   const router = useRouter();
-  const { canDelete } = useAccess();
+  const { canDelete, canManage } = useAccess();
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState<ProductRow | "new" | null>(null);
   const [sessionPin, setSessionPin] = useState<string | undefined>(undefined);
@@ -455,23 +455,33 @@ export function ProductsView({
                     </span>
                   </td>
                   <td className="hidden px-3 py-4 text-center sm:table-cell sm:px-4">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggle(p.id, !p.active);
-                      }}
-                      disabled={isPending}
-                      className={`inline-flex h-6 w-11 items-center rounded-full transition ${
-                        p.active ? "bg-emerald-500" : "bg-neutral-300"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                          p.active ? "translate-x-6" : "translate-x-1"
+                    {canManage ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggle(p.id, !p.active);
+                        }}
+                        disabled={isPending}
+                        className={`inline-flex h-6 w-11 items-center rounded-full transition ${
+                          p.active ? "bg-emerald-500" : "bg-neutral-300"
                         }`}
-                      />
-                    </button>
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                            p.active ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    ) : (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          p.active ? "bg-emerald-100 text-emerald-800" : "bg-neutral-200 text-neutral-600"
+                        }`}
+                      >
+                        {p.active ? "Ativo" : "Inativo"}
+                      </span>
+                    )}
                   </td>
                   <td className="hidden px-3 py-4 sm:table-cell sm:px-4">
                     <div className="flex items-center justify-end gap-3">
