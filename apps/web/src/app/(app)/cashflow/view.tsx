@@ -2,6 +2,7 @@ import { TrendingUp, TrendingDown } from "lucide-react";
 import { MonthSelect } from "./month-select";
 import { CaixaPdfButton } from "./pdf-button";
 import { AnticipateBox } from "./anticipate-box";
+import { MovementsList } from "./movements-list";
 import { CashBars } from "../dashboard/charts";
 
 export interface Movement {
@@ -24,10 +25,6 @@ function monthLabel(key: string): string {
   const [y, m] = key.split("-").map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
-}
-
 export function CashflowView({
   storeName,
   monthKey,
@@ -157,23 +154,7 @@ export function CashflowView({
         Movimentos — {monthLabel(monthKey)}
       </h2>
       <section className="mt-3 rounded-2xl bg-white shadow-card">
-        {movements.length === 0 ? (
-          <div className="p-12 text-center text-sm text-neutral-500">Nenhum movimento neste mês.</div>
-        ) : (
-          <ul className="divide-y divide-neutral-100">
-            {movements.map((m, i) => (
-              <li key={i} className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="shrink-0 font-mono text-xs text-neutral-500">{fmtDate(m.date)}</span>
-                  <span className="truncate text-sm">{m.label}</span>
-                </div>
-                <span className={`shrink-0 text-sm font-medium ${m.kind === "in" ? "text-emerald-700" : "text-red-700"}`}>
-                  {m.kind === "in" ? "+" : "−"} {formatBrl(Math.abs(m.amountBrl))}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <MovementsList movements={movements} />
       </section>
     </main>
   );
