@@ -73,7 +73,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-      <section className="rounded-2xl bg-white p-6 shadow-card">
+      <section className="rounded-2xl bg-white p-5 shadow-card sm:p-6">
         <h2 className="text-lg font-semibold">Identidade</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
@@ -116,7 +116,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
         </div>
       </section>
 
-      <section className="rounded-2xl bg-white p-6 shadow-card">
+      <section className="rounded-2xl bg-white p-5 shadow-card sm:p-6">
         <h2 className="text-lg font-semibold">Horário de funcionamento</h2>
         <p className="mt-1 text-xs text-neutral-500">
           Cada dia pode ter um horário diferente (ex: sábado e domingo). Desmarque pra fechar o dia.
@@ -161,7 +161,7 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
         </div>
       </section>
 
-      <section className="rounded-2xl bg-white p-6 shadow-card">
+      <section className="rounded-2xl bg-white p-5 shadow-card sm:p-6">
         <h2 className="text-lg font-semibold">Entrega e pagamento</h2>
         <div className="mt-4">
           <label className="block text-sm font-medium text-neutral-700">
@@ -252,10 +252,10 @@ export function BotConfigForm({ initial }: { initial: BotConfigInput }) {
         </div>
       </section>
 
-      <section className="rounded-2xl bg-white p-6 shadow-card">
+      <section className="rounded-2xl bg-white p-5 shadow-card sm:p-6">
         <h2 className="text-lg font-semibold">Instruções extras</h2>
         <p className="mt-1 text-xs text-neutral-500">
-          Texto livre injetado no prompt do bot. Use pra regras que não cabem nos campos acima.
+          Regras que não cabem nos campos acima (texto livre pro bot).
         </p>
         <textarea
           rows={5}

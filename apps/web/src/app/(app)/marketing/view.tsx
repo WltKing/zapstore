@@ -165,8 +165,7 @@ export function MarketingView({
       </h2>
       {noKeywords && (
         <p className="mt-2 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Pra separar Meta × Google, configure as <strong>frases de identificação</strong> no fim da
-          página — o bot reconhece a frase do anúncio e marca cada venda com a origem certa.
+          Pra separar Meta × Google, cadastre as <strong>frases dos anúncios</strong> no fim da página.
         </p>
       )}
       <div className="mt-3 grid gap-4 lg:grid-cols-2">
@@ -175,8 +174,7 @@ export function MarketingView({
       </div>
       {semOrigemRevenue > 0 && (
         <p className="mt-2 text-xs text-neutral-400">
-          {formatBrl(semOrigemRevenue)} em vendas online sem origem identificada neste mês (cliente
-          não veio por frase de anúncio).
+          {formatBrl(semOrigemRevenue)} em vendas online sem origem identificada neste mês.
         </p>
       )}
 
@@ -190,8 +188,7 @@ export function MarketingView({
           </div>
           <div className="mt-2 text-2xl font-bold">{formatBrl(forecastNextMonth)}</div>
           <p className="mt-1 text-xs text-neutral-400">
-            Estimativa de vendas online — média dos últimos 3 meses. Mantendo o ritmo (e o
-            investimento), é o esperado pro mês que vem.
+            Média dos últimos 3 meses, mantendo o ritmo de investimento.
           </p>
         </div>
         <Simulator meta={meta} google={google} />
@@ -363,8 +360,7 @@ function ChannelCard({ stats }: { stats: ChannelStats }) {
 
       {stats.invest > 0 && stats.count === 0 && stats.leads === 0 && (
         <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Tem investimento mas nenhum lead identificado — confira as frases de identificação no fim
-          da página.
+          Tem investimento mas nenhum lead — confira as frases no fim da página.
         </p>
       )}
     </section>
@@ -421,8 +417,7 @@ function Simulator({ meta, google }: { meta: ChannelStats; google: ChannelStats 
       </div>
       {stats.avgRoas == null ? (
         <p className="mt-3 text-xs text-neutral-400">
-          Sem histórico suficiente nesse canal — lance o investimento do mês e deixe as vendas
-          acontecerem pra liberar a estimativa.
+          Sem histórico ainda — lance o investimento e deixe as vendas acontecerem.
         </p>
       ) : estimate != null ? (
         <p className="mt-3 text-sm text-neutral-700">
@@ -470,10 +465,9 @@ function KeywordsEditor({ initial }: { initial: { meta: string[]; google: string
     <section className="mt-8 rounded-2xl bg-white p-5 shadow-card sm:p-6">
       <h2 className="font-semibold">Identificação de origem (frases dos anúncios)</h2>
       <p className="mt-1 text-sm text-neutral-500">
-        Anúncio com botão de WhatsApp manda uma mensagem pronta (ex:{" "}
-        <em>&quot;Vi o anúncio no Instagram e quero saber mais&quot;</em>). Cadastre essa frase no canal
-        certo: quando o cliente iniciar a conversa com ela, o sistema marca os pedidos dele como
-        vindos daquele canal — é assim que o ROAS e o CAC de cada canal são calculados.
+        O anúncio manda uma frase pronta no WhatsApp (ex:{" "}
+        <em>&quot;Vi o anúncio no Instagram&quot;</em>). Cadastre-a no canal certo — é assim que o ROAS e o
+        CAC de cada canal são calculados.
       </p>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">

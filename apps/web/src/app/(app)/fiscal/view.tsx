@@ -233,8 +233,7 @@ export function FiscalView({
           <p className="text-sm text-neutral-500">{storeName}</p>
           <h1 className="text-3xl font-bold tracking-tight">Configuração fiscal</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            Emissão de NFC-e e NF-e. Preencha os dados da empresa, envie o certificado e pronto —
-            as notas saem valendo.
+            Preencha os dados da empresa e envie o certificado pra emitir NFC-e e NF-e.
           </p>
         </div>
         </header>
@@ -272,7 +271,7 @@ export function FiscalView({
       </section>
 
       {/* Dados da empresa */}
-      <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
+      <section className="mt-6 rounded-2xl bg-white p-5 shadow-card sm:p-6">
         <h2 className="font-semibold">Dados da empresa (emitente)</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
@@ -307,7 +306,7 @@ export function FiscalView({
       </section>
 
       {/* Endereço */}
-      <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
+      <section className="mt-6 rounded-2xl bg-white p-5 shadow-card sm:p-6">
         <h2 className="font-semibold">Endereço</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div>
@@ -346,7 +345,7 @@ export function FiscalView({
       </section>
 
       {/* Emissão */}
-      <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
+      <section className="mt-6 rounded-2xl bg-white p-5 shadow-card sm:p-6">
         <h2 className="font-semibold">Emissão</h2>
         <div className="mt-4 flex flex-wrap items-center gap-6">
           <label className="flex items-center gap-2 text-sm text-neutral-700">
@@ -405,9 +404,8 @@ export function FiscalView({
           {form.emitiuAntes && (
             <>
               <p className="mt-3 text-sm text-neutral-500">
-                Informe a série e o <strong>próximo número</strong> de cada documento pra continuar a
-                sequência — senão a SEFAZ rejeita por número repetido. Esses dados aparecem na última
-                nota emitida no sistema antigo.
+                Série e <strong>próximo número</strong> de cada documento (estão na última nota do
+                sistema antigo) — senão a SEFAZ rejeita por número repetido.
               </p>
               <div className="mt-3 grid gap-4 sm:grid-cols-2">
                 {form.habilitaNfce && (
@@ -458,12 +456,11 @@ export function FiscalView({
       </section>
 
       {/* Certificado */}
-      <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
+      <section className="mt-6 rounded-2xl bg-white p-5 shadow-card sm:p-6">
         <h2 className="font-semibold">Certificado digital A1</h2>
         <p className="mt-1 text-sm text-neutral-500">
-          Envie o arquivo <strong>.pfx</strong> (ou .p12) + a senha. Ele vai direto pro emissor de
-          notas — o sistema <strong>não guarda</strong> o arquivo nem a senha. Salve os dados da
-          empresa antes.
+          Envie o <strong>.pfx</strong> (ou .p12) + senha. O sistema <strong>não guarda</strong> o
+          arquivo nem a senha. Salve os dados da empresa antes.
         </p>
         <div className="mt-4 flex flex-wrap items-end gap-3">
           <div>
@@ -510,8 +507,7 @@ export function FiscalView({
             Essa empresa já emitiu notas pelo nosso sistema antes?
           </summary>
           <p className="mt-2 text-sm text-neutral-500">
-            Se essa empresa <strong>já foi cadastrada aqui antes</strong> (certificado já enviado),
-            recupere o cadastro sem reenviar o arquivo — buscamos pelo CNPJ.
+            Recupere o cadastro pelo CNPJ, sem reenviar o arquivo.
           </p>
           <button
             type="button"
@@ -525,8 +521,7 @@ export function FiscalView({
       </section>
 
       <p className="mt-4 text-xs text-neutral-400">
-        A logo da loja (Configurações → Identidade visual) é aplicada automaticamente no
-        cupom/DANFE das notas.
+        A logo da loja é aplicada automaticamente na nota.
       </p>
     </main>
   );
