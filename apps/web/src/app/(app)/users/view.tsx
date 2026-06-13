@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { inviteUserAction, removeUserAction, setUserAccessAction } from "@/lib/actions/users";
 import { ROLE_LABELS } from "@/lib/roles";
@@ -153,97 +153,75 @@ export function UsersView({
             </p>
           </section>
 
-          {/* Lista */}
-          <section className="mt-6 rounded-2xl bg-white shadow-card">
-            <table className="w-full">
-              <thead className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-500">
-                <tr>
-                  <th className="py-3 pl-4 pr-2 text-left sm:px-4">Usuário</th>
-                  <th className="px-2 py-3 text-left sm:px-4">Perfil</th>
-                  <th className="py-3 pl-2 pr-4 text-right sm:px-4">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => {
-                  const self = u.userId === currentUserId;
-                  return (
-                    <Fragment key={u.userId}>
-                      <tr className="border-b border-neutral-100 last:border-0">
-                        <td className="py-3 pl-4 pr-2 sm:px-4 sm:py-4">
-                          <div className="font-medium">
-                            {u.email}
-                            {self && (
-                              <span className="ml-2 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-500">
-                                VOCÊ
-                              </span>
-                            )}
-                          </div>
-                          {!u.verified && (
-                            <div className="text-xs text-amber-600">Convite pendente (ainda não acessou)</div>
-                          )}
-                        </td>
-                        <td className="px-2 py-3 sm:px-4 sm:py-4">
-                          <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-700">
-                            {accessLabel(u)}
+          {/* Lista (cards que empilham no mobile: e-mail em cima, perfil + ações embaixo) */}
+          <section className="mt-6 divide-y divide-neutral-100 rounded-2xl bg-white shadow-card">
+            {users.map((u) => {
+              const self = u.userId === currentUserId;
+              return (
+                <div key={u.userId}>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-4 sm:px-6">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-medium">{u.email}</span>
+                        {self && (
+                          <span className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-500">
+                            VOCÊ
                           </span>
-                        </td>
-                        <td className="py-3 pl-2 pr-4 text-right sm:px-4 sm:py-4">
-                          {self ? (
-                            <span className="text-xs text-neutral-400">—</span>
-                          ) : (
-                            <div className="flex items-center justify-end gap-3">
-                              <button
-                                type="button"
-                                onClick={() => setEditing(editing === u.userId ? null : u.userId)}
-                                className="text-sm text-neutral-600 hover:text-neutral-900"
-                              >
-                                {editing === u.userId ? "Fechar" : "Editar acesso"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (confirm(`Remover ${u.email} da loja?`)) run(() => removeUserAction(u.userId));
-                                }}
-                                disabled={isPending}
-                                className="text-sm text-red-600 hover:text-red-700"
-                              >
-                                Remover
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                      {editing === u.userId && !self && (
-                        <tr className="border-b border-neutral-100 bg-neutral-50">
-                          <td colSpan={3} className="px-6 py-4">
-                            <AccessEditor
-                              user={u}
-                              disabled={isPending}
-                              onSave={(role, permissions) => {
-                                run(async () => {
-                                  const r = await setUserAccessAction(u.userId, { role, permissions });
-                                  if (r.ok) setEditing(null);
-                                  return r;
-                                });
-                              }}
-                            />
-                          </td>
-                        </tr>
+                        )}
+                      </div>
+                      {!u.verified && (
+                        <div className="text-xs text-amber-600">Convite pendente (ainda não acessou)</div>
                       )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-700">
+                      {accessLabel(u)}
+                    </span>
+                    {!self && (
+                      <div className="flex shrink-0 items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setEditing(editing === u.userId ? null : u.userId)}
+                          className="text-sm text-neutral-600 hover:text-neutral-900"
+                        >
+                          {editing === u.userId ? "Fechar" : "Editar acesso"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Remover ${u.email} da loja?`)) run(() => removeUserAction(u.userId));
+                          }}
+                          disabled={isPending}
+                          className="text-sm text-red-600 hover:text-red-700"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {editing === u.userId && !self && (
+                    <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-4 sm:px-6">
+                      <AccessEditor
+                        user={u}
+                        disabled={isPending}
+                        onSave={(role, permissions) => {
+                          run(async () => {
+                            const r = await setUserAccessAction(u.userId, { role, permissions });
+                            if (r.ok) setEditing(null);
+                            return r;
+                          });
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </section>
 
-          <p className="mt-4 text-xs text-neutral-500">
-            <strong>Perfis prontos:</strong> Administrador — o dono, vê e faz tudo ·
-            Gerente — opera tudo (pedidos, produtos, clientes, agenda, entregas), menos o
-            financeiro da empresa, configurações, usuários e o bot. Pra outros casos (vendedor,
-            entregador…), escolha <strong>Personalizado</strong> e marque as áreas que a pessoa pode
-            acessar. <strong>Caixa, despesas, marketing, fiscal, assinatura, configurações e bot são
-            exclusivos do dono</strong> — não aparecem aqui.
+          <p className="mt-4 text-xs leading-relaxed text-neutral-500">
+            <strong>Administrador</strong> faz tudo. <strong>Gerente</strong> opera o dia a dia.{" "}
+            <strong>Personalizado</strong>: você marca as áreas. Finanças, fiscal, configurações e bot
+            são só do dono.
           </p>
         </>
       )}
