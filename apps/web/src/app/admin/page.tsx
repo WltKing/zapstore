@@ -61,6 +61,8 @@ export default async function AdminClientsPage() {
       msgsMonth,
       orderCount: data.orderCount,
       lastActivity: lastActivity ? lastActivity.toISOString() : null,
+      suspended: t.suspended,
+      exempt: t.billingExempt,
     });
   }
 

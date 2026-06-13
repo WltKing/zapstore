@@ -3,9 +3,11 @@ import { redirect } from "next/navigation";
 import { prisma } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
-import { effectivePermissions, areaForPath } from "@/lib/permissions";
+import { effectivePermissions, areaForPath, AREAS } from "@/lib/permissions";
 import { allowedAreasForModules, isServiceLed } from "@/lib/modules";
 import { isSuperAdminEmail } from "@/lib/super-admin";
+import { getImpersonatedTenantId } from "@/lib/impersonation";
+import { stopImpersonationAction } from "@/lib/actions/admin";
 import { brandCssVars } from "@/lib/theme";
 import { NICHE_TEMPLATES } from "@/lib/niches";
 import { AppShell } from "@/components/app-shell";
@@ -19,12 +21,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Sem loja ainda: manda criar (exceto se ja estiver no onboarding, que fica fora deste grupo).
   if (!tenant) redirect("/onboarding");
 
+  // Super-admin "vendo como" esta loja (suporte)? Então acesso total (perfil ADMIN).
+  const impersonating = (await getImpersonatedTenantId()) === tenant.id;
+
   // Permissões do usuário nesta loja (perfil pronto ou personalizado).
   const link = await prisma.tenantUser.findFirst({
     where: { userId: session.user.id, tenantId: tenant.id },
     select: { role: true, permissions: true },
   });
-  const permAllowed = effectivePermissions(link?.role ?? "OPERATOR", link?.permissions);
+  const role = impersonating ? "ADMIN" : link?.role ?? "OPERATOR";
+  const permAllowed = impersonating ? [...AREAS] : effectivePermissions(role, link?.permissions);
 
   // Eixo NICHO: áreas liberadas pelos módulos ativos da loja (universais + módulos).
   const modules = tenant.enabledModules ?? [];
@@ -46,6 +52,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <>
       {/* Tema white-label: cor da loja aplicada no sistema todo. */}
       <style dangerouslySetInnerHTML={{ __html: brandCssVars(tenant.brandColor) }} />
+      {impersonating && (
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-amber-500 px-4 py-2 text-center text-sm font-medium text-white">
+          <span>
+            Você está vendo a loja <strong>{tenant.name}</strong> como suporte (painel do dono).
+          </span>
+          <form action={stopImpersonationAction}>
+            <button type="submit" className="underline underline-offset-2 hover:opacity-80">
+              Sair desta loja →
+            </button>
+          </form>
+        </div>
+      )}
       <AppShell
         storeName={tenant.name}
         iconUrl={tenant.iconUrl}
@@ -54,7 +72,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         serviceLed={serviceLed}
         nicheLabel={NICHE_TEMPLATES[tenant.niche as keyof typeof NICHE_TEMPLATES]?.label ?? "Loja"}
         userName={session.user.name?.trim() || session.user.email.split("@")[0]}
-        role={link?.role ?? "OPERATOR"}
+        role={role}
       >
         {children}
       </AppShell>

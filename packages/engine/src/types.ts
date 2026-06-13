@@ -18,6 +18,6 @@ export interface TurnResult {
   replyText: string;
   toolExecutions: ToolExecution[];
   usage: LLMUsage;
-  /** true se o bot esta bloqueado (cota estourada ou conversa pausada) */
-  blocked?: "quota_exceeded" | "bot_paused";
+  /** true se o bot esta bloqueado (cota, pausa manual, ou loja suspensa) */
+  blocked?: "quota_exceeded" | "bot_paused" | "suspended";
 }

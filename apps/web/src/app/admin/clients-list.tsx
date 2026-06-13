@@ -14,6 +14,8 @@ export interface ClientCard {
   msgsMonth: number;
   orderCount: number;
   lastActivity: string | null;
+  suspended: boolean;
+  exempt: boolean;
 }
 
 function fmtDate(iso: string | null): string {
@@ -67,7 +69,11 @@ export function ClientsList({ rows }: { rows: ClientCard[] }) {
                   </span>
                 </div>
 
-                <div className="mt-2 text-xs text-neutral-500">{r.nicheLabel}</div>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+                  <span>{r.nicheLabel}</span>
+                  {r.suspended && <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700">Suspensa</span>}
+                  {r.exempt && <span className="rounded-full bg-indigo-100 px-2 py-0.5 font-medium text-indigo-700">Isenta</span>}
+                </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                   <Stat label="Msgs/mês" value={r.msgsMonth.toLocaleString("pt-BR")} />
@@ -80,7 +86,12 @@ export function ClientsList({ rows }: { rows: ClientCard[] }) {
                   />
                 </div>
 
-                <div className="mt-2 text-[11px] text-neutral-400">Criada em {fmtDate(r.createdAt)}</div>
+                <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-2">
+                  <span className="text-[11px] text-neutral-400">Criada em {fmtDate(r.createdAt)}</span>
+                  <a href={`/admin/loja/${r.id}`} className="text-xs font-medium text-brand hover:underline">
+                    Gerenciar →
+                  </a>
+                </div>
               </div>
             );
           })}

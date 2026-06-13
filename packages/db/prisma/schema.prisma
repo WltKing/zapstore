@@ -41,6 +41,8 @@ model Tenant {
   marketingKeywords Json? // frases-chave de origem de lead: { meta: string[], google: string[] }
   primaryFocus String? // atividade principal quando vende E agenda: "products" | "scheduling" (prioriza menu/terminologia)
   managementPinHash String? // senha de gestao (salt:hash scrypt) — exigida pra editar/excluir registros
+  suspended     Boolean @default(false) // super-admin pausou a loja: o bot para de responder
+  billingExempt Boolean @default(false) // isenta de cobranca/cota (loja do dono, parceiros)
   status      TenantStatus @default(TRIAL)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

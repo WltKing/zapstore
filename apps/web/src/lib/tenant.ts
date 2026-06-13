@@ -1,9 +1,27 @@
 import { prisma, withTenant } from "@zapstore/db";
 import { parseCardFees, feePctForOrder, hasAnyFee } from "@/lib/fees";
 import { parseSettlement, summarizeReceivables } from "@/lib/settlement";
+import { getImpersonatedTenantId } from "@/lib/impersonation";
 
-/** Retorna a primeira loja do usuario (com botConfig+subscription), ou null. */
+/** Retorna a primeira loja do usuario (com botConfig+subscription), ou null.
+ * Se o super-admin estiver "vendo como" uma loja (suporte), retorna ESSA loja. */
 export async function getPrimaryTenantForUser(userId: string) {
+  // Impersonação (super-admin dando suporte): manda na escolha da loja.
+  const impId = await getImpersonatedTenantId();
+  if (impId) {
+    const impTenant = await prisma.tenant.findUnique({ where: { id: impId } });
+    if (impTenant) {
+      const { botConfig, subscription } = await withTenant(impId, async (tx) => {
+        const [botConfig, subscription] = await Promise.all([
+          tx.botConfig.findUnique({ where: { tenantId: impId } }),
+          tx.subscription.findUnique({ where: { tenantId: impId } }),
+        ]);
+        return { botConfig, subscription };
+      });
+      return { ...impTenant, botConfig, subscription };
+    }
+  }
+
   const link = await prisma.tenantUser.findFirst({
     where: { userId },
     orderBy: { createdAt: "asc" },

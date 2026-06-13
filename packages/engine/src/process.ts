@@ -91,7 +91,17 @@ export async function processConversationTurn(input: TurnInput): Promise<TurnRes
     throw new Error("Tenant ou botConfig nao encontrado");
   }
 
-  // 2. Checagem de cota mensal.
+  // Loja suspensa pelo super-admin: o bot nao responde (silencioso).
+  if (tenant.suspended) {
+    return {
+      replyText: "",
+      toolExecutions: [],
+      usage: { tokensIn: 0, tokensOut: 0, costBrl: 0 },
+      blocked: "suspended",
+    };
+  }
+
+  // 2. Checagem de cota mensal (lojas isentas nao tem limite).
   const quota = tenant.subscription?.messageQuota ?? DEFAULT_QUOTA;
   const usage = await withTenant(tenantId, (tx) =>
     tx.usageEvent.aggregate({
@@ -100,7 +110,7 @@ export async function processConversationTurn(input: TurnInput): Promise<TurnRes
     }),
   );
   const used = usage._sum.messageCount ?? 0;
-  if (used >= quota) {
+  if (!tenant.billingExempt && used >= quota) {
     return {
       replyText: "Estamos com instabilidade no atendimento automatico. Um humano vai te responder em breve.",
       toolExecutions: [],
