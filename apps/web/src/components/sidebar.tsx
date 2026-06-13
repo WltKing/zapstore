@@ -61,6 +61,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { href: "/agenda", label: "Agenda", icon: CalendarDays },
       { href: "/scheduling", label: "Agendamentos", icon: CalendarClock },
+      { href: "/services", label: "Serviços", icon: Sparkles },
     ],
   },
   {

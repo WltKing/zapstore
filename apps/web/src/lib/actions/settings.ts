@@ -8,6 +8,7 @@ import { parseCardFees, type CardFees } from "@/lib/fees";
 import { parseSettlement, type SettlementConfig } from "@/lib/settlement";
 import { sanitizeModules } from "@/lib/modules";
 import { syncFiscalLogoForTenant } from "./fiscal";
+import { hashPin, verifyPin } from "@/lib/management";
 
 async function requireTenantId(): Promise<string> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -131,6 +132,46 @@ export async function updateStoreSettingsAction(input: StoreSettingsInput): Prom
 
 /** Liga/desliga módulos do nicho (Produtos, Entrega, Fiscal...). O nicho é travado;
  * sanitizeModules mantém só módulos válidos pro nicho e força os "core" ligados. */
+/** Define/troca/remove a senha de gestão (só o dono). Trocar/remover exige a atual. */
+export async function setManagementPinAction(
+  newPin: string,
+  currentPin?: string,
+): Promise<ActionResult> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { ok: false, error: "Não autenticado." };
+    const link = await prisma.tenantUser.findFirst({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "asc" },
+      select: { tenantId: true, role: true },
+    });
+    if (!link) return { ok: false, error: "Você não tem loja cadastrada." };
+    if (link.role !== "ADMIN") return { ok: false, error: "Só o dono define a senha de gestão." };
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: link.tenantId },
+      select: { managementPinHash: true },
+    });
+    if (tenant?.managementPinHash) {
+      if (!currentPin || !verifyPin(currentPin, tenant.managementPinHash)) {
+        return { ok: false, error: "Senha atual incorreta." };
+      }
+    }
+
+    const clean = newPin.trim();
+    if (clean && clean.length < 4) return { ok: false, error: "A senha precisa de pelo menos 4 caracteres." };
+
+    await prisma.tenant.update({
+      where: { id: link.tenantId },
+      data: { managementPinHash: clean ? hashPin(clean) : null },
+    });
+    revalidatePath("/settings");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erro desconhecido" };
+  }
+}
+
 export async function updateModulesAction(
   modules: string[],
   primaryFocus?: string,

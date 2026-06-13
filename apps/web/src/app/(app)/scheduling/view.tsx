@@ -1,5 +1,6 @@
 "use client";
 
+import { callWithPin } from "@/lib/with-pin";
 import { useState, useTransition } from "react";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -220,7 +221,7 @@ export function SchedulingView({
                         <button
                           type="button"
                           onClick={() => {
-                            if (confirm("Excluir este agendamento?")) run(() => deleteAppointmentAction(a.id));
+                            if (confirm("Excluir este agendamento?")) run(() => callWithPin((pin) => deleteAppointmentAction(a.id, pin)));
                           }}
                           disabled={isPending}
                           className="inline-flex items-center justify-center text-neutral-400 hover:text-red-700"

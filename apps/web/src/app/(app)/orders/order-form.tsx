@@ -17,6 +17,7 @@ import {
   type WeeklyCapacity,
 } from "@/lib/order-validation";
 import { maskPhone, maskCep, maskCpfCnpj } from "@/lib/format";
+import { callWithPin } from "@/lib/with-pin";
 
 function Req() {
   return <span className="text-red-500" aria-hidden>{" *"}</span>;
@@ -196,7 +197,7 @@ export function OrderForm({
     }
     startTransition(async () => {
       if (orderId) {
-        const r = await updateOrderAction(orderId, form);
+        const r = await callWithPin((pin) => updateOrderAction(orderId, form, pin));
         if (!r.ok) setError(r.error ?? "Erro");
         else {
           setSaved(true);

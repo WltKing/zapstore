@@ -13,6 +13,7 @@ import {
   type ProductInput,
 } from "@/lib/actions/products";
 import { ImageUpload } from "@/components/image-upload";
+import { callWithPin } from "@/lib/with-pin";
 import { NfeImportDialog } from "@/components/nfe-import-dialog";
 import { priceFromCostMargin } from "@/lib/pricing";
 
@@ -130,7 +131,7 @@ export function ProductsView({
   const handleDelete = (id: string, name: string) => {
     if (!confirm(`Excluir "${name}"? Essa acao nao pode ser desfeita.`)) return;
     startTransition(async () => {
-      const res = await deleteProductAction(id);
+      const res = await callWithPin((pin) => deleteProductAction(id, pin));
       if (!res.ok) setError(res.error ?? "Erro");
       else router.refresh();
     });
@@ -154,7 +155,7 @@ export function ProductsView({
     setError(null);
     setNotice(null);
     startTransition(async () => {
-      const r = await deleteProductsAction(Array.from(selected));
+      const r = await callWithPin((pin) => deleteProductsAction(Array.from(selected), pin));
       if (!r.ok) setError(r.error ?? "Erro");
       else {
         setNotice(`${r.deleted} produto${(r.deleted ?? 0) > 1 ? "s" : ""} excluído${(r.deleted ?? 0) > 1 ? "s" : ""}.`);
@@ -178,7 +179,7 @@ export function ProductsView({
     setError(null);
     setNotice(null);
     startTransition(async () => {
-      const r = await applyMarginToProductsAction(Array.from(selected), pct);
+      const r = await callWithPin((pin) => applyMarginToProductsAction(Array.from(selected), pct, pin));
       if (!r.ok) setError(r.error ?? "Erro");
       else {
         setNotice(
@@ -574,7 +575,7 @@ function ProductDialog({
     setError(null);
     startTransition(async () => {
       const res = editingId
-        ? await updateProductAction(editingId, form)
+        ? await callWithPin((pin) => updateProductAction(editingId, form, pin))
         : await createProductAction(form);
       if (!res.ok) setError(res.error ?? "Erro");
       else onSaved();

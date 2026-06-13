@@ -52,11 +52,15 @@ export const AREA_LABELS: Record<Area, string> = {
   settings: "Configurações",
 };
 
-/** Presets por perfil pronto. ADMIN = tudo; GERENTE = opera tudo, mas não mexe
- * em usuários/configurações/assinatura (acesso e setup são do dono). */
+/** Presets por perfil pronto. ADMIN = tudo. GERENTE opera tudo, mas NÃO vê o
+ * financeiro da empresa (caixa, despesas, marketing) nem mexe em usuários/
+ * configurações/assinatura — dados de dinheiro são do dono (perfil Financeiro
+ * é a exceção que o dono concede conscientemente). */
 export const ROLE_PERMISSIONS: Record<Role, Area[]> = {
   ADMIN: [...AREAS],
-  MANAGER: AREAS.filter((a) => !["users", "settings", "billing"].includes(a)),
+  MANAGER: AREAS.filter(
+    (a) => !["users", "settings", "billing", "cashflow", "expenses", "marketing"].includes(a),
+  ),
   OPERATOR: ["dashboard", "orders", "products", "customers", "agenda", "scheduling", "services", "simulator"],
   FINANCIAL: ["dashboard", "orders", "cashflow", "expenses", "billing"],
   DELIVERY: ["dashboard", "route", "deliveries", "agenda"],

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { prisma, withTenant, type AppointmentStatus } from "@zapstore/db";
 import { auth } from "@/lib/auth";
+import { requireManagementPin } from "@/lib/management";
 
 async function requireTenantId(): Promise<string> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -53,9 +54,12 @@ export async function createProfessionalAction(input: ProfessionalInput): Promis
 export async function updateProfessionalAction(
   id: string,
   input: ProfessionalInput,
+  pin?: string,
 ): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
+    const g = await requireManagementPin(tenantId, pin);
+    if (!g.ok) return g;
     if (!input.name.trim()) return { ok: false, error: "Informe o nome do profissional." };
     await withTenant(tenantId, async (tx) => {
       await tx.professional.update({
@@ -70,9 +74,11 @@ export async function updateProfessionalAction(
   }
 }
 
-export async function deleteProfessionalAction(id: string): Promise<ActionResult> {
+export async function deleteProfessionalAction(id: string, pin?: string): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
+    const g = await requireManagementPin(tenantId, pin, { deletion: true });
+    if (!g.ok) return g;
     await withTenant(tenantId, async (tx) => {
       await tx.professional.delete({ where: { id } });
     });
@@ -124,9 +130,11 @@ export async function createServiceAction(input: ServiceInput): Promise<ActionRe
   }
 }
 
-export async function updateServiceAction(id: string, input: ServiceInput): Promise<ActionResult> {
+export async function updateServiceAction(id: string, input: ServiceInput, pin?: string): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
+    const g = await requireManagementPin(tenantId, pin);
+    if (!g.ok) return g;
     const err = validateService(input);
     if (err) return { ok: false, error: err };
     await withTenant(tenantId, async (tx) => {
@@ -147,9 +155,11 @@ export async function updateServiceAction(id: string, input: ServiceInput): Prom
   }
 }
 
-export async function deleteServiceAction(id: string): Promise<ActionResult> {
+export async function deleteServiceAction(id: string, pin?: string): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
+    const g = await requireManagementPin(tenantId, pin, { deletion: true });
+    if (!g.ok) return g;
     await withTenant(tenantId, async (tx) => {
       await tx.service.delete({ where: { id } });
     });
@@ -305,9 +315,11 @@ export async function completeAppointmentAction(
   }
 }
 
-export async function deleteAppointmentAction(id: string): Promise<ActionResult> {
+export async function deleteAppointmentAction(id: string, pin?: string): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
+    const g = await requireManagementPin(tenantId, pin, { deletion: true });
+    if (!g.ok) return g;
     await withTenant(tenantId, async (tx) => {
       await tx.appointment.delete({ where: { id } });
     });

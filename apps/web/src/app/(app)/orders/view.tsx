@@ -13,6 +13,7 @@ import {
 import { deleteOrderAction, updateOrderStatusAction } from "@/lib/actions/orders";
 import { printReport, esc, formatBrlReport } from "@/lib/print-report";
 import { paymentLabel } from "@/lib/payments";
+import { callWithPin } from "@/lib/with-pin";
 import { RowFiscal, type RowFiscalConfig } from "./row-fiscal";
 
 interface OrderItem {
@@ -172,7 +173,7 @@ export function OrdersView({
   const remove = (id: string, num: number) => {
     if (!confirm(`Excluir pedido #${num} permanentemente?`)) return;
     startTransition(async () => {
-      const r = await deleteOrderAction(id);
+      const r = await callWithPin((pin) => deleteOrderAction(id, pin));
       if (!r.ok) setError(r.error ?? "Erro");
       else router.refresh();
     });

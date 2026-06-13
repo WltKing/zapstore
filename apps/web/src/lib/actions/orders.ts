@@ -13,6 +13,7 @@ import {
   type DeliveryCutoffs,
   type WeeklyCapacity,
 } from "@/lib/order-validation";
+import { requireManagementPin } from "@/lib/management";
 
 /** Config de entrega da loja: cortes + capacidade semanal. */
 async function getDeliveryConfig(
@@ -304,9 +305,11 @@ export async function createOrderAction(
   }
 }
 
-export async function updateOrderAction(id: string, input: OrderInput): Promise<ActionResult> {
+export async function updateOrderAction(id: string, input: OrderInput, pin?: string): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
+    const guard = await requireManagementPin(tenantId, pin);
+    if (!guard.ok) return guard;
     const err = validateOrderInput(input);
     if (err) return { ok: false, error: err };
 
@@ -373,9 +376,11 @@ export async function updateOrderStatusAction(id: string, status: OrderStatus): 
   }
 }
 
-export async function deleteOrderAction(id: string): Promise<ActionResult> {
+export async function deleteOrderAction(id: string, pin?: string): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
+    const guard = await requireManagementPin(tenantId, pin, { deletion: true });
+    if (!guard.ok) return guard;
     await withTenant(tenantId, async (tx) => {
       const order = await tx.order.findUnique({
         where: { id },

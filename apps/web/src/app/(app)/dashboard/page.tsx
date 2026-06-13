@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { prisma } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser, getTenantStats, getDashboardExtras, getReceivables } from "@/lib/tenant";
 import { NICHE_TEMPLATES } from "@/lib/niches";
@@ -90,6 +91,13 @@ export default async function DashboardPage({
 
   const modules = tenant.enabledModules ?? [];
   const has = (m: string) => modules.includes(m);
+
+  // Dados FINANCEIROS da empresa (faturamento, lucro, caixa...) só o DONO vê.
+  const link = await prisma.tenantUser.findFirst({
+    where: { userId: session.user.id, tenantId: tenant.id },
+    select: { role: true },
+  });
+  const showFinance = link?.role === "ADMIN";
   // Negócio de serviço (estética/salão): terminologia "Serviço/Profissional" (pelo nicho).
   const serviceLed = isServiceLed(tenant.enabledModules ?? [], tenant.primaryFocus);
 
@@ -111,8 +119,9 @@ export default async function DashboardPage({
   const showGoal = has("goal") && goalBrl > 0;
   const goalPct = showGoal ? Math.min(100, Math.round((faturamento / goalBrl) * 100)) : 0;
 
-  // Quantidade de cards na faixa "Hoje" (varia por nicho) — pra grade preencher a linha.
-  const hojeCount = 2 + (has("products") ? 1 : 0) + (has("scheduling") ? 1 : 0);
+  // Quantidade de cards na faixa "Hoje" — pra grade preencher a linha.
+  const hojeCount =
+    1 + (showFinance ? 1 : 0) + (has("products") ? 1 : 0) + (has("scheduling") ? 1 : 0);
 
   // Barras horizontais: faturamento (100%) e pra onde foi, terminando no lucro.
   const revenueRows = [
@@ -176,7 +185,8 @@ export default async function DashboardPage({
         </div>
       )}
 
-      {/* Núcleo de KPIs do mês */}
+      {/* Núcleo de KPIs do mês — financeiro: só o dono */}
+      {showFinance && (
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
           {isCurrentMonth ? "Este mês" : monthName}
@@ -195,9 +205,10 @@ export default async function DashboardPage({
           <Card title="Despesas" value={formatBrl(extras.despesasMes)} icon={TrendingDown} tint="red" delta={despesasDelta} deltaInverted />
         </div>
       </section>
+      )}
 
       {/* Bot — o diferencial: atendimento automático */}
-      {isCurrentMonth && (
+      {isCurrentMonth && showFinance && (
         <section className="mt-6 overflow-hidden rounded-2xl bg-brand p-6 text-white shadow-card">
           <div className="flex flex-wrap items-center justify-between gap-5">
             <div className="flex items-center gap-3">
@@ -234,7 +245,7 @@ export default async function DashboardPage({
       )}
 
       {/* Meta do mês (módulo opcional) */}
-      {showGoal && (
+      {showGoal && showFinance && (
         <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
           <div className="flex items-baseline justify-between gap-3">
             <div>
@@ -271,7 +282,8 @@ export default async function DashboardPage({
         </section>
       )}
 
-      {/* Para onde vai o faturamento — barra de composição */}
+      {/* Para onde vai o faturamento — barra de composição (só o dono) */}
+      {showFinance && (
       <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Para onde vai o faturamento</h2>
@@ -303,9 +315,10 @@ export default async function DashboardPage({
           </p>
         )}
       </section>
+      )}
 
       {/* A receber (maquininha) — estado atual, só no mês corrente */}
-      {isCurrentMonth && receivables.total > 0 && (
+      {isCurrentMonth && showFinance && receivables.total > 0 && (
         <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">A receber (maquininha)</h2>
@@ -338,7 +351,9 @@ export default async function DashboardPage({
         <section className="mt-8">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Hoje</h2>
           <div className={`grid gap-4 ${gridCols(hojeCount)}`}>
-            <Card title="Vendas hoje" value={formatBrl(stats.salesTodayBrl)} icon={ShoppingCart} tint="blue" />
+            {showFinance && (
+              <Card title="Vendas hoje" value={formatBrl(stats.salesTodayBrl)} icon={ShoppingCart} tint="blue" />
+            )}
             <Card title="Pedidos abertos" value={String(stats.openOrderCount)} icon={Package} tint="amber" />
             {has("products") && (
               <Card
@@ -355,8 +370,8 @@ export default async function DashboardPage({
         </section>
       )}
 
-      {/* Saúde do estoque (produtos, mês corrente) */}
-      {isCurrentMonth && has("products") && (extras.capitalEmEstoque > 0 || extras.staleCount > 0) && (
+      {/* Saúde do estoque (produtos, mês corrente — valores financeiros: só o dono) */}
+      {isCurrentMonth && showFinance && has("products") && (extras.capitalEmEstoque > 0 || extras.staleCount > 0) && (
         <section className="mt-8">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Saúde do estoque</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -383,7 +398,9 @@ export default async function DashboardPage({
         </section>
       )}
 
-      {/* ===== Análise de vendas ===== */}
+      {/* ===== Análise de vendas (financeiro: só o dono) ===== */}
+      {showFinance && (
+      <>
       <SectionDivider>Análise de vendas</SectionDivider>
       <section className={`mt-4 grid gap-4 ${isCurrentMonth ? "lg:grid-cols-2" : ""}`}>
         {isCurrentMonth && (
@@ -466,6 +483,8 @@ export default async function DashboardPage({
           </section>
         </>
       )}
+      </>
+      )}
 
       {/* Clientes (novos × recorrentes) e atendimentos (faltas) do mês */}
       {(extras.novosClientes + extras.recorrentesClientes > 0 ||
@@ -503,8 +522,8 @@ export default async function DashboardPage({
         </>
       )}
 
-      {/* Plano (uso de mensagens) — só no mês corrente */}
-      {isCurrentMonth && (
+      {/* Plano (uso de mensagens) — só no mês corrente (assinatura: só o dono) */}
+      {isCurrentMonth && showFinance && (
       <section className="mt-8 rounded-2xl bg-white p-5 shadow-card">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -530,7 +549,7 @@ export default async function DashboardPage({
       )}
 
       {/* Próximos passos — só no mês corrente, some quando a loja já está configurada */}
-      {isCurrentMonth && !setupComplete && (
+      {isCurrentMonth && showFinance && !setupComplete && (
       <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
         <h2 className="text-lg font-semibold">Próximos passos</h2>
         <p className="mt-1 text-sm text-neutral-500">Pra deixar seu bot 100% pronto.</p>

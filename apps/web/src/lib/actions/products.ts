@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { prisma, withTenant } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { priceFromCostMargin } from "@/lib/pricing";
+import { requireManagementPin } from "@/lib/management";
 
 export interface ProductInput {
   name: string;
@@ -99,9 +100,11 @@ export async function createProductAction(input: ProductInput): Promise<ActionRe
   }
 }
 
-export async function updateProductAction(id: string, input: ProductInput): Promise<ActionResult> {
+export async function updateProductAction(id: string, input: ProductInput, pin?: string): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
+    const guard = await requireManagementPin(tenantId, pin);
+    if (!guard.ok) return guard;
     const err = validateProduct(input);
     if (err) return { ok: false, error: err };
 
@@ -140,9 +143,11 @@ export async function updateProductAction(id: string, input: ProductInput): Prom
   }
 }
 
-export async function deleteProductAction(id: string): Promise<ActionResult> {
+export async function deleteProductAction(id: string, pin?: string): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
+    const guard = await requireManagementPin(tenantId, pin, { deletion: true });
+    if (!guard.ok) return guard;
     await withTenant(tenantId, async (tx) => {
       await tx.product.delete({ where: { id } });
     });
@@ -156,9 +161,12 @@ export async function deleteProductAction(id: string): Promise<ActionResult> {
 /** Exclui vários produtos de uma vez (seleção em massa). */
 export async function deleteProductsAction(
   ids: string[],
+  pin?: string,
 ): Promise<ActionResult & { deleted?: number }> {
   try {
     const tenantId = await requireTenantId();
+    const guard = await requireManagementPin(tenantId, pin, { deletion: true });
+    if (!guard.ok) return guard;
     if (!ids.length) return { ok: false, error: "Nenhum produto selecionado." };
     const r = await withTenant(tenantId, (tx) =>
       tx.product.deleteMany({ where: { id: { in: ids } } }),
@@ -175,9 +183,12 @@ export async function deleteProductsAction(
 export async function applyMarginToProductsAction(
   ids: string[],
   marginPct: number,
+  pin?: string,
 ): Promise<ActionResult & { updated?: number; skipped?: number }> {
   try {
     const tenantId = await requireTenantId();
+    const guard = await requireManagementPin(tenantId, pin);
+    if (!guard.ok) return guard;
     if (!ids.length) return { ok: false, error: "Nenhum produto selecionado." };
     if (!Number.isFinite(marginPct) || marginPct < 0 || marginPct >= 100)
       return { ok: false, error: "Margem inválida — use um valor entre 0 e 99." };

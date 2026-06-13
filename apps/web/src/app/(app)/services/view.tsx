@@ -1,5 +1,6 @@
 "use client";
 
+import { callWithPin } from "@/lib/with-pin";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createServiceAction, updateServiceAction, deleteServiceAction } from "@/lib/actions/scheduling";
@@ -87,7 +88,7 @@ export function ServicesView({ services }: { services: ServiceRow[] }) {
                   <button
                     type="button"
                     onClick={() => {
-                      if (confirm(`Excluir o serviço "${s.name}"?`)) run(() => deleteServiceAction(s.id));
+                      if (confirm(`Excluir o serviço "${s.name}"?`)) run(() => callWithPin((pin) => deleteServiceAction(s.id, pin)));
                     }}
                     disabled={isPending}
                     className="text-neutral-400 hover:text-red-700"
@@ -108,7 +109,7 @@ export function ServicesView({ services }: { services: ServiceRow[] }) {
           isPending={isPending}
           onClose={() => setEditing(null)}
           onSubmit={(input) =>
-            run(() => (editing === "new" ? createServiceAction(input) : updateServiceAction(editing.id, input)))
+            run(() => (editing === "new" ? createServiceAction(input) : callWithPin((pin) => updateServiceAction(editing.id, input, pin))))
           }
         />
       )}

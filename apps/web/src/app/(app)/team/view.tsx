@@ -1,5 +1,6 @@
 "use client";
 
+import { callWithPin } from "@/lib/with-pin";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -94,7 +95,7 @@ export function TeamView({
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => run(() => updateProfessionalAction(m.id, { name: m.name, active: !m.active }))}
+                    onClick={() => run(() => callWithPin((pin) => updateProfessionalAction(m.id, { name: m.name, active: !m.active }, pin)))}
                     disabled={isPending}
                     className="text-sm text-neutral-600 hover:text-neutral-900"
                   >
@@ -104,7 +105,7 @@ export function TeamView({
                     type="button"
                     onClick={() => {
                       const nn = prompt("Novo nome", m.name);
-                      if (nn && nn.trim()) run(() => updateProfessionalAction(m.id, { name: nn.trim(), active: m.active }));
+                      if (nn && nn.trim()) run(() => callWithPin((pin) => updateProfessionalAction(m.id, { name: nn.trim(), active: m.active }, pin)));
                     }}
                     disabled={isPending}
                     className="text-neutral-400 hover:text-neutral-700"
@@ -115,7 +116,7 @@ export function TeamView({
                   <button
                     type="button"
                     onClick={() => {
-                      if (confirm(`Excluir "${m.name}"?`)) run(() => deleteProfessionalAction(m.id));
+                      if (confirm(`Excluir "${m.name}"?`)) run(() => callWithPin((pin) => deleteProfessionalAction(m.id, pin)));
                     }}
                     disabled={isPending}
                     className="text-neutral-400 hover:text-red-700"

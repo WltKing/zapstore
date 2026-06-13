@@ -34,6 +34,7 @@ export function SettingsView({
   enabledModules,
   primaryFocus: primaryFocusProp,
   email,
+  securitySlot,
   deliverySlot,
 }: {
   storeName: string;
@@ -53,6 +54,7 @@ export function SettingsView({
   enabledModules: string[];
   primaryFocus: string | null;
   email: string;
+  securitySlot?: React.ReactNode;
   deliverySlot?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -527,6 +529,7 @@ export function SettingsView({
         </div>
       </form>
 
+      {securitySlot}
       {deliverySlot}
 
       <ModulesSection niche={niche} enabledModules={enabledModules} nicheLabel={nicheLabel} primaryFocus={primaryFocusProp} />
