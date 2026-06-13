@@ -98,11 +98,11 @@ export function UsersView({
       ) : (
         <>
           {/* Convidar */}
-          <section className="mt-8 rounded-2xl bg-white p-6 shadow-card">
+          <section className="mt-8 rounded-2xl bg-white p-5 shadow-card sm:p-6">
             <h2 className="font-semibold">Convidar para a equipe</h2>
             <form onSubmit={invite} className="mt-4 space-y-4">
               <div className="flex flex-wrap items-end gap-3">
-                <div className="min-w-56 flex-1">
+                <div className="w-full min-w-0 flex-1 sm:w-auto">
                   <label className="block text-sm font-medium text-neutral-700">E-mail</label>
                   <input
                     type="email"
@@ -138,7 +138,7 @@ export function UsersView({
               </div>
 
               {inviteRole === "CUSTOM" && (
-                <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+                <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 sm:p-4">
                   <p className="mb-3 text-xs text-neutral-500">
                     Comece por um modelo e ajuste as áreas que essa pessoa pode acessar:
                   </p>
@@ -277,7 +277,7 @@ function AreaPicker({
           </button>
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {PICKABLE_AREAS.map((area) => {
           const isDash = area === "dashboard";
           const on = isDash || checked.includes(area);
@@ -293,9 +293,9 @@ function AreaPicker({
                 checked={on}
                 disabled={isDash}
                 onChange={() => toggle(area)}
-                className="h-4 w-4 rounded border-neutral-300"
+                className="h-4 w-4 shrink-0 rounded border-neutral-300"
               />
-              {AREA_LABELS[area]}
+              <span className="min-w-0">{AREA_LABELS[area]}</span>
             </label>
           );
         })}
