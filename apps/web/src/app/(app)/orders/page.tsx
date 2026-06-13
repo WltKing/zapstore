@@ -6,7 +6,15 @@ import { getPrimaryTenantForUser } from "@/lib/tenant";
 import { OrdersView } from "./view";
 import { missingNfeFields } from "@/lib/order-validation";
 
-export default async function OrdersPage() {
+/** Limite de pedidos por página/consulta (a busca varre o banco; isto só capa o payload). */
+const DEFAULT_TAKE = 50; // lista padrão = recentes
+const SEARCH_TAKE = 200; // busca ou mês inteiro
+
+export default async function OrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; month?: string }>;
+}) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/login");
 
@@ -19,10 +27,34 @@ export default async function OrdersPage() {
   // Etiqueta/filtro de tipo só fazem sentido quando a loja faz os DOIS (produto + serviço).
   const showType = schedulingOn && productsOn;
 
-  const { orders, fiscalCfg, serviceOrderIds } = await withTenant(tenant.id, async (tx) => {
-    const [orders, fiscalCfg] = await Promise.all([
-      tx.order.findMany({ orderBy: { createdAt: "desc" }, take: 100 }),
+  const sp = await searchParams;
+  const q = (sp.q ?? "").trim();
+  const month = sp.month ?? "all";
+
+  // Filtro do servidor: busca (varre TODO o banco) tem prioridade; senão, mês escolhido;
+  // senão, os mais recentes. Status/tipo continuam no cliente (sobre o que voltar).
+  let where: Prisma.OrderWhereInput = {};
+  if (q) {
+    const digits = q.replace(/\D/g, "");
+    const ors: Prisma.OrderWhereInput[] = [
+      { customerName: { contains: q, mode: "insensitive" } },
+      { sellerName: { contains: q, mode: "insensitive" } },
+    ];
+    if (digits) ors.push({ customerPhone: { contains: digits } });
+    const n = Number(q);
+    if (Number.isInteger(n) && n > 0) ors.push({ orderNumber: n });
+    where = { OR: ors };
+  } else if (/^\d{4}-\d{2}$/.test(month)) {
+    const [y, m] = month.split("-").map(Number);
+    where = { createdAt: { gte: new Date(y, m - 1, 1), lt: new Date(y, m, 1) } };
+  }
+  const take = q || month !== "all" ? SEARCH_TAKE : DEFAULT_TAKE;
+
+  const { orders, fiscalCfg, serviceOrderIds, earliest } = await withTenant(tenant.id, async (tx) => {
+    const [orders, fiscalCfg, agg] = await Promise.all([
+      tx.order.findMany({ where, orderBy: { createdAt: "desc" }, take }),
       tx.fiscalConfig.findUnique({ where: { tenantId: tenant.id } }),
+      tx.order.aggregate({ _min: { createdAt: true } }), // 1º pedido → monta a lista de meses
     ]);
     // Pedido de serviço = ligado a um agendamento concluído (Appointment.orderId).
     let serviceOrderIds = new Set<string>();
@@ -33,8 +65,20 @@ export default async function OrdersPage() {
       });
       serviceOrderIds = new Set(appts.map((a) => a.orderId).filter((x): x is string => !!x));
     }
-    return { orders, fiscalCfg, serviceOrderIds };
+    return { orders, fiscalCfg, serviceOrderIds, earliest: agg._min.createdAt };
   });
+
+  // Lista de meses (do 1º pedido até hoje) pro seletor — independe do que foi carregado.
+  const months: string[] = [];
+  if (earliest) {
+    const d = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
+    const now = new Date();
+    while (d <= now) {
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+      d.setMonth(d.getMonth() + 1);
+    }
+    months.reverse();
+  }
 
   const rows = orders.map((o) => ({
     id: o.id,
@@ -65,5 +109,16 @@ export default async function OrdersPage() {
     habilitaNfe: fiscalCfg?.habilitaNfe ?? false,
   };
 
-  return <OrdersView storeName={tenant.name} orders={rows} fiscalConfig={fiscalConfig} showType={showType} />;
+  return (
+    <OrdersView
+      storeName={tenant.name}
+      orders={rows}
+      fiscalConfig={fiscalConfig}
+      showType={showType}
+      months={months}
+      q={q}
+      month={month}
+      hasMore={orders.length >= take}
+    />
+  );
 }

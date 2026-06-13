@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   FileDown,
@@ -77,10 +77,6 @@ function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
-function monthKey(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
 function monthLabel(key: string): string {
   const [y, m] = key.split("-").map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
@@ -91,11 +87,19 @@ export function OrdersView({
   orders,
   fiscalConfig,
   showType = false,
+  months,
+  q,
+  month,
+  hasMore = false,
 }: {
   storeName: string;
   orders: OrderRow[];
   fiscalConfig: RowFiscalConfig;
   showType?: boolean;
+  months: string[];
+  q: string;
+  month: string;
+  hasMore?: boolean;
 }) {
   const router = useRouter();
   const { canDelete } = useAccess();
@@ -103,43 +107,48 @@ export function OrdersView({
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const now = new Date();
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const [query, setQuery] = useState("");
+  // Busca e mês são do SERVIDOR (varrem o banco todo) via URL. Status/tipo ficam no
+  // cliente (filtram só o que voltou). O input mantém estado local pra digitar fluido.
+  const [query, setQuery] = useState(q);
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [monthFilter, setMonthFilter] = useState<string>(currentMonth);
+  const searching = q.trim().length > 0;
 
-  const months = useMemo(() => {
-    const set = new Set(orders.map((o) => monthKey(o.createdAt)));
-    set.add(currentMonth);
-    return Array.from(set).sort().reverse();
+  // Navega pra /orders com os parâmetros (busca tem prioridade sobre mês).
+  const pushParams = (next: { q?: string; month?: string }) => {
+    const params = new URLSearchParams();
+    const nq = (next.q ?? "").trim();
+    if (nq) params.set("q", nq);
+    else if (next.month && next.month !== "all") params.set("month", next.month);
+    const qs = params.toString();
+    startTransition(() => router.replace(qs ? `/orders?${qs}` : "/orders", { scroll: false }));
+  };
+
+  // Digitar busca → atualiza a URL com um pequeno atraso (debounce), varrendo o banco.
+  // (Não sincronizamos URL→input pra não atropelar o que o usuário está digitando.)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (query.trim() !== q) pushParams({ q: query, month });
+    }, 450);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orders]);
+  }, [query]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const qd = q.replace(/\D/g, "");
     return orders.filter((o) => {
-      if (monthFilter !== "all" && monthKey(o.createdAt) !== monthFilter) return false;
       if (statusFilter !== "all" && o.status !== statusFilter) return false;
       if (showType && typeFilter !== "all" && o.kind !== typeFilter) return false;
-      if (q) {
-        const hit =
-          o.customerName.toLowerCase().includes(q) ||
-          (o.sellerName ?? "").toLowerCase().includes(q) ||
-          String(o.orderNumber).includes(qd || q) ||
-          (!!qd && o.customerPhone.includes(qd));
-        if (!hit) return false;
-      }
       return true;
     });
-  }, [orders, query, statusFilter, typeFilter, monthFilter, showType]);
+  }, [orders, statusFilter, typeFilter, showType]);
 
   const exportPdf = () => {
     const total = filtered.reduce((s, o) => s + o.totalBrl, 0);
-    const periodLabel =
-      monthFilter === "all" ? "Todos os meses" : monthLabel(monthFilter);
+    const periodLabel = searching
+      ? `Busca: ${q}`
+      : month === "all"
+        ? "Pedidos recentes"
+        : monthLabel(month);
     const rows = filtered
       .map(
         (o) =>
@@ -220,9 +229,13 @@ export function OrdersView({
           className="min-w-56 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
         <select
-          value={monthFilter}
-          onChange={(e) => setMonthFilter(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          value={searching ? "all" : month}
+          disabled={searching}
+          onChange={(e) => {
+            setQuery("");
+            pushParams({ month: e.target.value });
+          }}
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:opacity-50"
         >
           <option value="all">Todos os meses</option>
           {months.map((m) => (
@@ -256,14 +269,22 @@ export function OrdersView({
         </select>
       </div>
 
-      <section className="mt-4 rounded-2xl bg-white shadow-card">
+      <p className="mt-3 text-xs text-neutral-500">
+        {searching
+          ? `Resultados da busca por “${q}” em todos os pedidos — ${filtered.length} encontrado${filtered.length === 1 ? "" : "s"}${hasMore ? " (mostrando os mais recentes; refine a busca se precisar)" : ""}.`
+          : month !== "all"
+            ? `${monthLabel(month)} — ${filtered.length} pedido${filtered.length === 1 ? "" : "s"}.`
+            : `Mostrando os ${orders.length} pedidos mais recentes. Use a busca pra encontrar qualquer pedido, de qualquer data.`}
+      </p>
+
+      <section className="mt-3 rounded-2xl bg-white shadow-card">
         {filtered.length === 0 ? (
           <div className="p-12 text-center">
             <h2 className="text-lg font-semibold">
-              {orders.length === 0 ? "Nenhum pedido ainda" : "Nenhum pedido neste filtro"}
+              {orders.length === 0 && !searching ? "Nenhum pedido ainda" : "Nenhum pedido encontrado"}
             </h2>
             <p className="mt-1 text-sm text-neutral-500">
-              {orders.length === 0
+              {orders.length === 0 && !searching
                 ? "Crie um pedido no botão acima, ou deixe o bot fechar a venda — aparece aqui automaticamente."
                 : "Ajuste a busca, o mês ou o status."}
             </p>
