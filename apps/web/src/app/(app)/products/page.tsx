@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { withTenant } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { getPrimaryTenantForUser } from "@/lib/tenant";
+import { getCurrentRole } from "@/lib/management";
 import { ProductsView } from "./view";
 
 export default async function ProductsPage() {
@@ -11,6 +12,9 @@ export default async function ProductsPage() {
 
   const tenant = await getPrimaryTenantForUser(session.user.id);
   if (!tenant) redirect("/onboarding");
+
+  // Custo e margem são do dono: só ADMIN recebe esses dados (nem chegam ao navegador).
+  const isOwner = (await getCurrentRole(tenant.id)) === "ADMIN";
 
   const products = await withTenant(tenant.id, async (tx) =>
     tx.product.findMany({
@@ -28,7 +32,7 @@ export default async function ProductsPage() {
     category: p.category,
     kind: p.kind,
     priceBrl: Number(p.priceBrl),
-    costBrl: p.costBrl != null ? Number(p.costBrl) : null,
+    costBrl: isOwner && p.costBrl != null ? Number(p.costBrl) : null,
     imageUrl: p.imageUrl,
     realImageUrl: p.realImageUrl,
     stock: p.stock,
@@ -53,6 +57,7 @@ export default async function ProductsPage() {
       storeName={tenant.name}
       defaultMarginPct={defaultMarginPct}
       roundTo90={tenant.roundTo90}
+      isOwner={isOwner}
     />
   );
 }

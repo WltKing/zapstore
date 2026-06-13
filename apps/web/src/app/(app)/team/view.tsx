@@ -15,14 +15,41 @@ export interface TeamMember {
   id: string;
   name: string;
   active: boolean;
+  isSeller: boolean;
+  isProfessional: boolean;
 }
+
+/** Modo da loja: só vende (seller), só atende (professional) ou as duas coisas (both). */
+type Mode = "seller" | "professional" | "both";
+type Kind = "seller" | "professional" | "both";
+
+/** Flags do banco a partir do tipo escolhido. */
+function flagsFor(kind: Kind): { isSeller: boolean; isProfessional: boolean } {
+  if (kind === "both") return { isSeller: true, isProfessional: true };
+  if (kind === "professional") return { isSeller: false, isProfessional: true };
+  return { isSeller: true, isProfessional: false };
+}
+
+function kindOf(m: TeamMember): Kind {
+  if (m.isSeller && m.isProfessional) return "both";
+  if (m.isProfessional) return "professional";
+  return "seller";
+}
+
+const KIND_LABEL: Record<Kind, string> = {
+  seller: "Vendedor",
+  professional: "Profissional",
+  both: "Ambos",
+};
 
 export function TeamView({
   members,
+  mode,
   label,
   singular,
 }: {
   members: TeamMember[];
+  mode: Mode;
   label: string;
   singular: string;
 }) {
@@ -31,6 +58,7 @@ export function TeamView({
   const [isPending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [newKind, setNewKind] = useState<Kind>("seller");
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) =>
     start(async () => {
@@ -43,28 +71,48 @@ export function TeamView({
       }
     });
 
+  // Em loja de um eixo só, o tipo é fixo; em loja que faz as duas coisas, vale a escolha.
+  const fixedKind: Kind = mode === "professional" ? "professional" : "seller";
+  const createKind: Kind = mode === "both" ? newKind : fixedKind;
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
       <header>
         <h1 className="text-3xl font-bold tracking-tight">{label}</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Cadastre quem fecha vendas / atende. Aparece como vendedor no pedido e nos relatórios.
+          {mode === "both"
+            ? "Cadastre sua equipe. Vendedores aparecem no pedido; profissionais aparecem na agenda. Quem faz os dois, marque “Ambos”."
+            : mode === "professional"
+              ? "Cadastre quem realiza os atendimentos. Aparece na agenda e nos relatórios."
+              : "Cadastre quem fecha vendas. Aparece como vendedor no pedido e nos relatórios."}
         </p>
       </header>
 
       <form
-        className="mt-6 flex gap-2"
+        className="mt-6 flex flex-wrap gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          if (name.trim()) run(() => createProfessionalAction({ name: name.trim(), active: true }));
+          if (name.trim())
+            run(() => createProfessionalAction({ name: name.trim(), active: true, ...flagsFor(createKind) }));
         }}
       >
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={`Nome do ${singular}`}
-          className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          className="min-w-48 flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
         />
+        {mode === "both" && (
+          <select
+            value={newKind}
+            onChange={(e) => setNewKind(e.target.value as Kind)}
+            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          >
+            <option value="seller">Vendedor</option>
+            <option value="professional">Profissional</option>
+            <option value="both">Ambos</option>
+          </select>
+        )}
         <button
           type="submit"
           disabled={isPending || !name.trim()}
@@ -83,9 +131,14 @@ export function TeamView({
         ) : (
           <ul className="divide-y divide-neutral-100">
             {members.map((m) => (
-              <li key={m.id} className="flex items-center justify-between px-6 py-3">
-                <div className="flex items-center gap-3">
+              <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 px-6 py-3">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{m.name}</span>
+                  {mode === "both" && (
+                    <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand">
+                      {KIND_LABEL[kindOf(m)]}
+                    </span>
+                  )}
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs ${
                       m.active ? "bg-emerald-100 text-emerald-800" : "bg-neutral-200 text-neutral-600"
@@ -95,6 +148,26 @@ export function TeamView({
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
+                  {mode === "both" && (
+                    <select
+                      value={kindOf(m)}
+                      onChange={(e) => {
+                        const k = e.target.value as Kind;
+                        run(() =>
+                          callWithPin((pin) =>
+                            updateProfessionalAction(m.id, { name: m.name, active: m.active, ...flagsFor(k) }, pin),
+                          ),
+                        );
+                      }}
+                      disabled={isPending}
+                      title="Tipo"
+                      className="rounded-lg border border-neutral-300 px-2 py-1 text-xs shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                    >
+                      <option value="seller">Vendedor</option>
+                      <option value="professional">Profissional</option>
+                      <option value="both">Ambos</option>
+                    </select>
+                  )}
                   <button
                     type="button"
                     onClick={() => run(() => callWithPin((pin) => updateProfessionalAction(m.id, { name: m.name, active: !m.active }, pin)))}

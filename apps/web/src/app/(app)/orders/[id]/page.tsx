@@ -38,7 +38,7 @@ export default async function EditOrderPage({
         select: { id: true, name: true, priceBrl: true },
       }),
       tx.fiscalConfig.findUnique({ where: { tenantId: tenant.id } }),
-      tx.professional.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { name: true } }),
+      tx.professional.findMany({ where: { active: true, isSeller: true }, orderBy: { name: "asc" }, select: { name: true } }),
       tx.appointment.findFirst({ where: { orderId: id }, select: { id: true } }),
       tx.botConfig.findUnique({
         where: { tenantId: tenant.id },

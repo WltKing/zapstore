@@ -45,7 +45,7 @@ export default async function NewOrderPage() {
         orderBy: { name: "asc" },
         select: { id: true, name: true, priceBrl: true },
       }),
-      tx.professional.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { name: true } }),
+      tx.professional.findMany({ where: { active: true, isSeller: true }, orderBy: { name: "asc" }, select: { name: true } }),
       tx.botConfig.findUnique({
         where: { tenantId: tenant.id },
         select: { morningCutoff: true, afternoonCutoff: true, weeklyCapacity: true },

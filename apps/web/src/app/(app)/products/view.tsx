@@ -13,7 +13,8 @@ import {
   type ProductInput,
 } from "@/lib/actions/products";
 import { ImageUpload } from "@/components/image-upload";
-import { callWithPin } from "@/lib/with-pin";
+import { callWithPin, requestPin } from "@/lib/with-pin";
+import { verifyManagementPinAction } from "@/lib/actions/access";
 import { useAccess } from "@/lib/access-context";
 import { NfeImportDialog } from "@/components/nfe-import-dialog";
 import { priceFromCostMargin } from "@/lib/pricing";
@@ -76,16 +77,34 @@ export function ProductsView({
   storeName,
   defaultMarginPct,
   roundTo90,
+  isOwner,
 }: {
   initial: ProductRow[];
   storeName: string;
   defaultMarginPct: number | null;
   roundTo90: boolean;
+  isOwner: boolean;
 }) {
   const router = useRouter();
   const { canDelete } = useAccess();
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState<ProductRow | "new" | null>(null);
+  const [sessionPin, setSessionPin] = useState<string | undefined>(undefined);
+
+  // Abre a edição de um produto EXISTENTE só APÓS a senha de gestão (não revela
+  // custo/dados internos sem autorização). O PIN é reaproveitado ao salvar.
+  const openEdit = (p: ProductRow) => {
+    setError(null);
+    startTransition(async () => {
+      const r = await requestPin((pin) => verifyManagementPinAction(pin));
+      if (!r.ok) {
+        if (r.error) setError(r.error);
+        return;
+      }
+      setSessionPin(r.pin);
+      setEditing(p);
+    });
+  };
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -301,15 +320,17 @@ export function ProductsView({
           <span className="text-sm font-medium">
             {selected.size} selecionado{selected.size > 1 ? "s" : ""}
           </span>
-          <button
-            type="button"
-            onClick={handleBulkMargin}
-            disabled={isPending}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
-          >
-            <Percent className="h-4 w-4" strokeWidth={2} />
-            Alterar margem
-          </button>
+          {isOwner && (
+            <button
+              type="button"
+              onClick={handleBulkMargin}
+              disabled={isPending}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
+            >
+              <Percent className="h-4 w-4" strokeWidth={2} />
+              Alterar margem
+            </button>
+          )}
           {canDelete && (
             <button
               type="button"
@@ -359,7 +380,7 @@ export function ProductsView({
                 </th>
                 <th className="py-3 pl-4 pr-2 text-left sm:px-4">Produto</th>
                 <th className="px-2 py-3 text-right sm:px-4">Preço</th>
-                <th className="hidden px-3 py-3 text-right md:table-cell md:px-4">Margem</th>
+                {isOwner && <th className="hidden px-3 py-3 text-right md:table-cell md:px-4">Margem</th>}
                 <th className="py-3 pl-2 pr-4 text-right sm:px-4">Estoque</th>
                 <th className="hidden px-3 py-3 text-center sm:table-cell sm:px-4">Ativo</th>
                 <th className="hidden px-3 py-3 text-right sm:table-cell sm:px-4">Ações</th>
@@ -369,10 +390,7 @@ export function ProductsView({
               {filtered.map((p) => (
                 <tr
                   key={p.id}
-                  onClick={() => {
-                    setError(null);
-                    setEditing(p);
-                  }}
+                  onClick={() => openEdit(p)}
                   className="cursor-pointer border-b border-neutral-100 last:border-0 hover:bg-neutral-50"
                 >
                   <td className="hidden py-4 pl-4 pr-1 sm:table-cell" onClick={(e) => e.stopPropagation()}>
@@ -420,9 +438,11 @@ export function ProductsView({
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-2 py-3 text-right text-[13px] font-medium sm:px-4 sm:py-4 sm:text-base">{formatBrl(p.priceBrl)}</td>
-                  <td className="hidden px-3 py-4 text-right text-neutral-600 md:table-cell md:px-4">
-                    {marginLabel(p.priceBrl, p.costBrl)}
-                  </td>
+                  {isOwner && (
+                    <td className="hidden px-3 py-4 text-right text-neutral-600 md:table-cell md:px-4">
+                      {marginLabel(p.priceBrl, p.costBrl)}
+                    </td>
+                  )}
                   <td className="py-3 pl-2 pr-4 text-right text-[13px] sm:px-4 sm:py-4 sm:text-base">
                     <span
                       className={
@@ -459,8 +479,7 @@ export function ProductsView({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setError(null);
-                          setEditing(p);
+                          openEdit(p);
                         }}
                         title="Editar"
                         className="inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700"
@@ -506,6 +525,8 @@ export function ProductsView({
           allProducts={initial}
           defaultMarginPct={defaultMarginPct}
           roundTo90={roundTo90}
+          isOwner={isOwner}
+          sessionPin={sessionPin}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -545,6 +566,8 @@ function ProductDialog({
   allProducts,
   defaultMarginPct,
   roundTo90,
+  isOwner,
+  sessionPin,
   onClose,
   onSaved,
 }: {
@@ -553,6 +576,8 @@ function ProductDialog({
   allProducts: ProductRow[];
   defaultMarginPct: number | null;
   roundTo90: boolean;
+  isOwner: boolean;
+  sessionPin?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -580,8 +605,9 @@ function ProductDialog({
     e.preventDefault();
     setError(null);
     startTransition(async () => {
+      // A senha já foi pedida ao abrir a edição (sessionPin) — não pergunta de novo.
       const res = editingId
-        ? await callWithPin((pin) => updateProductAction(editingId, form, pin))
+        ? await updateProductAction(editingId, form, sessionPin)
         : await createProductAction(form);
       if (!res.ok) setError(res.error ?? "Erro");
       else onSaved();
@@ -725,7 +751,7 @@ function ProductDialog({
               onChange={(e) => setForm({ ...form, priceBrl: Number(e.target.value) })}
               className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             />
-            {suggestedPrice != null && (
+            {isOwner && suggestedPrice != null && (
               <button
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, priceBrl: suggestedPrice }))}
@@ -735,23 +761,25 @@ function ProductDialog({
               </button>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700">Custo (R$, opcional)</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.costBrl ?? ""}
-              onChange={(e) => {
-                const cost = e.target.value === "" ? null : Number(e.target.value);
-                // Mexeu no custo → recalcula o preço pela margem base (sempre, se houver margem).
-                const p = priceFromCostMargin(cost, defaultMarginPct, roundTo90);
-                setForm((f) => ({ ...f, costBrl: cost, ...(p != null ? { priceBrl: p } : {}) }));
-              }}
-              placeholder="pra calcular margem"
-              className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-            />
-          </div>
+          {isOwner && (
+            <div>
+              <label className="block text-sm font-medium text-neutral-700">Custo (R$, opcional)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.costBrl ?? ""}
+                onChange={(e) => {
+                  const cost = e.target.value === "" ? null : Number(e.target.value);
+                  // Mexeu no custo → recalcula o preço pela margem base (sempre, se houver margem).
+                  const p = priceFromCostMargin(cost, defaultMarginPct, roundTo90);
+                  setForm((f) => ({ ...f, costBrl: cost, ...(p != null ? { priceBrl: p } : {}) }));
+                }}
+                placeholder="pra calcular margem"
+                className="mt-1 block w-full rounded-lg border border-neutral-300 px-3 py-2 shadow-card focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-neutral-700">Estoque</label>
             <input

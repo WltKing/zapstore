@@ -14,7 +14,7 @@ export default async function SchedulingPage() {
 
   const { professionals, services, appointments } = await withTenant(tenant.id, async (tx) => {
     const [professionals, services, appointments] = await Promise.all([
-      tx.professional.findMany({ orderBy: { name: "asc" } }),
+      tx.professional.findMany({ where: { isProfessional: true }, orderBy: { name: "asc" } }),
       tx.service.findMany({ orderBy: { name: "asc" } }),
       tx.appointment.findMany({
         orderBy: { scheduledFor: "asc" },

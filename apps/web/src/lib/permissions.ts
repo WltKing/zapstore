@@ -78,6 +78,10 @@ export const CUSTOM_TEMPLATES: { key: string; label: string; areas: Area[] }[] =
   { key: "delivery", label: "Entregador / Motorista", areas: ROLE_PERMISSIONS.DELIVERY },
 ];
 
+/** Áreas que SÓ o dono (ADMIN) acessa, independente de perfil/personalização:
+ * configuração do bot, simulador e WhatsApp são o "coração" do atendimento. */
+export const ADMIN_ONLY_AREAS: Area[] = ["bot", "simulator", "whatsapp"];
+
 export function isArea(v: string): v is Area {
   return (AREAS as readonly string[]).includes(v);
 }
@@ -94,6 +98,8 @@ export function effectivePermissions(
   } else {
     base = ROLE_PERMISSIONS[(role as Role) in ROLE_PERMISSIONS ? (role as Role) : "OPERATOR"];
   }
+  // Bot / Simulador / WhatsApp: só o dono, sempre — removidos pra qualquer outro perfil.
+  if (role !== "ADMIN") base = base.filter((a) => !ADMIN_ONLY_AREAS.includes(a));
   return base.includes("dashboard") ? base : ["dashboard", ...base];
 }
 

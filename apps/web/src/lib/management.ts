@@ -74,3 +74,14 @@ export async function requireManagementPin(
 export function pinFingerprint(pin: string): string {
   return createHash("sha256").update(pin).digest("hex").slice(0, 8);
 }
+
+/** Papel do usuário logado nesta loja (ADMIN/MANAGER/...), ou null. */
+export async function getCurrentRole(tenantId: string): Promise<string | null> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return null;
+  const link = await prisma.tenantUser.findFirst({
+    where: { userId: session.user.id, tenantId },
+    select: { role: true },
+  });
+  return link?.role ?? null;
+}

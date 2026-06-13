@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { prisma, withTenant } from "@zapstore/db";
 import { auth } from "@/lib/auth";
 import { priceFromCostMargin } from "@/lib/pricing";
-import { requireManagementPin } from "@/lib/management";
+import { requireManagementPin, getCurrentRole } from "@/lib/management";
 
 export interface ProductInput {
   name: string;
@@ -108,6 +108,10 @@ export async function updateProductAction(id: string, input: ProductInput, pin?:
     const err = validateProduct(input);
     if (err) return { ok: false, error: err };
 
+    // Custo é informação do DONO: só ADMIN pode alterá-lo. Gerente edita o resto
+    // sem tocar no custo (não vem no formulário dele — preserva o que está salvo).
+    const isOwner = (await getCurrentRole(tenantId)) === "ADMIN";
+
     await withTenant(tenantId, async (tx) => {
       await tx.product.update({
         where: { id },
@@ -118,7 +122,9 @@ export async function updateProductAction(id: string, input: ProductInput, pin?:
           category: input.category?.trim() || null,
           kind: input.kind === "kit" ? "kit" : "simple",
           priceBrl: input.priceBrl,
-          costBrl: input.costBrl != null && !Number.isNaN(input.costBrl) ? input.costBrl : null,
+          ...(isOwner
+            ? { costBrl: input.costBrl != null && !Number.isNaN(input.costBrl) ? input.costBrl : null }
+            : {}),
           imageUrl: input.imageUrl?.trim() || null,
           realImageUrl: input.realImageUrl?.trim() || null,
           stock: input.stock,

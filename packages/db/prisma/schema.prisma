@@ -456,6 +456,10 @@ model Professional {
   tenantId  String   @db.Uuid
   name      String
   active    Boolean  @default(true)
+  // Em lojas que vendem E atendem, a pessoa pode ser vendedor, profissional ou ambos.
+  // Vendedor aparece na lista do PEDIDO; profissional aparece na AGENDA.
+  isSeller       Boolean @default(true)
+  isProfessional Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

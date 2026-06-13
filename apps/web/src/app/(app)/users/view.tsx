@@ -11,7 +11,11 @@ import {
   PRESET_ROLES,
   CUSTOM_TEMPLATES,
   ROLE_PERMISSIONS,
+  ADMIN_ONLY_AREAS,
 } from "@/lib/permissions";
+
+// Áreas que aparecem no seletor de Personalizado (tira as exclusivas do dono).
+const PICKABLE_AREAS = AREAS.filter((a) => !ADMIN_ONLY_AREAS.includes(a));
 
 interface UserRow {
   userId: string;
@@ -265,7 +269,7 @@ function AreaPicker({
           <button
             key={t.key}
             type="button"
-            onClick={() => setChecked([...t.areas])}
+            onClick={() => setChecked(t.areas.filter((a) => !ADMIN_ONLY_AREAS.includes(a)))}
             className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-xs font-medium text-neutral-700 hover:border-brand hover:text-brand"
           >
             {t.label}
@@ -273,7 +277,7 @@ function AreaPicker({
         ))}
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {AREAS.map((area) => {
+        {PICKABLE_AREAS.map((area) => {
           const isDash = area === "dashboard";
           const on = isDash || checked.includes(area);
           return (

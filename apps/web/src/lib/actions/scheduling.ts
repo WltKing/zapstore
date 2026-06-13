@@ -33,18 +33,28 @@ function fail(e: unknown): ActionResult {
 export interface ProfessionalInput {
   name: string;
   active: boolean;
+  // Tipo (lojas que fazem as duas coisas). Quando ausente, não altera o que já está salvo.
+  isSeller?: boolean;
+  isProfessional?: boolean;
 }
 
 export async function createProfessionalAction(input: ProfessionalInput): Promise<ActionResult> {
   try {
     const tenantId = await requireTenantId();
-    if (!input.name.trim()) return { ok: false, error: "Informe o nome do profissional." };
+    if (!input.name.trim()) return { ok: false, error: "Informe o nome." };
     await withTenant(tenantId, async (tx) => {
       await tx.professional.create({
-        data: { tenantId, name: input.name.trim(), active: input.active },
+        data: {
+          tenantId,
+          name: input.name.trim(),
+          active: input.active,
+          isSeller: input.isSeller ?? true,
+          isProfessional: input.isProfessional ?? false,
+        },
       });
     });
     revalidatePath("/scheduling");
+    revalidatePath("/team");
     return { ok: true };
   } catch (e) {
     return fail(e);
@@ -60,14 +70,21 @@ export async function updateProfessionalAction(
     const tenantId = await requireTenantId();
     const g = await requireManagementPin(tenantId, pin);
     if (!g.ok) return g;
-    if (!input.name.trim()) return { ok: false, error: "Informe o nome do profissional." };
+    if (!input.name.trim()) return { ok: false, error: "Informe o nome." };
     await withTenant(tenantId, async (tx) => {
       await tx.professional.update({
         where: { id },
-        data: { name: input.name.trim(), active: input.active },
+        data: {
+          name: input.name.trim(),
+          active: input.active,
+          // Só toca no tipo quando vem explícito (rename/toggle não zeram os flags).
+          ...(input.isSeller !== undefined ? { isSeller: input.isSeller } : {}),
+          ...(input.isProfessional !== undefined ? { isProfessional: input.isProfessional } : {}),
+        },
       });
     });
     revalidatePath("/scheduling");
+    revalidatePath("/team");
     return { ok: true };
   } catch (e) {
     return fail(e);
