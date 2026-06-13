@@ -145,9 +145,12 @@ export function SettingsView({
         </div>
         </header>
 
-      <form onSubmit={submit} className="mt-8 space-y-6">
+      {/* O que a loja usa (mais importante: define o sistema) */}
+      <ModulesSection niche={niche} enabledModules={enabledModules} nicheLabel={nicheLabel} primaryFocus={primaryFocusProp} />
+
+      <form onSubmit={submit} className="mt-6 space-y-6">
         {/* Dados da loja */}
-        <section className="rounded-2xl bg-white p-6 shadow-card">
+        <section className="rounded-2xl bg-white p-5 shadow-card sm:p-6">
           <h2 className="font-semibold">Dados da loja</h2>
           <div className="mt-4 space-y-4">
             <div>
@@ -168,13 +171,12 @@ export function SettingsView({
         </section>
 
         {/* Identidade visual */}
-        <section className="rounded-2xl bg-white p-6 shadow-card">
+        <section className="rounded-2xl bg-white p-5 shadow-card sm:p-6">
           <h2 className="font-semibold">Identidade visual</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            Cor da marca + <strong>ícone</strong> (aparece no menu) e <strong>logo</strong> (aparece na
-            nota fiscal e na impressão de pedidos).
+            Ícone aparece no menu; logo aparece na nota e na impressão.
           </p>
-          <div className="mt-4 flex items-start gap-6">
+          <div className="mt-4 flex flex-col items-stretch gap-4 sm:flex-row sm:items-start sm:gap-6">
             {/* Prévia do ícone, como aparece no menu (sobre a cor da marca) */}
             <div className="flex flex-col items-center gap-2">
               <div
@@ -209,30 +211,17 @@ export function SettingsView({
                   />
                 </div>
               </div>
-              <ImageUpload
-                label="Ícone da loja (quadrado, p/ o menu) — PNG transparente fica melhor"
-                value={icon}
-                onChange={setIcon}
-                keepTransparency
-              />
-              <ImageUpload
-                label="Logo completa (p/ nota fiscal e impressão)"
-                value={logo}
-                onChange={setLogo}
-                keepTransparency
-              />
+              <ImageUpload label="Ícone (PNG quadrado, p/ o menu)" value={icon} onChange={setIcon} keepTransparency />
+              <ImageUpload label="Logo (p/ nota e impressão)" value={logo} onChange={setLogo} keepTransparency />
             </div>
           </div>
         </section>
 
         {/* Precificação */}
-        <section className="rounded-2xl bg-white p-6 shadow-card">
+        <section className="rounded-2xl bg-white p-5 shadow-card sm:p-6">
           <h2 className="font-semibold">Precificação</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            Com a margem padrão preenchida, o sistema <strong>sugere o preço de venda</strong>{" "}
-            automaticamente a partir do custo — ao cadastrar um produto e ao importar o XML de uma
-            nota. Evita produto com preço zerado. (Margem sobre a venda: custo R$ 100 + margem 30%
-            = preço R$ 142,86.)
+            Sugere o preço de venda a partir do custo (custo R$ 100 + 30% = R$ 142,86).
           </p>
           <div className="mt-4 max-w-xs">
             <label className="block text-sm font-medium text-neutral-700">Margem padrão (%)</label>
@@ -274,11 +263,10 @@ export function SettingsView({
         </section>
 
         {/* Financeiro (caixa) */}
-        <section className="rounded-2xl bg-white p-6 shadow-card">
-          <h2 className="font-semibold">Financeiro (caixa)</h2>
+        <section className="rounded-2xl bg-white p-5 shadow-card sm:p-6">
+          <h2 className="font-semibold">Taxas de pagamento</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            Usadas no <strong>Caixa</strong> e no <strong>Dashboard</strong> pra calcular o líquido.
-            Cada forma de pagamento (e cada parcela do crédito) pode ter uma taxa diferente.
+            Descontadas pra calcular o líquido no Caixa e no painel.
           </p>
 
           {/* Pix + débito */}
@@ -358,10 +346,7 @@ export function SettingsView({
                 </div>
               ))}
             </div>
-            <p className="mt-2 text-xs text-neutral-400">
-              Ex: 1x = 3,09% · 2x = 4,5% · 3x = 5,2%… Aplica nas vendas no cartão conforme o nº de
-              parcelas.
-            </p>
+            <p className="mt-2 text-xs text-neutral-400">Ex: 1x = 3,09% · 2x = 4,5% · 3x = 5,2%…</p>
           </div>
 
           {/* Imposto */}
@@ -383,11 +368,9 @@ export function SettingsView({
 
         {/* Meta de vendas — só se o módulo estiver ligado */}
         {goalEnabled && (
-          <section className="rounded-2xl bg-white p-6 shadow-card">
+          <section className="rounded-2xl bg-white p-5 shadow-card sm:p-6">
             <h2 className="font-semibold">Meta de vendas</h2>
-            <p className="mt-1 text-sm text-neutral-500">
-              Sua meta de faturamento por mês. Aparece na Visão Geral com barra de progresso e projeção.
-            </p>
+            <p className="mt-1 text-sm text-neutral-500">Meta de faturamento do mês — aparece na Visão Geral.</p>
             <div className="mt-4 max-w-xs">
               <label className="block text-sm font-medium text-neutral-700">Meta mensal (R$)</label>
               <input
@@ -407,11 +390,10 @@ export function SettingsView({
         )}
 
         {/* Recebimento (maquininha) */}
-        <section className="rounded-2xl bg-white p-6 shadow-card">
+        <section className="rounded-2xl bg-white p-5 shadow-card sm:p-6">
           <h2 className="font-semibold">Recebimento (maquininha)</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            Quando o dinheiro de cada forma cai na sua conta. O sistema usa isso pra calcular o{" "}
-            <strong>valor a receber</strong> (líquido) no painel.
+            Quando o dinheiro cai na conta — usado no “a receber” do painel.
           </p>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
@@ -453,23 +435,16 @@ export function SettingsView({
               )}
             </div>
             <p className="mt-2 text-xs text-neutral-400">
-              <strong>Por parcela</strong>: cada parcela cai a cada 30 dias. <strong>Antecipado</strong>: tudo de uma vez em
-              D+x. <strong>Na hora</strong>: D+0.
+              Por parcela: a cada 30 dias · Antecipado: tudo em D+x · Na hora: D+0.
             </p>
           </div>
-
-          <p className="mt-3 text-xs text-neutral-400">
-            Quer antecipar? A taxa de antecipação varia, então você calcula na hora — no card{" "}
-            <strong>&quot;A receber&quot;</strong> do painel.
-          </p>
         </section>
 
         {/* Pix */}
-        <section className="rounded-2xl bg-white p-6 shadow-card">
+        <section className="rounded-2xl bg-white p-5 shadow-card sm:p-6">
           <h2 className="font-semibold">Recebimento Pix</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            Com a chave Pix preenchida, o sistema gera o <strong>QR Code Pix</strong> na impressão do
-            pedido (quando marcado como &quot;a receber&quot;). O dinheiro cai direto na sua conta.
+            Gera o QR Code Pix na impressão do pedido.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
@@ -494,7 +469,7 @@ export function SettingsView({
         </section>
 
         {/* Outras configs (links) */}
-        <section className="rounded-2xl bg-white p-6 shadow-card">
+        <section className="rounded-2xl bg-white p-5 shadow-card sm:p-6">
           <h2 className="font-semibold">Operação</h2>
           <p className="mt-1 text-sm text-neutral-500">Horário, pagamento, entrega e bot ficam aqui:</p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -531,8 +506,6 @@ export function SettingsView({
 
       {securitySlot}
       {deliverySlot}
-
-      <ModulesSection niche={niche} enabledModules={enabledModules} nicheLabel={nicheLabel} primaryFocus={primaryFocusProp} />
     </main>
   );
 }
@@ -590,11 +563,10 @@ function ModulesSection({
   if (configurable.length === 0) return null;
 
   return (
-    <section className="mt-6 rounded-2xl bg-white p-6 shadow-card">
+    <section className="mt-6 rounded-2xl bg-white p-5 shadow-card sm:p-6">
       <h2 className="font-semibold">Funções do sistema</h2>
       <p className="mt-1 text-sm text-neutral-500">
-        Ligue só o que sua loja usa — você ajusta quando quiser. O ramo (<strong>{nicheLabel}</strong>)
-        só personaliza o atendente do WhatsApp, não muda as funções.
+        Ligue só o que sua loja usa. O ramo (<strong>{nicheLabel}</strong>) só personaliza o bot.
       </p>
 
       <div className="mt-4 space-y-3">
